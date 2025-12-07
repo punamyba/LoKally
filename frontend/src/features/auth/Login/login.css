@@ -1,0 +1,147 @@
+/* GLOBAL APPLE FONT */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  }
+  
+  /* BACKGROUND */
+  .page-bg {
+    min-height: 100vh;
+    width: 100%;
+    background: linear-gradient(#61a8e2,#fdfdfd ,#fdfdfd, #a9f89b);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  
+/* CARD — DESKTOP BIGGER */
+.card {
+    width: 480px;
+    max-width: 95%;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(6px);
+    padding: 35px 40px;      /* more spacious */
+    border-radius: 26px;
+    text-align: center;
+    box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.10);
+  }
+  
+  
+  /* LOGO */
+  .logo {
+    width: 110px;
+    margin-bottom: 10px;
+  }
+  
+  /* TITLE */
+  .title {
+    font-size: 25px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  
+  .subtitle {
+    font-size: 14px;
+    opacity: 0.75;
+    margin-bottom: 18px;
+  }
+  
+  /* INPUT FIELD — SUPER SLIM iOS */
+  .input-box {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  
+    background: #ffffff;
+    padding: 7px 12px;         /* VERY SLIM */
+    border: 1px solid #2aa03a;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  
+    transition: 0.2s ease-in-out;
+  }
+  
+  .input-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    padding: 3px 0;           /* extra slim */
+  }
+  
+  /* ICON */
+  .icon {
+    font-size: 16px;
+    color: #1b8d28;
+  }
+  
+  /* FOCUS EFFECT */
+  .input-box:focus-within {
+    border-color: #3d82f7;
+    box-shadow: 0 0 6px rgba(0, 110, 255, 0.45);
+  }
+  
+  /* BUTTON */
+  .btn {
+    width: 100%;
+    padding: 12px;
+    background: #167ee0;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 10px;
+  }
+  
+  .btn:hover {
+    background: #1266b6;
+  }
+  
+  /* SWITCH TEXT */
+  .switch-text {
+    margin-top: 15px;
+    font-size: 13px;
+  }
+  
+  .switch-text a {
+    color: #2569ff;
+    text-decoration: none;
+  }
+  
+  
+  /* BIGGER desktop */
+  @media (min-width: 1100px) {
+    .card {
+      width: 520px;
+      padding: 55px 45px;
+      border-radius: 28px;
+    }
+  
+    .title {
+      font-size: 30px;
+    }
+  
+    .subtitle {
+      font-size: 16px;
+    }
+  
+    .input-box {
+      padding: 10px 14px;
+      margin-bottom: 18px;
+    }
+  
+    .input-box input {
+      font-size: 15px;
+    }
+  
+    .btn {
+      padding: 14px;
+      font-size: 16px;
+    }
+  }
