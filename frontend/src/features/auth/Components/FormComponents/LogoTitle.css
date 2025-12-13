@@ -1,0 +1,16 @@
+.logo-title-box {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.logo-img {
+  width: 90px;
+  margin-bottom: 10px;
+}
+
+.logo-title {
+  font-size: 25px;
+  font-weight: 600;
+  font-family: cursive !important;
+  color: rgb(60, 184, 25) !important;
+}

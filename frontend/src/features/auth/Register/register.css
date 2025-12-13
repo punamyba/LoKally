@@ -144,4 +144,67 @@
       font-size: 16px;
     }
   }
+  /* ---------- FIX FORM ALIGNMENT ---------- */
+
+/* Form entirely left aligned */
+form {
+  text-align: left !important;
+  width: 100%;
+}
+
+/* Every input box aligns left (override card center) */
+.input-box {
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+/* Error text left aligned */
+.input-error {
+  color: red;
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: left !important;
+}
+
+/* ---------- GENDER RADIO GROUP ---------- */
+
+.radio-container {
+  width: 100%;
+  margin: 10px 0 18px 0;
+  text-align: left !important;
+}
+
+/* Gender label left */
+.radio-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  text-align: left !important;
+  color: #1b8d28;
+}
+
+/* Radio buttons left aligned */
+.radio-group {
+  display: flex;
+  gap: 18px;
+  justify-content: flex-start !important;
+  align-items: center;
+  text-align: left !important;
+}
+
+.radio-option {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
   
+}
+
+/* Gender error left aligned */
+.radio-error {
+  color: red;
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: left !important;
+}

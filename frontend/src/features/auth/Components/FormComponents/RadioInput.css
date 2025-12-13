@@ -1,0 +1,42 @@
+/* ---------- GENDER RADIO GROUP ---------- */
+
+.radio-container {
+    width: 100%;
+    margin: 10px 0 18px 0;
+    text-align: left !important;
+  }
+  
+  .radio-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1b8d28 !important;          /* ✅ GREEN COLOR */
+    margin-bottom: 6px;
+    display: block;
+  }
+  
+  .radio-group {
+    display: flex;
+    gap: 18px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  
+  .radio-option {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+    color: #1b8d28;          /* ✅ GREEN TEXT for Male / Female / Others */
+  }
+  
+  .radio-option input[type="radio"] {
+    accent-color: #1b8d28;  /* ✅ GREEN RADIO BUTTON */
+  }
+  
+  /* Gender error */
+  .radio-error {
+    color: red;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  

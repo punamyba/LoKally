@@ -1,53 +1,149 @@
-import React from "react";
+import React, { useState } from "react";
 import "./register.css";
-import logo from "../../../assets/logo1.png";
-import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import { FaUser, FaEnvelope, FaLock, FaPhone, FaBirthdayCake } from "react-icons/fa";
+import { Link } from "react-router-dom";
+
+import FormInput from "../Components/FormComponents/FormInput";
+import AuthButton from "../Components/FormComponents/AuthButton";
+import LogoTitle from "../Components/FormComponents/LogoTitle";
+import RadioInput from "../Components/FormComponents/RadioInput";
 
 const Register = () => {
+  const { register, handleSubmit, control, formState: { errors } } = useForm();
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    dob: "",
+    address: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    gender: ""
+  });
+
+  const handleRegister = (data: any) => {
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+
+    console.log("REGISTER DATA:", { ...form, ...data });
+    alert("Registration Successful!");
+  };
+
   return (
     <div className="page-bg">
       <div className="card">
-        <img src={logo} className="logo" />
+        
+        <LogoTitle title="LoKally" />
 
-        <h2 className="title">LoKally</h2>
         <p className="subtitle">Create your account</p>
 
-        <div className="input-box">
-          <FaUser className="icon" />
-          <input type="text" placeholder="Full Name" />
-        </div>
+        <form onSubmit={handleSubmit(handleRegister)}>
 
-        <div className="input-box">
-          <FaBirthdayCake className="icon" />
-          <input type="date" />
-        </div>
+          {/* First Name */}
+          <FormInput
+            icon={<FaUser className="icon" />}
+            type="text"
+            placeholder="First Name"
+            {...register("firstName", { required: "First name required" })}
+            onChange={(e: any) => setForm({ ...form, firstName: e.target.value })}
+            error={errors.firstName?.message as string}
+          />
 
-        <div className="input-box">
-          <FaEnvelope className="icon" />
-          <input type="email" placeholder="Your Email" />
-        </div>
+          {/* Last Name */}
+          <FormInput
+            icon={<FaUser className="icon" />}
+            type="text"
+            placeholder="Last Name"
+            {...register("lastName", { required: "Last name required" })}
+            onChange={(e: any) => setForm({ ...form, lastName: e.target.value })}
+            error={errors.lastName?.message as string}
+          />
 
-        <div className="input-box">
-          <FaPhone className="icon" />
-          <input type="text" placeholder="Phone Number" />
-        </div>
+          {/* Email */}
+          <FormInput
+            icon={<FaEnvelope className="icon" />}
+            type="email"
+            placeholder="Your Email"
+            {...register("email", { required: "Email required" })}
+            onChange={(e: any) => setForm({ ...form, email: e.target.value })}
+            error={errors.email?.message as string}
+          />
 
-        <div className="input-box">
-          <FaLock className="icon" />
-          <input type="password" placeholder="Password" />
-        </div>
+          {/* Phone */}
+          <FormInput
+            icon={<FaPhone className="icon" />}
+            type="text"
+            placeholder="Phone Number"
+            {...register("phone", { required: "Phone number required" })}
+            onChange={(e: any) => setForm({ ...form, phone: e.target.value })}
+            error={errors.phone?.message as string}
+          />
 
-        <div className="input-box">
-          <FaLock className="icon" />
-          <input type="password" placeholder="Confirm Password" />
-        </div>
+          {/* Date of Birth */}
+          <FormInput
+            icon={<FaBirthdayCake className="icon" />}
+            type="date"
+            placeholder="Date of Birth"
+            {...register("dob", { required: "Date of birth required" })}
+            onChange={(e: any) => setForm({ ...form, dob: e.target.value })}
+            error={errors.dob?.message as string}
+          />
 
-        <button className="btn">Register Now</button>
+          {/* Address */}
+          <FormInput
+            icon={<FaUser className="icon" />}
+            type="text"
+            placeholder="Address"
+            {...register("address", { required: "Address required" })}
+            onChange={(e: any) => setForm({ ...form, address: e.target.value })}
+            error={errors.address?.message as string}
+          />
+
+          {/* Gender (Radio) */}
+          <RadioInput
+            control={control}
+            name="gender"
+            label="Gender"
+            rules={{ required: "Gender is required" }}
+            options={[
+              { value: "Male", label: "Male" },
+              { value: "Female", label: "Female" },
+              { value: "Others", label: "Others" }
+            ]}
+          />
+
+          {/* Password */}
+          <FormInput
+            icon={<FaLock className="icon" />}
+            type="password"
+            placeholder="Password"
+            {...register("password", { required: "Password required" })}
+            onChange={(e: any) => setForm({ ...form, password: e.target.value })}
+            error={errors.password?.message as string}
+          />
+
+          {/* Confirm Password */}
+          <FormInput
+            icon={<FaLock className="icon" />}
+            type="password"
+            placeholder="Confirm Password"
+            {...register("confirmPassword", { required: "Confirm password required" })}
+            onChange={(e: any) => setForm({ ...form, confirmPassword: e.target.value })}
+            error={errors.confirmPassword?.message as string}
+          />
+
+          <AuthButton text="Register Now" />
+
+        </form>
 
         <p className="switch-text">
-          Already have an account? <Link to="/">Login</Link>
+          Already have an account? <Link to="/">Sign In</Link>
         </p>
+
       </div>
     </div>
   );
