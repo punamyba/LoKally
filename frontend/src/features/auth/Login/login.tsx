@@ -2,23 +2,47 @@ import React from "react";
 import "./login.css";
 import { useForm } from "react-hook-form";
 import { FaEnvelope, FaLock } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import FormInput from "../Components/FormComponents/FormInput";
 import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
 
+import { loginApi } from "../../../shared/config/api";
+
+type LoginFormData = {
+  email: string;
+  password: string;
+};
+
 const Login = () => {
+  const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
-    formState: { errors }
-  } = useForm();
+    formState: { errors },
+  } = useForm<LoginFormData>();
 
-  const onSubmit = (data: any) => {
-    console.log("Login Data:", data);
-    alert("Login Successful!");
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const res = await loginApi(data);
+  
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("currentUser", JSON.stringify(res.data.user));
+  
+      navigate("/dashboard"); // ✅ verified user only
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+  
+      if (msg?.includes("verify")) {
+        alert("📧 Please verify your email before logging in");
+      } else {
+        alert(msg || "Login failed");
+      }
+    }
   };
+  
 
   return (
     <div className="page-bg">
@@ -26,16 +50,15 @@ const Login = () => {
         <LogoTitle title="LoKally" />
 
         <form onSubmit={handleSubmit(onSubmit)}>
-
           {/* Email */}
           <FormInput
             icon={<FaEnvelope className="icon" />}
             type="email"
             placeholder="Your Email"
             {...register("email", {
-              required: "Email is required"
+              required: "Email is required",
             })}
-            error={errors.email?.message as string}
+            error={errors.email?.message}
           />
 
           {/* Password */}
@@ -44,21 +67,18 @@ const Login = () => {
             type="password"
             placeholder="Password"
             {...register("password", {
-              required: "Password is required"
+              required: "Password is required",
             })}
-            error={errors.password?.message as string}
+            error={errors.password?.message}
           />
 
-          {/* Forgot Password — Right aligned */}
           <div className="forgot-wrapper">
             <Link className="forgot-text" to="/forgot">
               Forgot Password
             </Link>
           </div>
 
-          {/* Submit Button */}
           <AuthButton text="Sign In" />
-
         </form>
 
         <p className="switch-text">
