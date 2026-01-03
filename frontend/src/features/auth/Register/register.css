@@ -6,7 +6,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   }
   
-  /* BACKGROUND */
+  /* BACKGROUND 
   .page-bg {
     min-height: 100vh;
     width: 100%;
@@ -15,13 +15,13 @@
     justify-content: center;
     align-items: center;
     padding: 20px;
-  }
+  }*/
   
 /* CARD — DESKTOP BIGGER */
 .card {
     width: 480px;
     max-width: 95%;
-    background: transparent;
+    background: rgba(253, 253, 253, 0.351);
     backdrop-filter: blur(6px);
     padding: 45px 40px;      /* more spacious */
     border-radius: 26px;
@@ -56,7 +56,7 @@
     align-items: center;
     gap: 10px;
   
-    background: #ffffff;
+    background: #ffffffc1;
     padding: 7px 12px;         /* VERY SLIM */
     border: 1px solid #2aa03a;
     border-radius: 10px;

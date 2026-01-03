@@ -1,4 +1,4 @@
-import React from "react";
+
 import "./login.css";
 import { useForm } from "react-hook-form";
 import { FaEnvelope, FaLock } from "react-icons/fa";
@@ -9,6 +9,7 @@ import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
 
 import { loginApi } from "../../../shared/config/api";
+import AuthLayout from "../Components/authlayout/AuthLayout";
 
 type LoginFormData = {
   email: string;
@@ -45,7 +46,7 @@ const Login = () => {
   
 
   return (
-    <div className="page-bg">
+    <AuthLayout>
       <div className="card">
         <LogoTitle title="LoKally" />
 
@@ -85,7 +86,7 @@ const Login = () => {
           Don’t have an account? <Link to="/register">Sign Up</Link>
         </p>
       </div>
-    </div>
+      </AuthLayout>
   );
 };
 

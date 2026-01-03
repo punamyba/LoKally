@@ -1,4 +1,4 @@
-import React from "react";
+
 import "./register.css";
 import { useForm } from "react-hook-form";
 import {
@@ -16,10 +16,9 @@ import LogoTitle from "../Components/FormComponents/LogoTitle";
 import RadioInput from "../Components/FormComponents/RadioInput";
 
 import { registerApi } from "../../../shared/config/api";
+import AuthLayout from "../Components/authlayout/AuthLayout";
 
-/* =========================
-   FRONTEND FORM TYPE
-========================= */
+
 type RegisterFormData = {
   firstName: string;
   lastName: string;
@@ -78,7 +77,7 @@ const Register = () => {
   };
 
   return (
-    <div className="page-bg">
+    <AuthLayout>
       <div className="card">
         <LogoTitle title="LoKally" />
         <p className="subtitle">Create your account</p>
@@ -168,7 +167,7 @@ const Register = () => {
           Already have an account? <Link to="/">Sign In</Link>
         </p>
       </div>
-    </div>
+      </AuthLayout>
   );
 };
 

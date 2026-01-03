@@ -4,11 +4,7 @@ import pool from "../config/db.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
 
-/**
- * =========================
- * REGISTER USER
- * =========================
- */
+/* REGISTER USER */
 export const registerUser = async (req, res) => {
   try {
     const {
