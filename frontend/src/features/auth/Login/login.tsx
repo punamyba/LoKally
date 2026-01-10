@@ -7,7 +7,8 @@ import { Link, useNavigate } from "react-router-dom";
 import FormInput from "../Components/FormComponents/FormInput";
 import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
-
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { loginApi } from "../../../shared/config/api";
 import AuthLayout from "../Components/authlayout/AuthLayout";
 
@@ -42,8 +43,23 @@ const Login = () => {
         alert(msg || "Login failed");
       }
     }
+
   };
   
+  const location = useLocation();
+
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const status = params.get("verify");
+
+  if (status === "success") {
+    alert("✅ Email verified successfully. Please login.");
+  }
+
+  if (status === "invalid") {
+    alert("❌ Invalid or expired verification link.");
+  }
+}, []);
 
   return (
     <AuthLayout>
@@ -74,9 +90,9 @@ const Login = () => {
           />
 
           <div className="forgot-wrapper">
-            <Link className="forgot-text" to="/forgot">
-              Forgot Password
-            </Link>
+          <a href="/forgot-password" className="forgot-text">
+            Forgot password?
+          </a>    
           </div>
 
           <AuthButton text="Sign In" />

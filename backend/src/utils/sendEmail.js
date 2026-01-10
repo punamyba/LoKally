@@ -1,23 +1,43 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
-const sendEmail = async (to, link) => {
+dotenv.config();
+
+/*
+  Backward compatible:
+  - sendEmail(to, link) for verification link
+  - sendEmail(to, subject, html) for OTP/reset
+*/
+const sendEmail = async (to, arg2, arg3) => {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
   });
 
-  await transporter.sendMail({
-    from: `"LoKally" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: "Verify your email",
-    html: `
+  let subject = "";
+  let html = "";
+
+  if (typeof arg2 === "string" && arg2.startsWith("http") && !arg3) {
+    subject = "Verify your email";
+    html = `
       <h3>Verify your email</h3>
       <p>Click the link below:</p>
-      <a href="${link}">${link}</a>
-    `,
+      <a href="${arg2}">${arg2}</a>
+    `;
+  } else {
+    subject = arg2;
+    html = arg3;
+  }
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
   });
 };
 

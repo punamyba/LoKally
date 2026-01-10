@@ -49,7 +49,7 @@ const Register = () => {
   ========================= */
   const handleRegister = async (data: RegisterFormData) => {
     if (data.password !== data.confirmPassword) {
-      alert("❌ Passwords do not match");
+      alert(" Passwords do not match");
       return;
     }
 
@@ -61,13 +61,13 @@ const Register = () => {
         phone: data.phone,
         dob: data.dob,
         address: data.address,
-        gender: data.gender, // ✅ DB SAFE
+        gender: data.gender, //  DB SAFE
         password: data.password,
         confirm_password: data.confirmPassword,
       });
 
       alert(
-        "✅ Registered successfully!\n📧 Please check your email to verify your account."
+        " Registered successfully!\n📧 Please check your email to verify your account."
       );
 
       navigate("/"); // back to login

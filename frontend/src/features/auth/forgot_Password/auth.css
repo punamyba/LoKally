@@ -1,0 +1,154 @@
+/* =========================
+   GLOBAL FONT (APPLE STYLE)
+   ========================= */
+   * {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+      "Segoe UI", Roboto, sans-serif;
+  }
+  
+  /* =========================
+     WRAPPER (NO BACKGROUND)
+     ========================= */
+  .auth-wrapper {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  
+  /* =========================
+     CARD
+     ========================= */
+  .auth-card {
+    width: 450px;
+    max-width: 95%;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(8px);
+    padding: 40px 36px;
+    border-radius: 26px;
+    text-align: center;
+    box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* =========================
+     TITLES
+     ========================= */
+  .auth-card h2 {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  
+  .subtitle {
+    font-size: 14px;
+    opacity: 0.75;
+    margin-bottom: 22px;
+  }
+  
+  /* =========================
+     INPUTS
+     ========================= */
+  .auth-card input {
+    width: 100%;
+    padding: 11px 14px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid #2aa03a;
+    outline: none;
+    background: rgba(255, 255, 255, 0.85);
+    transition: 0.2s ease;
+  }
+  
+  /* OTP INPUT */
+  .auth-card input.otp {
+    letter-spacing: 6px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  /* FOCUS */
+  .auth-card input:focus {
+    border-color: #3d82f7;
+    box-shadow: 0 0 6px rgba(0, 110, 255, 0.45);
+  }
+  
+  /* =========================
+     BUTTON
+     ========================= */
+  .auth-card button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #167ee0;
+    color: white;
+    transition: 0.2s ease;
+  }
+  
+  .auth-card button:hover {
+    background: #1266b6;
+  }
+  
+  .auth-card button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  /* =========================
+     MESSAGES
+     ========================= */
+  .info {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #2569ff;
+  }
+  
+  .success {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #1b8d28;
+  }
+  
+  .error {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #e53935;
+  }
+  
+  /* =========================
+     DESKTOP (BIGGER)
+     ========================= */
+  @media (min-width: 1100px) {
+    .auth-card {
+      width: 520px;
+      padding: 55px 45px;
+    }
+  
+    .auth-card h2 {
+      font-size: 30px;
+    }
+  
+    .subtitle {
+      font-size: 16px;
+    }
+  
+    .auth-card input {
+      font-size: 15px;
+      padding: 13px 16px;
+    }
+  
+    .auth-card button {
+      padding: 15px;
+      font-size: 16px;
+    }
+  }
+  
