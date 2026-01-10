@@ -20,6 +20,8 @@ import {
   MessageCircle,
   Star
 } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+
 
 const Home = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,6 +67,8 @@ const Home = () => {
     localStorage.clear();
     window.location.href = "/";
   };
+
+  const navigate = useNavigate();
 
   return (
     <div className="home-container">
@@ -146,11 +150,16 @@ const Home = () => {
 
         {/* Quick Actions */}
         <div className="quick-actions">
-          <div className="action-card">
+        <div 
+            className="action-card"
+            onClick={() => navigate("/explore-map")}
+            style={{ cursor: "pointer" }}
+            >
             <Map size={40} color="#167ee0" />
             <h3 className="action-title">Explore Map</h3>
             <p className="action-desc">View all hidden places</p>
-          </div>
+        </div>
+
           <div className="action-card">
             <Upload size={40} color="#1b8d28" />
             <h3 className="action-title">Add Place</h3>

@@ -9,6 +9,7 @@ import AuthGuard from "./shared/guards/authGuard";
 import ForgotPassword from "./features/auth/forgot_Password/ForgotPaswword";
 import VerifyOTP from "./features/auth/forgot_Password/VerfyOTP";
 import ResetPassword from "./features/auth/forgot_Password/ResetPassword";
+import ExploreMap from "./features/auth/Map/ExploreMap";
 
 function App() {
   const [email, setEmail] = useState("");
@@ -56,6 +57,8 @@ function App() {
             </AuthGuard>
           }
         />
+        {/* Explore-Map */}
+        <Route path="/explore-map" element={<ExploreMap />} />
       </Routes>
     </BrowserRouter>
   );
