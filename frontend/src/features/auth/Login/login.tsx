@@ -33,7 +33,7 @@ const Login = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("currentUser", JSON.stringify(res.data.user));
   
-      navigate("/dashboard"); // ✅ verified user only
+      navigate("/dashboard"); // verified user only
     } catch (err: any) {
       const msg = err.response?.data?.message;
   
@@ -53,11 +53,11 @@ useEffect(() => {
   const status = params.get("verify");
 
   if (status === "success") {
-    alert("✅ Email verified successfully. Please login.");
+    alert(" Email verified successfully. Please login.");
   }
 
   if (status === "invalid") {
-    alert("❌ Invalid or expired verification link.");
+    alert(" Invalid or expired verification link.");
   }
 }, []);
 

@@ -44,9 +44,7 @@ const Register = () => {
 
   const password = watch("password");
 
-  /* =========================
-     SUBMIT HANDLER
-  ========================= */
+  /* SUBMIT HANDLER*/
   const handleRegister = async (data: RegisterFormData) => {
     if (data.password !== data.confirmPassword) {
       alert(" Passwords do not match");

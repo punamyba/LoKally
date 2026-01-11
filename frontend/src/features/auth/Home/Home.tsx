@@ -3,9 +3,6 @@ import './home.css';
 import { 
   Search, 
   MapPin, 
-  Users, 
-  Award, 
-  Map, 
   Upload, 
   Compass,
   Mountain,
@@ -20,8 +17,6 @@ import {
   MessageCircle,
   Star
 } from 'lucide-react';
-import { useNavigate } from "react-router-dom";
-
 
 const Home = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,7 +33,7 @@ const Home = () => {
     {
       id: 1,
       name: 'Lumbini, Nepal',
-      image: 'https://lumbinidevtrust.gov.np/',
+      image: 'https://upload.wikimedia.org/wikipedia/commons/1/18/BRP_Lumbini_Mayadevi_temple.jpg',
       info: '167 Recommend Stay',
       likes: 234,
       comments: 45,
@@ -47,7 +42,7 @@ const Home = () => {
     {
       id: 2,
       name: 'Pokhara, Nepal',
-      image: '',
+      image: 'https://www.acethehimalaya.com/wp-content/uploads/2024/02/things-to-do-in-pokhara.jpg',
       info: '189 Recommend Stay',
       likes: 189,
       comments: 32,
@@ -56,19 +51,54 @@ const Home = () => {
     {
       id: 3,
       name: 'Chitwan, Nepal',
-      image: '',
+      image: 'https://www.magicalnepal.com/wp-content/uploads/2025/06/1-1.jpg',
       info: '123 Recommend Stay',
       likes: 156,
       comments: 28,
       verified: true
+    },
+    {
+      id: 4,
+      name: 'Annapurna, Nepal',
+      image: 'https://media.nepaltrekadventures.com/uploads/img/annapurna-base-camp-in-nepal-1.webp',
+      info: '245 Recommend Stay',
+      likes: 312,
+      comments: 56,
+      verified: true
+    },
+    {
+      id: 5,
+      name: 'Bhaktapur, Nepal',
+      image: 'https://assets-cdn.kathmandupost.com/uploads/source/news/2020/opinion/7-lead-for-online%20(7).jpg',
+      info: '198 Recommend Stay',
+      likes: 267,
+      comments: 41,
+      verified: true
+    },
+    {
+      id: 6,
+      name: 'Rara Lake, Nepal',
+      image: 'https://www.himalayajourneys.com/assets/images/Rara%20lake%20Jeep%20tour.jpg',
+      info: '156 Recommend Stay',
+      likes: 178,
+      comments: 34,
+      verified: true
+    },
+    {
+      id: 7,
+      name: 'Mustang, Nepal',
+      image: 'https://media.sublimetrails.com/uploads/img/breathtaking-landscape-of-mustang-nepal1.webp',
+      info: '134 Recommend Stay',
+      likes: 145,
+      comments: 29,
+      verified: true
     }
   ];
+
   const logout = () => {
     localStorage.clear();
     window.location.href = "/";
   };
-
-  const navigate = useNavigate();
 
   return (
     <div className="home-container">
@@ -92,7 +122,7 @@ const Home = () => {
               <Upload size={18} />
               Add Place
             </button>
-            <button onClick={logout}>Logout</button>
+            <button className="logout-btn" onClick={logout}>Logout</button>
             <div className="profile-circle">
               <User size={20} />
             </div>
@@ -123,43 +153,16 @@ const Home = () => {
           <button className="filter-btn">Filter</button>
         </div>
 
-        {/* Stats */}
-        <div className="stats">
-          <div className="stat-card">
-            <MapPin size={24} color="#167ee0" />
-            <div>
-              <div className="stat-number">1,234</div>
-              <div className="stat-label">Hidden Places</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <Users size={24} color="#1b8d28" />
-            <div>
-              <div className="stat-number">5,678</div>
-              <div className="stat-label">Explorers</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <Award size={24} color="#ff9500" />
-            <div>
-              <div className="stat-number">892</div>
-              <div className="stat-label">Verified</div>
-            </div>
-          </div>
-        </div>
-
         {/* Quick Actions */}
         <div className="quick-actions">
-        <div 
+          <div 
             className="action-card"
-            onClick={() => navigate("/explore-map")}
-            style={{ cursor: "pointer" }}
-            >
-            <Map size={40} color="#167ee0" />
+            onClick={() => window.location.href = "/explore-map"}
+          >
+            <MapPin size={40} color="#167ee0" />
             <h3 className="action-title">Explore Map</h3>
             <p className="action-desc">View all hidden places</p>
-        </div>
-
+          </div>
           <div className="action-card">
             <Upload size={40} color="#1b8d28" />
             <h3 className="action-title">Add Place</h3>
@@ -212,14 +215,27 @@ const Home = () => {
           ))}
         </div>
 
-        {/* CTA */}
-        <div className="cta">
-          <h2 className="cta-title">Found a Hidden Gem?</h2>
-          <p className="cta-text">Share it with the community and help others discover Nepal's beauty</p>
-          <button className="cta-button">
-            <Upload size={20} />
-            Add Your Discovery
-          </button>
+        {/* Community Section */}
+        <div className="community-section">
+          <h2 className="community-title">Join Our Explorer Community</h2>
+          <p className="community-text">Connect with travelers, share experiences, and discover authentic Nepal together</p>
+          <div className="community-stats">
+            <div className="community-stat">
+              <User size={30} color="#167ee0" />
+              <div className="stat-number">5,678</div>
+              <div className="stat-label">Active Explorers</div>
+            </div>
+            <div className="community-stat">
+              <MapPin size={30} color="#1b8d28" />
+              <div className="stat-number">1,234</div>
+              <div className="stat-label">Places Shared</div>
+            </div>
+            <div className="community-stat">
+              <Star size={30} color="#ff9500" />
+              <div className="stat-number">892</div>
+              <div className="stat-label">Verified Spots</div>
+            </div>
+          </div>
         </div>
       </main>
 

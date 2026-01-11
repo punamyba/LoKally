@@ -9,7 +9,7 @@
   .radio-label {
     font-size: 14px;
     font-weight: 600;
-    color: #1b8d28 !important;          /* ✅ GREEN COLOR */
+    color: #1b8d28 !important;          
     margin-bottom: 6px;
     display: block;
   }
@@ -26,11 +26,11 @@
     gap: 6px;
     align-items: center;
     cursor: pointer;
-    color: #1b8d28;          /* ✅ GREEN TEXT for Male / Female / Others */
+    color: #1b8d28;          
   }
   
   .radio-option input[type="radio"] {
-    accent-color: #1b8d28;  /* ✅ GREEN RADIO BUTTON */
+    accent-color: #1b8d28;  
   }
   
   /* Gender error */

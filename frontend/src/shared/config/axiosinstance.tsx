@@ -1,15 +1,15 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
+  baseURL: "http://localhost:5001/api", //  backend
   headers: {
     "Content-Type": "application/json",
   },
 });
+ 
 
-// =======================
 // REQUEST INTERCEPTOR
-// =======================
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -23,9 +23,9 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// =======================
+
 // RESPONSE INTERCEPTOR
-// =======================
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {

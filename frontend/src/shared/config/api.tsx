@@ -1,22 +1,14 @@
 import axiosInstance from "./axiosinstance";
 
-/* =======================
-   FORM TYPES (FRONTEND)
-======================= */
+/* FORM TYPES (FRONTEND) */
 export type LoginFormData = {
   email: string;
   password: string;
 };
 
-/*
-⚠️ NOTE:
-RegisterFormData यहाँ राख्दैनौँ
-किनकि form type ≠ API payload type
-*/
 
-/* =======================
-   API PAYLOAD TYPES
-======================= */
+
+/*API PAYLOAD TYPES*/
 export type RegisterPayload = {
   first_name: string;
   last_name: string;
@@ -29,9 +21,7 @@ export type RegisterPayload = {
   confirm_password: string;
 };
 
-/* =======================
-   AUTH APIS
-======================= */
+/* AUTH APIS */
 export const registerApi = (data: RegisterPayload) => {
   return axiosInstance.post("/register", data);
 };
@@ -40,9 +30,7 @@ export const loginApi = (data: LoginFormData) => {
   return axiosInstance.post("/login", data);
 };
 
-/* =======================
-   PROTECTED EXAMPLE
-======================= */
+/*  PROTECTED EXAMPLE*/ 
 export const getUserListApi = () => {
   return axiosInstance.get("/user-list");
 };

@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// ✅ Props type
+//  Props type
 interface MapViewProps {
   fullHeight?: boolean;
 }
@@ -23,7 +23,7 @@ interface MapViewProps {
 const MapView: React.FC<MapViewProps> = ({ fullHeight = false }) => {
   const [position, setPosition] = useState<[number, number] | null>(null);
 
-  // 📍 Get user's current location
+  //  To get user's current location
   useEffect(() => {
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
@@ -60,7 +60,7 @@ const MapView: React.FC<MapViewProps> = ({ fullHeight = false }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {/* 🧲 Draggable Marker */}
+      {/*  Draggable Marker */}
       <Marker
         position={position}
         draggable={true}
