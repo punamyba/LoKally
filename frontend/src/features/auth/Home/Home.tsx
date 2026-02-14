@@ -17,6 +17,15 @@ import {
   MessageCircle,
   Star
 } from 'lucide-react';
+import Navbar from "../Components/Layout/Navbar/Navbar";
+import Footer from "../Components/Layout/Footer/Footer";
+import "../Components/Layout/Navbar/Navbar.css";
+import "../Components/Layout/Footer/Footer.css";
+
+
+
+
+
 
 const Home = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -102,37 +111,9 @@ const Home = () => {
 
   return (
     <div className="home-container">
-      {/* Header */}
-      <header className="header">
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo-circle">L</div>
-            <div className="logo-text">LoKally</div>
-          </div>
-          
-          <nav className={`nav-links ${menuOpen ? 'active' : ''}`}>
-            <a href="#map">Map</a>
-            <a href="#explore">Explore</a>
-            <a href="#community">Community</a>
-            <a href="#about">About</a>
-          </nav>
-          
-          <div className="desktop-actions">
-            <button className="add-btn">
-              <Upload size={18} />
-              Add Place
-            </button>
-            <button className="logout-btn" onClick={logout}>Logout</button>
-            <div className="profile-circle">
-              <User size={20} />
-            </div>
-          </div>
-          
-          <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-      </header>
+     
+    <Navbar />
+      
 
       {/* Main */}
       <main className="main">
@@ -240,29 +221,7 @@ const Home = () => {
       </main>
 
       {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div>
-            <h3 className="footer-title">LoKally</h3>
-            <p className="footer-text">Discover Nepal's hidden treasures</p>
-          </div>
-          <div>
-            <h4 className="footer-heading">Quick Links</h4>
-            <a href="#" className="footer-link">About Us</a>
-            <a href="#" className="footer-link">How It Works</a>
-            <a href="#" className="footer-link">FAQs</a>
-          </div>
-          <div>
-            <h4 className="footer-heading">Community</h4>
-            <a href="#" className="footer-link">Guidelines</a>
-            <a href="#" className="footer-link">Report Issue</a>
-            <a href="#" className="footer-link">Contact</a>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>&copy; 2025 LoKally. Made with love in Nepal</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
