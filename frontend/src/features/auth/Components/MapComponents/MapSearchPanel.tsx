@@ -18,88 +18,75 @@ export default function MapSearchPanel({
   onPick,
 }: Props) {
   return (
-    <aside className="lk-panel">
-      <div className="lk-panelHeader">
-        <div className="lk-panelTitle">Explore</div>
-        <div className="lk-panelSub">
-          Search places and pick one to see details.
-        </div>
+    <aside className="msp-panel">
+      <div className="msp-header">
+        <div className="msp-title">Explore</div>
+        <div className="msp-subtitle">Search places and select one to view details.</div>
       </div>
 
-      {/* search inside panel */}
-      <div className="lk-searchWrap">
-        <span className="lk-searchIcon">🔍</span>
+      <div className="msp-searchWrap">
+        <span className="msp-searchIcon">🔎</span>
         <input
-          className="lk-searchInput"
+          className="msp-searchInput"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search places (name / category)..."
+          placeholder="Search by name or category..."
         />
-
         {query.trim() ? (
-          <button
-            className="lk-searchClear"
-            onClick={() => setQuery("")}
-            title="Clear"
-            aria-label="Clear"
-            type="button"
-          >
+          <button className="msp-clearBtn" onClick={() => setQuery("")} aria-label="Clear">
             ✕
           </button>
         ) : null}
       </div>
 
-      <div className="lk-resultsHead">
-        <span>Places</span>
-        <span className="lk-count">{results.length}</span>
-      </div>
+      <div className="msp-results">
+        <div className="msp-resultsTop">
+          <span>Places</span>
+          <span className="msp-count">{results.length}</span>
+        </div>
 
-      <div className="lk-results">
         {results.length === 0 ? (
-          <div className="lk-empty">No results. Try another keyword 🙂</div>
+          <div className="msp-empty">No results found.</div>
         ) : (
-          results.map((p) => {
-            const active = selectedPlaceId === p.id;
-
-            return (
-              <button
-                key={p.id}
-                className={active ? "lk-card lk-card--active" : "lk-card"}
-                onClick={() => onPick(p)}
-                type="button"
-              >
-                <div className="lk-thumb">
-                  {p.image ? (
-                    <img className="lk-thumbImg" src={p.image} alt={p.name} />
-                  ) : (
-                    <span className="lk-thumbLetter">
-                      {p.name.slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-
-                <div className="lk-cardBody">
-                  <div className="lk-cardTitle">{p.name}</div>
-
-                  <div className="lk-metaRow">
-                    {p.category ? <span className="lk-tag">{p.category}</span> : null}
-                    <span className="lk-coord">
-                      {p.lat.toFixed(3)}, {p.lng.toFixed(3)}
-                    </span>
+          <div className="msp-list">
+            {results.map((p) => {
+              const active = selectedPlaceId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  className={active ? "msp-item msp-item--active" : "msp-item"}
+                  onClick={() => onPick(p)}
+                >
+                  <div className="msp-thumb">
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} />
+                    ) : (
+                      <span>{p.name.slice(0, 1).toUpperCase()}</span>
+                    )}
                   </div>
 
-                  {p.description ? (
-                    <div className="lk-desc">{p.description}</div>
-                  ) : null}
-                </div>
-              </button>
-            );
-          })
+                  <div className="msp-meta">
+                    <div className="msp-name">{p.name}</div>
+                    <div className="msp-row">
+                      {p.category ? <span className="msp-tag">{p.category}</span> : null}
+                      <span className="msp-coords">
+                        {p.lat.toFixed(3)}, {p.lng.toFixed(3)}
+                      </span>
+                    </div>
+
+                    {p.description ? (
+                      <div className="msp-desc">{p.description}</div>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      <div className="lk-hint">
-        Tip: Click a place from the list — map will move to it and details will open.
+      <div className="msp-hint">
+        Select a place from the list. Details will stay open until you close it.
       </div>
     </aside>
   );

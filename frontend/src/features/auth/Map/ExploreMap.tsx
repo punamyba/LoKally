@@ -8,7 +8,6 @@ import type { Place } from "./Type";
 import MapSearchPanel from "../Components/MapComponents/MapSearchPanel";
 import "./ExploreMap.css";
 
-// ✅ Demo static places
 const DEMO_PLACES: Place[] = [
   {
     id: "1",
@@ -40,16 +39,6 @@ const DEMO_PLACES: Place[] = [
     image:
       "https://assets-cdn.kathmandupost.com/uploads/source/news/2020/opinion/7-lead-for-online%20(7).jpg",
   },
-  {
-    id: "4",
-    name: "Swayambhunath",
-    lat: 27.7149,
-    lng: 85.2903,
-    category: "Temple",
-    description: "Monkey Temple. Great view of Kathmandu valley.",
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/7/71/Swayambhunath_Stupa_2018.jpg",
-  },
 ];
 
 export default function ExploreMap() {
@@ -68,15 +57,15 @@ export default function ExploreMap() {
     );
   }, [places, query]);
 
-  const closeDetails = () => setSelectedPlace(null);
+  const closeDetails = () => {
+    setSelectedPlace(null);
+  };
 
   return (
     <div className="exmap-page">
       <Navbar />
 
-      {/* ✅ flex layout: navbar/footer height hardcode नगर्ने */}
       <div className="exmap-body">
-        {/* LEFT PANEL */}
         <MapSearchPanel
           query={query}
           setQuery={setQuery}
@@ -85,7 +74,6 @@ export default function ExploreMap() {
           onPick={(p) => setSelectedPlace(p)}
         />
 
-        {/* MAP AREA */}
         <div className="exmap-mapArea">
           <MapView
             fullHeight
@@ -94,10 +82,9 @@ export default function ExploreMap() {
             onSelectPlace={(p) => setSelectedPlace(p)}
           />
 
-          {/* DETAILS (RIGHT CARD) — ❌ नथिचेसम्म बन्द हुँदैन */}
           {selectedPlace && (
-            <div className="exmap-details" role="dialog" aria-modal="false">
-              {selectedPlace.image ? (
+            <div className="exmap-details">
+              {selectedPlace.image && (
                 <div className="exmap-detailsImageWrap">
                   <img
                     className="exmap-detailsImage"
@@ -105,7 +92,7 @@ export default function ExploreMap() {
                     alt={selectedPlace.name}
                   />
                 </div>
-              ) : null}
+              )}
 
               <div className="exmap-detailsContent">
                 <div className="exmap-detailsTop">
@@ -114,27 +101,26 @@ export default function ExploreMap() {
                       {selectedPlace.name}
                     </div>
 
-                    {selectedPlace.category ? (
+                    {selectedPlace.category && (
                       <div className="exmap-detailsTag">
                         {selectedPlace.category}
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
                   <button
                     className="exmap-detailsClose"
                     onClick={closeDetails}
-                    aria-label="Close"
-                    title="Close"
-                    type="button"
                   >
                     ✕
                   </button>
                 </div>
 
-                {selectedPlace.description ? (
-                  <p className="exmap-detailsDesc">{selectedPlace.description}</p>
-                ) : null}
+                {selectedPlace.description && (
+                  <p className="exmap-detailsDesc">
+                    {selectedPlace.description}
+                  </p>
+                )}
 
                 <div className="exmap-coords">
                   <div>
@@ -147,8 +133,7 @@ export default function ExploreMap() {
 
                 <button
                   className="exmap-detailsBtn"
-                  type="button"
-                  onClick={() => alert("Later we will open full details page ✅")}
+                  onClick={() => alert("Full details page later")}
                 >
                   View Full Details
                 </button>
@@ -158,7 +143,7 @@ export default function ExploreMap() {
         </div>
       </div>
 
-      <Footer />
+ 
     </div>
   );
 }

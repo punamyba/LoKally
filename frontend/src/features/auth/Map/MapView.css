@@ -1,13 +1,96 @@
 .lk-map {
   width: 100%;
   height: 420px;
+  position: relative;
 }
 
 .lk-map--full {
+  width: 100%;
   height: 100%;
+  position: relative;
 }
 
-/* map controls touch-friendly */
+/* Force leaflet controls visible */
+.leaflet-control-container {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 9999 !important;
+}
+
+/* Zoom buttons */
+.leaflet-control-zoom {
+  border: none;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .leaflet-control-zoom a {
-  border-radius: 10px !important;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f3d2e;
+  border: none;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #ffffff;
+}
+
+/* DivIcon base */
+.lk-placeIcon.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Image circle */
+.lk-placeIcon__wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  background: white;
+  background-size: cover;
+  background-position: center;
+
+  border: 3px solid rgba(22, 126, 224, 0.95);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
+
+  display: grid;
+  place-items: center;
+}
+
+.lk-placeIcon__fallback {
+  font-weight: 900;
+  font-size: 16px;
+  color: #1b8d28;
+
+  background: rgba(255, 255, 255, 0.75);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+
+/* Small pin dot */
+.lk-placeIcon__pin {
+  width: 14px;
+  height: 14px;
+  background: rgba(27, 141, 40, 0.95);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  margin: -6px auto 0;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.2);
+}
+/* If icon has background-image, hide fallback letter */
+.lk-placeIcon__wrap[style*="background-image"] .lk-placeIcon__fallback {
+  display: none;
 }

@@ -1,9 +1,9 @@
-.lk-panel {
+.msp-panel {
   width: 360px;
   max-width: 90vw;
   height: 100%;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(10px);
   border-right: 1px solid rgba(22, 126, 224, 0.12);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
@@ -13,38 +13,34 @@
   gap: 12px;
 }
 
-.lk-panelHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.lk-panelTitle {
+.msp-header .msp-title {
   font-size: 18px;
   font-weight: 900;
   color: #0f3d2e;
 }
 
-.lk-panelSub {
+.msp-header .msp-subtitle {
   font-size: 13px;
   color: #64748b;
+  margin-top: 2px;
 }
 
-.lk-searchWrap {
+.msp-searchWrap {
   position: relative;
 }
 
-.lk-searchIcon {
+.msp-searchIcon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0.6;
+  font-size: 14px;
+  opacity: 0.7;
 }
 
-.lk-searchInput {
+.msp-searchInput {
   width: 100%;
-  padding: 12px 40px 12px 40px;
+  padding: 12px 40px 12px 36px;
   border-radius: 14px;
   border: 1px solid rgba(27, 141, 40, 0.35);
   outline: none;
@@ -52,7 +48,7 @@
   background: #fff;
 }
 
-.lk-searchClear {
+.msp-clearBtn {
   position: absolute;
   right: 10px;
   top: 50%;
@@ -65,21 +61,29 @@
   font-weight: 900;
 }
 
-.lk-resultsHead {
+.msp-results {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.msp-resultsTop {
   font-size: 12px;
   font-weight: 800;
   color: #334155;
+  margin-bottom: 10px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-.lk-count {
+.msp-count {
   color: #64748b;
   font-weight: 700;
 }
 
-.lk-results {
+.msp-list {
   flex: 1;
   overflow-y: auto;
   padding-right: 6px;
@@ -88,7 +92,7 @@
   gap: 10px;
 }
 
-.lk-empty {
+.msp-empty {
   padding: 14px;
   border-radius: 14px;
   background: rgba(22, 126, 224, 0.08);
@@ -96,7 +100,7 @@
   font-size: 14px;
 }
 
-.lk-card {
+.msp-item {
   text-align: left;
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: rgba(255, 255, 255, 0.95);
@@ -106,9 +110,10 @@
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
   display: flex;
   gap: 12px;
+  align-items: center;
 }
 
-.lk-card--active {
+.msp-item--active {
   border: 1px solid rgba(22, 126, 224, 0.55);
   background: linear-gradient(
     135deg,
@@ -118,38 +123,34 @@
   box-shadow: 0 8px 18px rgba(22, 126, 224, 0.18);
 }
 
-.lk-thumb {
+.msp-thumb {
   width: 54px;
   height: 54px;
   border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    rgba(22, 126, 224, 0.2),
-    rgba(27, 141, 40, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(22, 126, 224, 0.2), rgba(27, 141, 40, 0.2));
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
-.lk-thumbImg {
+.msp-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.lk-thumbLetter {
+.msp-thumb span {
   font-weight: 900;
   color: #0f3d2e;
 }
 
-.lk-cardBody {
+.msp-meta {
   flex: 1;
   min-width: 0;
 }
 
-.lk-cardTitle {
+.msp-name {
   font-size: 15px;
   font-weight: 900;
   color: #0f3d2e;
@@ -158,7 +159,7 @@
   text-overflow: ellipsis;
 }
 
-.lk-metaRow {
+.msp-row {
   margin-top: 4px;
   display: flex;
   flex-wrap: wrap;
@@ -166,7 +167,7 @@
   align-items: center;
 }
 
-.lk-tag {
+.msp-tag {
   font-size: 12px;
   font-weight: 800;
   padding: 5px 10px;
@@ -175,13 +176,13 @@
   color: #167ee0;
 }
 
-.lk-coord {
+.msp-coords {
   font-size: 12px;
   color: #64748b;
   font-weight: 700;
 }
 
-.lk-desc {
+.msp-desc {
   margin-top: 6px;
   font-size: 12px;
   color: #475569;
@@ -191,11 +192,21 @@
   -webkit-box-orient: vertical;
 }
 
-.lk-hint {
+.msp-hint {
   padding: 10px;
   border-radius: 14px;
   background: rgba(27, 141, 40, 0.08);
   color: #0f172a;
   font-size: 12px;
   font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .msp-panel {
+    width: 100%;
+    max-width: none;
+    height: 320px;
+    border-right: none;
+    border-bottom: 1px solid rgba(22, 126, 224, 0.12);
+  }
 }
