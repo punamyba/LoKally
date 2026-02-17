@@ -1,0 +1,132 @@
+.exmap-page {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(#9dd0fa, #fdfdfd, #fdfdfd, #affda2);
+  display: flex;
+  flex-direction: column;
+}
+
+/* navbar र footer बीचको main area */
+.exmap-body {
+  flex: 1;
+  min-height: 0; /* IMPORTANT: map scroll/height issue fix */
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* map wrapper */
+.exmap-mapArea {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* DETAILS CARD (right) */
+.exmap-details {
+  position: absolute;
+  right: 16px;
+  top: 16px; /* अब navbar सँग overlap हुँदैन किनकि body नै navbar तल छ */
+  width: 360px;
+  max-width: calc(100% - 32px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  border: 1px solid rgba(22, 126, 224, 0.15);
+  z-index: 500; /* map भन्दा माथि */
+}
+
+.exmap-detailsImageWrap {
+  height: 180px;
+  overflow: hidden;
+}
+
+.exmap-detailsImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exmap-detailsContent {
+  padding: 14px;
+}
+
+.exmap-detailsTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.exmap-detailsTitle {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f3d2e;
+  line-height: 1.2;
+}
+
+.exmap-detailsTag {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    rgba(22, 126, 224, 0.14),
+    rgba(27, 141, 40, 0.14)
+  );
+  color: #167ee0;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.exmap-detailsClose {
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-weight: 900;
+}
+
+.exmap-detailsDesc {
+  margin-top: 10px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.exmap-coords {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #475569;
+  background: rgba(15, 61, 46, 0.04);
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.exmap-detailsBtn {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 900;
+  color: white;
+  background: linear-gradient(135deg, #167ee0 0%, #1b8d28 100%);
+}
+
+/* Mobile: details bottom मा */
+@media (max-width: 768px) {
+  .exmap-details {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    top: auto;
+    bottom: 12px;
+    max-width: none;
+  }
+}

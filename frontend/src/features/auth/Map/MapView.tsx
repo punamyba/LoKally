@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// 🔧 Fix default marker icon issue
+import type { Place } from "./Type";
+import "./MapView.css";
+
+// 🔧 marker icon fix
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -15,73 +18,76 @@ L.Icon.Default.mergeOptions({
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-//  Props type
-interface MapViewProps {
+type MapViewProps = {
   fullHeight?: boolean;
+  places: Place[];
+  selectedPlace: Place | null;
+  onSelectPlace: (place: Place) => void;
+};
+
+function FlyToSelected({ selectedPlace }: { selectedPlace: Place | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!selectedPlace) return;
+    map.flyTo([selectedPlace.lat, selectedPlace.lng], 15, { duration: 0.8 });
+  }, [selectedPlace, map]);
+
+  return null;
 }
 
-const MapView: React.FC<MapViewProps> = ({ fullHeight = false }) => {
-  const [position, setPosition] = useState<[number, number] | null>(null);
+export default function MapView({
+  fullHeight = false,
+  places,
+  selectedPlace,
+  onSelectPlace,
+}: MapViewProps) {
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const fallbackPos = useMemo<[number, number]>(() => [27.7172, 85.324], []);
 
-  //  To get user's current location
   useEffect(() => {
     if (!navigator.geolocation) {
-      alert("Geolocation not supported");
+      setUserPos(fallbackPos);
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPosition([pos.coords.latitude, pos.coords.longitude]);
-      },
-      () => {
-        alert("Location access denied");
-        // fallback: Kathmandu
-        setPosition([27.7172, 85.324]);
-      }
+      (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+      () => setUserPos(fallbackPos),
+      { enableHighAccuracy: true, timeout: 8000 }
     );
-  }, []);
+  }, [fallbackPos]);
 
-  if (!position) {
-    return <p style={{ padding: "20px" }}>Loading map...</p>;
-  }
+  const center = useMemo<[number, number]>(() => {
+    if (selectedPlace) return [selectedPlace.lat, selectedPlace.lng];
+    if (userPos) return userPos;
+    return fallbackPos;
+  }, [selectedPlace, userPos, fallbackPos]);
 
   return (
     <MapContainer
-      center={position}
+      center={center}
       zoom={15}
-      style={{
-        height: fullHeight ? "100vh" : "400px",
-        width: "100%",
-      }}
+      className={fullHeight ? "lk-map lk-map--full" : "lk-map"}
     >
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {/*  Draggable Marker */}
-      <Marker
-        position={position}
-        draggable={true}
-        eventHandlers={{
-          dragend: (e) => {
-            const marker = e.target;
-            const newPos = marker.getLatLng();
-            setPosition([newPos.lat, newPos.lng]);
-          },
-        }}
-      >
-        <Popup>
-          <b>Your Location</b>
-          <br />
-          Lat: {position[0].toFixed(6)}
-          <br />
-          Lng: {position[1].toFixed(6)}
-        </Popup>
-      </Marker>
+      <FlyToSelected selectedPlace={selectedPlace} />
+
+      {/* user marker (simple) */}
+      {userPos && <Marker position={userPos} />}
+
+      {/* place markers — click => details open, but no leaflet popup */}
+      {places.map((p) => (
+        <Marker
+          key={p.id}
+          position={[p.lat, p.lng]}
+          eventHandlers={{ click: () => onSelectPlace(p) }}
+        />
+      ))}
     </MapContainer>
   );
-};
-
-export default MapView;
+}
