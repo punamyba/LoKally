@@ -200,13 +200,17 @@
   font-size: 12px;
   font-weight: 700;
 }
-
 @media (max-width: 768px) {
   .msp-panel {
     width: 100%;
     max-width: none;
-    height: 320px;
+    height: 100%;               /* ✅ exmap-leftOverlay controls height */
     border-right: none;
-    border-bottom: 1px solid rgba(22, 126, 224, 0.12);
+    border-bottom: none;
+    padding: 14px 14px 18px;
+  }
+
+  .msp-list {
+    padding-bottom: 8px;
   }
 }

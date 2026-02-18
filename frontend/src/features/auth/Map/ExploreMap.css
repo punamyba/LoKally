@@ -1,60 +1,413 @@
+/* ExploreMap.css */
+
 .exmap-page {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(#9dd0fa, #fdfdfd, #affda2);
+}
+
+.exmap-body {
+  height: calc(100vh - 72px);
+  position: relative;
 }
 
 .exmap-mapArea {
+  height: 100%;
+  width: 100%;
   position: relative;
-  flex: 1;
+  overflow: hidden;
 }
 
-/* LEFT PANEL FIX */
+.exmap-fab {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1200;
+
+  border: none;
+  cursor: pointer;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #167ee0, #1b8d28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.fab-plus {
+  display: none;
+}
+
+.exmap-openSidebar {
+  display: none;
+}
+
 .exmap-leftOverlay {
   position: absolute;
-  top: 30px;
-  left: 30px;
-  width: 380px;               /* bigger */
-  max-height: 85%;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-  overflow-y: auto;
-  z-index: 1000;              /* IMPORTANT FIX */
+  top: 18px;
+  left: 18px;
+  z-index: 1100;
+
+  width: 380px;
+  max-width: calc(100vw - 36px);
+  border-radius: 22px;
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
 }
 
-/* DETAILS PANEL */
+.exmap-drawerHeader {
+  display: none;
+}
+
 .exmap-details {
   position: absolute;
-  top: 30px;
-  right: 30px;
-  width: 360px;
+  top: 20px;
+  right: 20px;
+  width: 380px;
+  max-width: calc(100vw - 40px);
   background: white;
-  border-radius: 22px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  z-index: 1000;
+  z-index: 1200;
+}
+
+.exmap-detailsImageWrap {
+  height: 190px;
+  overflow: hidden;
 }
 
 .exmap-detailsImage {
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
 }
 
 .exmap-detailsContent {
-  padding: 20px;
+  padding: 15px;
 }
 
 .exmap-detailsTop {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.coords {
+.exmap-detailsTitle {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1b8d28;
+}
+
+.exmap-detailsTag {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: #167ee020;
+  color: #167ee0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.exmap-detailsClose {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.exmap-detailsDesc {
   margin-top: 10px;
   font-size: 14px;
+  color: #444;
+}
+
+.exmap-coords {
+  margin-top: 10px;
+  font-size: 13px;
+  background: #f2f2f2;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.exmap-detailsBtn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #167ee0, #1b8d28);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.exmap-addPanel {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1300;
+
+  width: 420px;
+  max-width: calc(100vw - 36px);
+
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+}
+
+.exmap-addHeader {
+  padding: 14px 14px 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.exmap-addTitle {
+  font-weight: 800;
+  font-size: 16px;
+  color: #0b3d2e;
+}
+
+.exmap-addSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.exmap-addClose {
+  border: none;
+  background: #eef2f7;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.exmap-addForm {
+  padding: 12px 14px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exmap-label {
+  font-size: 12px;
+  color: #1f2937;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exmap-input {
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #dbe5f1;
+  padding: 0 12px;
+  outline: none;
+  background: #fff;
+}
+
+.exmap-textarea {
+  border-radius: 12px;
+  border: 1px solid #dbe5f1;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+  background: #fff;
+}
+
+.exmap-latlngRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.exmap-latlngBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exmap-latlngLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.exmap-addBtn {
+  margin-top: 8px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #167ee0, #1b8d28);
+}
+
+.exmap-addHint {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+@media (max-width: 768px) {
+  .exmap-openSidebar {
+    display: block;
+    position: absolute;
+    top: 64px;
+    left: 14px;
+    z-index: 1550;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    font-weight: 800;
+  }
+
+  .exmap-leftOverlay {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    height: 46vh;
+    z-index: 1600;
+  }
+
+  .exmap-leftOverlay.open {
+    transform: translateY(0);
+  }
+
+  .exmap-drawerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(22, 126, 224, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .exmap-drawerTitle {
+    font-weight: 900;
+    font-size: 14px;
+    color: #0f3d2e;
+  }
+
+  .exmap-drawerClose {
+    border: none;
+    background: #eef2f7;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .exmap-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .fab-text {
+    display: none;
+  }
+
+  .fab-plus {
+    display: block;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  /* Details bottom sheet: remove blank space */
+  .exmap-details {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+
+    width: 100%;
+    max-width: none;
+
+    border-radius: 18px 18px 0 0;
+
+    height: auto;
+    max-height: 58vh;
+
+    z-index: 1700;
+
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Make image more visible */
+  .exmap-detailsImageWrap {
+    height: 180px;
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+
+  .exmap-detailsImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Scroll only the content (not whole sheet) */
+  .exmap-detailsContent {
+    padding: 14px;
+    flex: 1 1 auto;
+    overflow: auto;
+  }
+
+  /* Keep button at the bottom, no empty area */
+  .exmap-detailsBtn {
+    position: sticky;
+    bottom: 0;
+    margin-top: 12px;
+  }
+
+  .exmap-addPanel {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+
+    width: 100%;
+    max-width: none;
+
+    border-radius: 18px 18px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    height: 62vh;
+    overflow: auto;
+  }
+
+  .exmap-addPanel.open {
+    transform: translateY(0);
+  }
 }

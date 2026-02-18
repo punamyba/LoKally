@@ -50,7 +50,7 @@ function App() {
 
         {/* Dashboard */}
         <Route
-          path="/dashboard"
+          path="/home"
           element={
             <AuthGuard>
               <Home />

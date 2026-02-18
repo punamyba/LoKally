@@ -33,7 +33,7 @@ const Login = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("currentUser", JSON.stringify(res.data.user));
   
-      navigate("/dashboard"); // verified user only
+      navigate("/home"); // verified user only
     } catch (err: any) {
       const msg = err.response?.data?.message;
   

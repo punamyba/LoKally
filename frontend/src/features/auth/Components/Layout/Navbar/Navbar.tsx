@@ -1,21 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./Navbar.css";
-import { MapPin, User, LogOut, Menu, X, Compass } from "lucide-react";
+import { User, LogOut, Menu, X, Compass, Bell, Search } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [q, setQ] = useState("");
   const navigate = useNavigate();
 
+  const isLoggedIn = !!localStorage.getItem("token");
+
   useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("token"));
-    
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -26,137 +23,185 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("currentUser") || "{}");
+    } catch {
+      return {};
+    }
+  }, [isLoggedIn]);
+
+  // ✅ show first name nicely
+  const firstName =
+    (currentUser?.first_name || currentUser?.name || "User")
+      .toString()
+      .trim()
+      .split(" ")[0];
+
+  const onSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // later: navigate(`/explore-map?search=${encodeURIComponent(q)}`)
+    // for now just go explore-map
+    navigate("/explore-map");
+  };
 
   return (
-    <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
-      <div className="navbar-container">
-        {/* Logo */}
-        <Link to="/" className="logo">
-          <div className="logo-icon">
-            <MapPin size={24} strokeWidth={2.5} />
-          </div>
-          <div className="logo-text">
-            <span className="logo-main">LoKally</span>
-            <span className="logo-sub">Nepal</span>
+    <header className={`lk-nav ${scrolled ? "lk-nav--scrolled" : ""}`}>
+      <div className="lk-nav__inner">
+        {/* LEFT: Brand text only (no pin icon) */}
+        <Link to={isLoggedIn ? "/home" : "/"} className="lk-brand">
+          <div className="lk-brand__text">
+            <div className="lk-brand__main">LoKally</div>
+            <div className="lk-brand__sub">NEPAL</div>
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <div className="nav-center">
-          
+        {/* CENTER: Komoot-style search pill */}
+        <form className="lk-search" onSubmit={onSearchSubmit}>
+          <Search size={18} className="lk-search__icon" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="lk-search__input"
+            placeholder="Search places, routes, highlights…"
+          />
+          {q.trim() ? (
+            <button
+              type="button"
+              className="lk-search__clear"
+              onClick={() => setQ("")}
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          ) : null}
+        </form>
+
+        {/* RIGHT: actions */}
+        <div className="lk-actions">
+          {/* Desktop nav links (small + clean) */}
+          <nav className="lk-links">
+            {isLoggedIn && (
+              <NavLink
+                to="/home"
+                className={({ isActive }) =>
+                  isActive ? "lk-link lk-link--active" : "lk-link"
+                }
+              >
+                Dashboard
+              </NavLink>
+            )}
+            <NavLink
+              to="/explore-map"
+              className={({ isActive }) =>
+                isActive ? "lk-link lk-link--active" : "lk-link"
+              }
+            >
+              Explore
+            </NavLink>
+          </nav>
+
+          {/* Notification */}
+          <button className="lk-iconBtn" type="button" aria-label="Notifications">
+            <Bell size={20} />
+            <span className="lk-dot" />
+          </button>
+
+          {/* User chip (simple) */}
+          {isLoggedIn ? (
+            <button
+              className="lk-userChip"
+              type="button"
+              onClick={() => navigate("/home")}
+              aria-label="Profile"
+            >
+              <span className="lk-userChip__avatar">
+                {firstName.charAt(0).toUpperCase()}
+              </span>
+              <span className="lk-userChip__name">{firstName}</span>
+            </button>
+          ) : (
+            <div className="lk-authBtns">
+              <Link to="/" className="lk-btn lk-btn--ghost">
+                Login
+              </Link>
+              <Link to="/register" className="lk-btn lk-btn--primary">
+                Get Started
+              </Link>
+            </div>
+          )}
+
+          {/* Logout (desktop) */}
+          {isLoggedIn ? (
+            <button className="lk-logout" onClick={handleLogout} type="button">
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
+          ) : null}
+
+          {/* Mobile menu toggle */}
+          <button
+            className="lk-menuBtn"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+            type="button"
+          >
+            {open ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE DRAWER */}
+      {open && (
+        <div className="lk-mobile">
+          <NavLink
+            to="/explore-map"
+            className={({ isActive }) =>
+              isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"
+            }
+            onClick={() => setOpen(false)}
+          >
+            <Compass size={18} />
+            <span>Explore</span>
+          </NavLink>
+
           {isLoggedIn && (
-            <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+            <NavLink
+              to="/home"
+              className={({ isActive }) =>
+                isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"
+              }
+              onClick={() => setOpen(false)}
+            >
               <User size={18} />
               <span>Dashboard</span>
             </NavLink>
           )}
 
-          <NavLink to="/explore-map" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
-            <Compass size={18} />
-            <span>Explore</span>
-          </NavLink>
-          
-          <NavLink to="/explore-map" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
-            <Compass size={18} />
-            <span>Explore</span>
-          </NavLink>
-        </div>
-
-        {/* Desktop Actions */}
-        <div className="nav-right">
-          {isLoggedIn ? (
-            <>
-              <div className="user-profile">
-                <div className="user-avatar">
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
-                </div>
-                <div className="user-info">
-                  <span className="user-name">{currentUser.name || "User"}</span>
-                  <span className="user-role">Explorer</span>
-                </div>
-              </div>
-              <button onClick={handleLogout} className="btn btn-logout">
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="btn btn-ghost">
-                Login
-              </Link>
-              <Link to="/register" className="btn btn-primary">
-                Get Started
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button 
-          className="mobile-toggle" 
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Mobile Menu */}
-      {open && (
-        <div className="mobile-menu">
-          <NavLink 
-            to="/explore-map" 
-            className={({ isActive }) => `mobile-link ${isActive ? "active" : ""}`}
-            onClick={() => setOpen(false)}
-          >
-            <Compass size={20} />
-            <span>Explore Map</span>
-          </NavLink>
-          
-          {isLoggedIn && (
-            <NavLink 
-              to="/dashboard" 
-              className={({ isActive }) => `mobile-link ${isActive ? "active" : ""}`}
-              onClick={() => setOpen(false)}
-            >
-              <User size={20} />
-              <span>Dashboard</span>
-            </NavLink>
-          )}
-
-          <div className="mobile-divider"></div>
+          <div className="lk-mDivider" />
 
           {isLoggedIn ? (
-            <>
-              <div className="mobile-profile">
-                <div className="user-avatar">
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
-                </div>
-                <div className="user-info">
-                  <span className="user-name">{currentUser.name || "User"}</span>
-                  <span className="user-role">Explorer</span>
-                </div>
-              </div>
-              <button onClick={handleLogout} className="btn btn-logout btn-full">
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            </>
+            <button className="lk-mLogout" onClick={handleLogout} type="button">
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
           ) : (
-            <div className="mobile-actions">
-              <Link to="/login" className="btn btn-ghost btn-full" onClick={() => setOpen(false)}>
+            <div className="lk-mAuth">
+              <Link to="/" className="lk-btn lk-btn--ghost" onClick={() => setOpen(false)}>
                 Login
               </Link>
-              <Link to="/register" className="btn btn-primary btn-full" onClick={() => setOpen(false)}>
+              <Link
+                to="/register"
+                className="lk-btn lk-btn--primary"
+                onClick={() => setOpen(false)}
+              >
                 Get Started
               </Link>
             </div>
           )}
         </div>
       )}
-    </nav>
+    </header>
   );
 };
 
