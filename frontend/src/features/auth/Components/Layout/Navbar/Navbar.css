@@ -127,7 +127,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  border-radius: 12px;
+  border-radius: 18px;
   text-decoration: none;
   color: var(--text);
   font-size: 15px;
@@ -142,7 +142,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(22, 126, 224, 0.08), rgba(27, 141, 40, 0.08));
+  background: linear-gradient(135deg,  #7ad68579, rgba(39, 176, 174, 0.357));
   opacity: 0;
   transition: opacity 0.3s ease;
   border-radius: 12px;

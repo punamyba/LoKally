@@ -44,10 +44,6 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="nav-center">
-          <NavLink to="/explore-map" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
-            <Compass size={18} />
-            <span>Explore</span>
-          </NavLink>
           
           {isLoggedIn && (
             <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
@@ -55,6 +51,16 @@ const Navbar = () => {
               <span>Dashboard</span>
             </NavLink>
           )}
+
+          <NavLink to="/explore-map" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+            <Compass size={18} />
+            <span>Explore</span>
+          </NavLink>
+          
+          <NavLink to="/explore-map" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
+            <Compass size={18} />
+            <span>Explore</span>
+          </NavLink>
         </div>
 
         {/* Desktop Actions */}

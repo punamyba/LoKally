@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import Navbar from "../Components/Layout/Navbar/Navbar";
-import Footer from "../Components/Layout/Footer/Footer";
-
 import MapView from "./MapView";
 import type { Place } from "./Type";
-
 import MapSearchPanel from "../Components/MapComponents/MapSearchPanel";
 import "./ExploreMap.css";
 
@@ -50,6 +47,7 @@ export default function ExploreMap() {
   const filteredPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return places;
+
     return places.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
@@ -57,93 +55,58 @@ export default function ExploreMap() {
     );
   }, [places, query]);
 
-  const closeDetails = () => {
-    setSelectedPlace(null);
-  };
+  const closeDetails = () => setSelectedPlace(null);
 
   return (
     <div className="exmap-page">
       <Navbar />
 
-      <div className="exmap-body">
-        <MapSearchPanel
-          query={query}
-          setQuery={setQuery}
-          results={filteredPlaces}
-          selectedPlaceId={selectedPlace?.id || null}
-          onPick={(p) => setSelectedPlace(p)}
+      <div className="exmap-mapArea">
+        <MapView
+          fullHeight
+          places={filteredPlaces}
+          selectedPlace={selectedPlace}
+          onSelectPlace={(p) => setSelectedPlace(p)}
         />
 
-        <div className="exmap-mapArea">
-          <MapView
-            fullHeight
-            places={filteredPlaces}
-            selectedPlace={selectedPlace}
-            onSelectPlace={(p) => setSelectedPlace(p)}
+        {/* LEFT PANEL */}
+        <div className="exmap-leftOverlay">
+          <MapSearchPanel
+            query={query}
+            setQuery={setQuery}
+            results={filteredPlaces}
+            selectedPlaceId={selectedPlace?.id || null}
+            onPick={(p) => setSelectedPlace(p)}
           />
+        </div>
 
-          {selectedPlace && (
-            <div className="exmap-details">
-              {selectedPlace.image && (
-                <div className="exmap-detailsImageWrap">
-                  <img
-                    className="exmap-detailsImage"
-                    src={selectedPlace.image}
-                    alt={selectedPlace.name}
-                  />
-                </div>
-              )}
+        {/* RIGHT DETAILS */}
+        {selectedPlace && (
+          <div className="exmap-details">
+            {selectedPlace.image && (
+              <img
+                className="exmap-detailsImage"
+                src={selectedPlace.image}
+                alt={selectedPlace.name}
+              />
+            )}
 
-              <div className="exmap-detailsContent">
-                <div className="exmap-detailsTop">
-                  <div>
-                    <div className="exmap-detailsTitle">
-                      {selectedPlace.name}
-                    </div>
+            <div className="exmap-detailsContent">
+              <div className="exmap-detailsTop">
+                <h3>{selectedPlace.name}</h3>
+                <button onClick={closeDetails}>✕</button>
+              </div>
 
-                    {selectedPlace.category && (
-                      <div className="exmap-detailsTag">
-                        {selectedPlace.category}
-                      </div>
-                    )}
-                  </div>
+              <p>{selectedPlace.description}</p>
 
-                  <button
-                    className="exmap-detailsClose"
-                    onClick={closeDetails}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {selectedPlace.description && (
-                  <p className="exmap-detailsDesc">
-                    {selectedPlace.description}
-                  </p>
-                )}
-
-                <div className="exmap-coords">
-                  <div>
-                    <b>Latitude:</b> {selectedPlace.lat.toFixed(6)}
-                  </div>
-                  <div>
-                    <b>Longitude:</b> {selectedPlace.lng.toFixed(6)}
-                  </div>
-                </div>
-
-                <button
-                  className="exmap-detailsBtn"
-                  onClick={() => alert("Full details page later")}
-                >
-                  View Full Details
-                </button>
+              <div className="coords">
+                <b>Lat:</b> {selectedPlace.lat.toFixed(6)} <br />
+                <b>Lng:</b> {selectedPlace.lng.toFixed(6)}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
- 
     </div>
   );
 }

@@ -1,102 +1,60 @@
 .exmap-page {
-  min-height: 100vh;
-  width: 100%;
-  background: linear-gradient(#9dd0fa, #fdfdfd, #affda2);
-}
-
-.exmap-body {
-  height: calc(100vh - 72px);
+  height: 100vh;
   display: flex;
-  position: relative;
-  overflow: hidden;
+  flex-direction: column;
 }
 
 .exmap-mapArea {
-  flex: 1;
   position: relative;
-  height: 100%;
-  min-width: 0;
+  flex: 1;
 }
 
+/* LEFT PANEL FIX */
+.exmap-leftOverlay {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 380px;               /* bigger */
+  max-height: 85%;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  z-index: 1000;              /* IMPORTANT FIX */
+}
+
+/* DETAILS PANEL */
 .exmap-details {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 350px;
+  top: 30px;
+  right: 30px;
+  width: 360px;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   z-index: 1000;
 }
 
-.exmap-detailsImageWrap {
-  height: 180px;
-  overflow: hidden;
-}
-
 .exmap-detailsImage {
   width: 100%;
-  height: 100%;
+  height: 200px;
   object-fit: cover;
 }
 
 .exmap-detailsContent {
-  padding: 15px;
+  padding: 20px;
 }
 
 .exmap-detailsTop {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
-.exmap-detailsTitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: #1b8d28;
-}
-
-.exmap-detailsTag {
-  margin-top: 6px;
-  display: inline-block;
-  padding: 5px 10px;
-  border-radius: 20px;
-  background: #167ee020;
-  color: #167ee0;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.exmap-detailsClose {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.exmap-detailsDesc {
+.coords {
   margin-top: 10px;
   font-size: 14px;
-  color: #444;
-}
-
-.exmap-coords {
-  margin-top: 10px;
-  font-size: 13px;
-  background: #f2f2f2;
-  padding: 8px;
-  border-radius: 8px;
-}
-
-.exmap-detailsBtn {
-  margin-top: 12px;
-  width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, #167ee0, #1b8d28);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
 }
