@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import './home.css';
 import { 
   Search, 
@@ -10,8 +9,7 @@ import {
   Church,
   Waves,
   Home as HomeIcon,
-  Menu,
-  X,
+ 
   User,
   Heart,
   MessageCircle,
@@ -28,7 +26,7 @@ import "../Components/Layout/Footer/Footer.css";
 
 
 const Home = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+  
 
   const categories = [
     { name: 'Mountains', icon: <Mountain />, count: 45 },
@@ -104,10 +102,6 @@ const Home = () => {
     }
   ];
 
-  const logout = () => {
-    localStorage.clear();
-    window.location.href = "/";
-  };
 
   return (
     <div className="home-container">
