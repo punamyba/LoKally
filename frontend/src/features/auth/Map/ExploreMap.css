@@ -23,7 +23,6 @@
   right: 22px;
   bottom: 22px;
   z-index: 1200;
-
   border: none;
   cursor: pointer;
   padding: 12px 18px;
@@ -42,26 +41,35 @@
   display: none;
 }
 
+/* =============================================
+   LEFT OVERLAY — explore/search panel
+   Desktop: 420px wide, nearly full map height
+============================================= */
 .exmap-leftOverlay {
   position: absolute;
   top: 18px;
   left: 18px;
   z-index: 1100;
 
-  width: 380px;
+  width: 420px;
   max-width: calc(100vw - 36px);
+  height: calc(100% - 36px);
   border-radius: 22px;
   overflow: hidden;
 
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(8px);
   box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+
+  display: flex;
+  flex-direction: column;
 }
 
 .exmap-drawerHeader {
   display: none;
 }
 
+/* place details card — right side desktop */
 .exmap-details {
   position: absolute;
   top: 20px;
@@ -146,6 +154,7 @@
   cursor: pointer;
 }
 
+/* add place panel — right side desktop */
 .exmap-addPanel {
   position: absolute;
   top: 18px;
@@ -157,7 +166,8 @@
 
   background: rgba(255, 255, 255, 0.95);
   border-radius: 18px;
-  overflow: hidden;
+  overflow: hidden auto;
+  max-height: calc(100vh - 100px);
   box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
 }
 
@@ -189,6 +199,7 @@
   border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .exmap-addForm {
@@ -261,153 +272,351 @@
   line-height: 1.3;
 }
 
+/* ============================================
+   IMAGE UPLOAD + SLIDESHOW STYLES
+============================================ */
+
+.exmap-imgCount {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-top: -2px;
+}
+
+.exmap-slideshow {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+}
+
+/* taller preview on desktop */
+.exmap-slideMain {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  background: #111;
+}
+
+.exmap-slideImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+.exmap-slideArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.82);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  z-index: 2;
+  transition: background 0.15s;
+}
+
+.exmap-slideArrow:hover { background: rgba(255,255,255,1); }
+.exmap-slideArrow--left { left: 8px; }
+.exmap-slideArrow--right { right: 8px; }
+
+.exmap-slideBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.exmap-slideRemove {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.exmap-slideRemove:hover { background: rgba(220, 38, 38, 1); }
+
+.exmap-thumbStrip {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  background: #1a1a1a;
+  scrollbar-width: none;
+}
+
+.exmap-thumbStrip::-webkit-scrollbar { display: none; }
+
+.exmap-thumb {
+  flex-shrink: 0;
+  width: 52px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  transition: border-color 0.15s;
+}
+
+.exmap-thumb.active { border-color: #167ee0; }
+
+.exmap-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.exmap-uploadBox {
+  border: 2px dashed #c3d9f5;
+  border-radius: 14px;
+  padding: 22px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: #f5f9ff;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.exmap-uploadBox:hover {
+  background: #eaf3ff;
+  border-color: #167ee0;
+}
+
+.exmap-uploadIcon { font-size: 28px; }
+
+.exmap-uploadText {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.exmap-uploadSub {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ============================================
+/* ============================================
+   MOBILE BREAKPOINT
+   Key idea:
+   - panel slides up from bottom, takes 52vh
+   - inside panel: flex column so list scrolls
+   - drawer header stays pinned at top
+   - smooth cubic-bezier spring animation
+============================================= */
 @media (max-width: 768px) {
+
+  /* "Open sidebar" button — floats over map */
   .exmap-openSidebar {
     display: block;
     position: absolute;
-    top: 64px;
+    top: 14px;
     left: 14px;
     z-index: 1550;
     border: none;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    padding: 9px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     font-weight: 800;
+    font-size: 13px;
+    color: #0f3d2e;
   }
 
+  /* BOTTOM SHEET PANEL
+     - fixed position so it sits over the map
+     - 52vh height = about half screen
+     - starts hidden below screen, slides up when .open
+     - flex column so header is pinned, list scrolls
+  */
   .exmap-leftOverlay {
+    position: fixed;
     left: 0;
     right: 0;
-    top: auto;
     bottom: 0;
+    top: auto;
     width: 100%;
     max-width: none;
-    border-radius: 18px 18px 0 0;
+    height: 52vh;
+    border-radius: 22px 22px 0 0;
     transform: translateY(100%);
-    transition: transform 0.25s ease;
-    height: 46vh;
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
     z-index: 1600;
+    background: #fff;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .exmap-leftOverlay.open {
     transform: translateY(0);
   }
 
+  /* DRAWER HEADER — pinned at top of sheet, never scrolls */
   .exmap-drawerHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px;
-    border-bottom: 1px solid rgba(22, 126, 224, 0.12);
-    background: rgba(255, 255, 255, 0.96);
+    padding: 18px 16px 12px;
+    background: #fff;
+    flex-shrink: 0;
+    position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  /* drag handle pill at top center */
+  .exmap-drawerHeader::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 99px;
+    background: #e2e8f0;
   }
 
   .exmap-drawerTitle {
     font-weight: 900;
-    font-size: 14px;
+    font-size: 15px;
     color: #0f3d2e;
   }
 
   .exmap-drawerClose {
     border: none;
-    background: #eef2f7;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    background: #f1f5f9;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 900;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
+  /* FAB — round + icon only */
   .exmap-fab {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 999px;
     padding: 0;
     display: grid;
     place-items: center;
-    font-size: 26px;
-    right: 16px;
-    bottom: 16px;
+    right: 14px;
+    bottom: 14px;
   }
 
-  .fab-text {
-    display: none;
-  }
+  .fab-text { display: none; }
 
   .fab-plus {
     display: block;
-    font-size: 28px;
+    font-size: 26px;
     line-height: 1;
   }
 
-  /* Details bottom sheet: remove blank space */
+  /* DETAILS — bottom sheet */
   .exmap-details {
+    position: fixed;
     top: auto;
     right: 0;
     left: 0;
     bottom: 0;
-
     width: 100%;
     max-width: none;
-
-    border-radius: 18px 18px 0 0;
-
+    border-radius: 22px 22px 0 0;
     height: auto;
     max-height: 58vh;
-
     z-index: 1700;
-
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
   }
 
-  /* Make image more visible */
   .exmap-detailsImageWrap {
-    height: 180px;
+    height: 170px;
     flex: 0 0 auto;
     overflow: hidden;
   }
 
-  .exmap-detailsImage {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  /* Scroll only the content (not whole sheet) */
+  /* scrollable content inside details */
   .exmap-detailsContent {
     padding: 14px;
     flex: 1 1 auto;
-    overflow: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Keep button at the bottom, no empty area */
   .exmap-detailsBtn {
     position: sticky;
     bottom: 0;
     margin-top: 12px;
   }
 
+  /* ADD PANEL — bottom sheet */
   .exmap-addPanel {
+    position: fixed;
     left: 0;
     right: 0;
     top: auto;
     bottom: 0;
-
     width: 100%;
     max-width: none;
-
-    border-radius: 18px 18px 0 0;
+    border-radius: 22px 22px 0 0;
     transform: translateY(100%);
-    transition: transform 0.25s ease;
-    height: 62vh;
-    overflow: auto;
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    height: 72vh;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
   }
 
   .exmap-addPanel.open {
     transform: translateY(0);
+  }
+
+  /* smaller image preview on mobile */
+  .exmap-slideMain {
+    height: 160px;
   }
 }

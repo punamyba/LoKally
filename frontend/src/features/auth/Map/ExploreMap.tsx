@@ -1,6 +1,6 @@
 /* ExploreMap.tsx */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Navbar from "../Components/Layout/Navbar/Navbar";
 import MapView from "./MapView";
 import type { Place } from "./Type";
@@ -76,9 +76,66 @@ export default function ExploreMap() {
   const [form, setForm] = useState({
     name: "",
     address: "",
-    photos: "",
     description: "",
   });
+
+  // --- IMAGE UPLOAD STUFF STARTS HERE ---
+  // uploadedImages = list of image preview URLs (from user's device)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  // activeSlide = which image is currently showing in the slideshow
+  const [activeSlide, setActiveSlide] = useState(0);
+  // fileInputRef = hidden file input, we click it when user clicks upload button
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // MAX 20 images allowed
+  const MAX_IMAGES = 20;
+
+  // when user picks files from their device
+  const handleImageFiles = (files: FileList | null) => {
+    if (!files) return;
+    const remaining = MAX_IMAGES - uploadedImages.length;
+    if (remaining <= 0) return;
+
+    // only take as many as we still have space for
+    const toProcess = Array.from(files).slice(0, remaining);
+
+    toProcess.forEach((file) => {
+      // convert file to base64 URL so we can show preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setUploadedImages((prev) => {
+          if (prev.length >= MAX_IMAGES) return prev;
+          return [...prev, result];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // after adding, go to the last slide so user sees new image
+    setActiveSlide(Math.max(0, uploadedImages.length));
+  };
+
+  // drag and drop: when user drops image files onto the upload box
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    handleImageFiles(e.dataTransfer.files);
+  };
+
+  // remove one image from the list by its index
+  const removeImage = (index: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+    // if we removed the last slide, go back one
+    setActiveSlide((prev) => Math.max(0, Math.min(prev, uploadedImages.length - 2)));
+  };
+
+  // go to previous slide
+  const prevSlide = () =>
+    setActiveSlide((prev) => (prev === 0 ? uploadedImages.length - 1 : prev - 1));
+
+  // go to next slide
+  const nextSlide = () =>
+    setActiveSlide((prev) => (prev === uploadedImages.length - 1 ? 0 : prev + 1));
+  // --- IMAGE UPLOAD STUFF ENDS HERE ---
 
   const places = useMemo(() => DEMO_PLACES, []);
 
@@ -143,6 +200,7 @@ export default function ExploreMap() {
       ...form,
       lat: tempPin?.lat,
       lng: tempPin?.lng,
+      images: uploadedImages, // send uploaded images to backend later
     });
 
     alert("Place add API later (console.log done).");
@@ -311,17 +369,105 @@ export default function ExploreMap() {
                   />
                 </label>
 
-                <label className="exmap-label">
-                  Photos (URLs)
-                  <input
-                    className="exmap-input"
-                    value={form.photos}
-                    onChange={(e) =>
-                      setForm((s) => ({ ...s, photos: e.target.value }))
-                    }
-                    placeholder="Paste image URLs separated by comma"
-                  />
-                </label>
+                {/* ======= IMAGE UPLOAD SECTION (new) ======= */}
+                <div className="exmap-label">
+                  Photos
+                  <div className="exmap-imgCount">
+                    {uploadedImages.length}/{MAX_IMAGES} images added
+                  </div>
+
+                  {/* --- SLIDESHOW: shows when at least 1 image is uploaded --- */}
+                  {uploadedImages.length > 0 && (
+                    <div className="exmap-slideshow">
+                      {/* big preview of current image */}
+                      <div className="exmap-slideMain">
+                        <img
+                          src={uploadedImages[activeSlide]}
+                          alt={`Preview ${activeSlide + 1}`}
+                          className="exmap-slideImg"
+                        />
+
+                        {/* left / right arrows — only show if more than 1 image */}
+                        {uploadedImages.length > 1 && (
+                          <>
+                            <button
+                              className="exmap-slideArrow exmap-slideArrow--left"
+                              onClick={prevSlide}
+                              type="button"
+                            >
+                              ‹
+                            </button>
+                            <button
+                              className="exmap-slideArrow exmap-slideArrow--right"
+                              onClick={nextSlide}
+                              type="button"
+                            >
+                              ›
+                            </button>
+                          </>
+                        )}
+
+                        {/* image counter badge eg: 2 / 5 */}
+                        <div className="exmap-slideBadge">
+                          {activeSlide + 1} / {uploadedImages.length}
+                        </div>
+
+                        {/* remove current image button */}
+                        <button
+                          className="exmap-slideRemove"
+                          onClick={() => removeImage(activeSlide)}
+                          type="button"
+                          title="Remove this image"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* small thumbnail strip below the big image */}
+                      <div className="exmap-thumbStrip">
+                        {uploadedImages.map((img, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            className={`exmap-thumb ${i === activeSlide ? "active" : ""}`}
+                            onClick={() => setActiveSlide(i)}
+                          >
+                            <img src={img} alt={`thumb ${i + 1}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* --- UPLOAD BOX: drag & drop or click to pick files --- */}
+                  {uploadedImages.length < MAX_IMAGES && (
+                    <div
+                      className="exmap-uploadBox"
+                      onDrop={handleDrop}
+                      onDragOver={(e) => e.preventDefault()} // needed to allow drop
+                      onClick={() => fileInputRef.current?.click()} // click box = open file picker
+                    >
+                      <div className="exmap-uploadIcon">🖼️</div>
+                      <div className="exmap-uploadText">
+                        Click or drag & drop images here
+                      </div>
+                      <div className="exmap-uploadSub">
+                        JPG, PNG, WEBP · Max {MAX_IMAGES} images
+                      </div>
+
+                      {/* hidden file input — accepts multiple images */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        style={{ display: "none" }}
+                        onChange={(e) => handleImageFiles(e.target.files)}
+                      />
+                    </div>
+                  )}
+                </div>
+                {/* ======= IMAGE UPLOAD SECTION ENDS ======= */}
 
                 <label className="exmap-label">
                   Description

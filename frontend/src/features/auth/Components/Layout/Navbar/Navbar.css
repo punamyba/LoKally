@@ -31,9 +31,9 @@
 .lk-nav__inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 18px 24px;           /* ✅ taller like before */
+  padding: 18px 26px;       
   display: grid;
-  grid-template-columns: auto minmax(320px, 620px) auto; /* ✅ search controlled */
+  grid-template-columns: auto minmax(320px, 620px) auto; 
   gap: 16px;
   align-items: center;
 }
@@ -72,7 +72,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 50px;                 /* ✅ bigger */
+  height: 50px;          
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(22, 126, 224, 0.18);
@@ -125,10 +125,10 @@
 
 .lk-link {
   text-decoration: none;
-  color: #334155;     /* ✅ softer dark */
+  color: #4589e8;     
   font-weight: 800;
   font-size: 14px;
-  padding: 10px 14px; /* ✅ slightly bigger */
+  padding: 10px 14px; 
   border-radius: 999px;
   background: transparent;
 }
@@ -171,8 +171,8 @@
   align-items: center;
   gap: 10px;
   border: 1px solid rgba(27, 141, 40, 0.18);
-  background: rgba(27, 141, 40, 0.06); /* ✅ soft green tint */
-  height: 50px;                        /* ✅ bigger */
+  background: rgba(27, 141, 40, 0.06); 
+  height: 50px;                    
   padding: 0 14px 0 10px;
   border-radius: 999px;
   cursor: pointer;
@@ -193,7 +193,7 @@
 .lk-userChip__name {
   font-weight: 900;
   font-size: 14px;
-  color: #0f3d2e;   /* ✅ greenish dark */
+  color: #0f3d2e;   
 }
 
 
@@ -323,12 +323,12 @@
 
   .lk-logout {
     display: inline-flex;
-    height: 50px;     /* ✅ bigger */
+    height: 50px;    
     padding: 0 16px;
   }
 
   .lk-iconBtn {
-    width: 50px;      /* ✅ bigger */
+    width: 50px;      
     height: 50px;
   }
 

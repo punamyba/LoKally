@@ -10,17 +10,17 @@ export const verifyEmail = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // ❌ invalid token → frontend error page
+      //  invalid token → frontend error page
       return res.redirect("http://localhost:5173/?verify=invalid");
     }
 
-    // ✅ verify user
+    //  verify user
     await pool.query(
       "UPDATE users SET is_verified=true, verification_token=null WHERE id=$1",
       [result.rows[0].id]
     );
 
-    // ✅ redirect to frontend login page
+    //  redirect to frontend login page
     return res.redirect("http://localhost:5173/?verify=success");
 
   } catch (err) {
