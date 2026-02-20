@@ -1,0 +1,261 @@
+// AdminAddPlace.tsx — LoKally Admin v2 (Multiple Photos)
+import { useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Upload, MapPin, CheckCircle, X, Images, Plus } from "lucide-react";
+import { adminApi } from "../AdminApi";
+import "./AdminAddPlace.css";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+type LatLng = { lat: number; lng: number };
+
+function MapPicker({ pin, setPin }: { pin: LatLng; setPin: (p: LatLng) => void }) {
+  useMapEvents({
+    click(e) { setPin({ lat: e.latlng.lat, lng: e.latlng.lng }); },
+  });
+  return (
+    <Marker position={[pin.lat, pin.lng]} draggable
+      eventHandlers={{
+        dragend(e) {
+          const ll = (e.target as L.Marker).getLatLng();
+          setPin({ lat: ll.lat, lng: ll.lng });
+        },
+      }}
+    />
+  );
+}
+
+const CATEGORIES = [
+  "Nature", "Heritage", "Temple", "Lake", "Viewpoint",
+  "Hidden Gem", "Adventure", "Cultural", "Food", "Other",
+];
+
+const MAX_PHOTOS = 20;
+
+export default function AdminAddPlace() {
+  const [form, setForm] = useState({ name: "", address: "", description: "", category: "" });
+  const [pin, setPin] = useState<LatLng>({ lat: 27.7172, lng: 85.324 });
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImages = (files: FileList) => {
+    const remaining = MAX_PHOTOS - imageFiles.length;
+    const newFiles = Array.from(files).slice(0, remaining);
+
+    newFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreviews((prev) => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+    setImageFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) handleImages(e.dataTransfer.files);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.address) { setError("Name and address are required!"); return; }
+    setError("");
+    setLoading(true);
+
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("address", form.address);
+    fd.append("description", form.description);
+    fd.append("category", form.category);
+    fd.append("lat", pin.lat.toString());
+    fd.append("lng", pin.lng.toString());
+
+    // Append all images — primary image first
+    imageFiles.forEach((file, i) => {
+      fd.append(i === 0 ? "image" : `image_${i}`, file);
+    });
+
+    const res = await adminApi.addPlace(fd);
+    setLoading(false);
+
+    if (res.success) {
+      setSuccess(true);
+      setForm({ name: "", address: "", description: "", category: "" });
+      setImageFiles([]);
+      setImagePreviews([]);
+      setPin({ lat: 27.7172, lng: 85.324 });
+      setTimeout(() => setSuccess(false), 4000);
+    } else {
+      setError(res.message || "Failed to add place. Try again.");
+    }
+  };
+
+  return (
+    <div className="aap-root">
+      <div className="aap-header">
+        <h1 className="aap-title">Add New Place</h1>
+        <p className="aap-subtitle">
+          Admin-added places are <strong>auto-approved</strong> and visible on the map immediately.
+        </p>
+      </div>
+
+      <div className="aap-body">
+
+        {/* ── FORM ─────────────────────────────── */}
+        <div className="aap-form-wrap">
+          {success && (
+            <div className="aap-success">
+              <CheckCircle size={15} strokeWidth={2.5} />
+              Place added and is now live on the map!
+            </div>
+          )}
+          {error && (
+            <div className="aap-error">
+              <X size={15} strokeWidth={2.5} /> {error}
+            </div>
+          )}
+
+          <form className="aap-form" onSubmit={handleSubmit}>
+            <div className="aap-field">
+              <label className="aap-label">Place Name <span className="aap-req">*</span></label>
+              <input className="aap-input" value={form.name}
+                onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+                placeholder="e.g. Phewa Lake" />
+            </div>
+
+            <div className="aap-field">
+              <label className="aap-label">Address <span className="aap-req">*</span></label>
+              <input className="aap-input" value={form.address}
+                onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
+                placeholder="e.g. Pokhara, Nepal" />
+            </div>
+
+            <div className="aap-field">
+              <label className="aap-label">Category</label>
+              <select className="aap-select" value={form.category}
+                onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))}>
+                <option value="">Select category</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div className="aap-field">
+              <label className="aap-label">Description</label>
+              <textarea className="aap-textarea" value={form.description}
+                onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                placeholder="What makes this place special?" rows={3} />
+            </div>
+
+            {/* ── PHOTOS SECTION ─────────────────── */}
+            <div className="aap-field">
+              <div className="aap-photo-header">
+                <label className="aap-label">
+                  <Images size={14} strokeWidth={2} />
+                  Photos
+                </label>
+                <span className="aap-photo-count">
+                  {imageFiles.length} / {MAX_PHOTOS}
+                </span>
+              </div>
+
+              {/* Preview grid */}
+              {imagePreviews.length > 0 && (
+                <div className="aap-photos-grid">
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className={`aap-photo-thumb ${i === 0 ? "aap-photo-thumb--primary" : ""}`}>
+                      <img src={src} alt={`photo ${i + 1}`} />
+                      {i === 0 && <span className="aap-photo-primary-tag">Cover</span>}
+                      <button type="button" className="aap-photo-remove" onClick={() => removeImage(i)}>
+                        <X size={11} strokeWidth={3} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Add more button in grid */}
+                  {imageFiles.length < MAX_PHOTOS && (
+                    <div className="aap-photo-add-more" onClick={() => fileRef.current?.click()}>
+                      <Plus size={20} strokeWidth={2} />
+                      <span>Add</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upload dropzone — only show if no photos yet */}
+              {imagePreviews.length === 0 && (
+                <div
+                  className="aap-upload-box"
+                  onClick={() => fileRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  <Upload size={24} strokeWidth={1.5} className="aap-upload-icon" />
+                  <div className="aap-upload-text">Click or drag to upload photos</div>
+                  <div className="aap-upload-sub">Up to {MAX_PHOTOS} photos · JPG, PNG, WEBP · Max 5MB each</div>
+                </div>
+              )}
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={(e) => e.target.files && handleImages(e.target.files)}
+              />
+            </div>
+
+            {/* Coordinates */}
+            <div className="aap-coords-row">
+              <div className="aap-field">
+                <label className="aap-label">Latitude</label>
+                <input className="aap-input aap-input--readonly" value={pin.lat.toFixed(6)} readOnly />
+              </div>
+              <div className="aap-field">
+                <label className="aap-label">Longitude</label>
+                <input className="aap-input aap-input--readonly" value={pin.lng.toFixed(6)} readOnly />
+              </div>
+            </div>
+
+            <div className="aap-map-hint">
+              <MapPin size={13} strokeWidth={2} />
+              Click on the map or drag the pin to set location
+            </div>
+
+            <button className="aap-submit" type="submit" disabled={loading}>
+              {loading ? "Adding..." : (
+                <><CheckCircle size={16} strokeWidth={2.5} /> Add Place (Auto Approved)</>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* ── MAP ─────────────────────────────── */}
+        <div className="aap-map-wrap">
+          <MapContainer center={[pin.lat, pin.lng]} zoom={7}
+            style={{ height: "100%", width: "100%", borderRadius: "16px" }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <MapPicker pin={pin} setPin={setPin} />
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+}

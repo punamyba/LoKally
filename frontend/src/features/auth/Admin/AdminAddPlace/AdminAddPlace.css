@@ -1,0 +1,235 @@
+/* AdminAddPlace.css — LoKally Admin v2 */
+
+.aap-root { padding: 32px 36px; max-width: 1200px; }
+.aap-header { margin-bottom: 26px; }
+.aap-title { font-family: var(--font-head); font-size: 26px; font-weight: 700; color: var(--slate-900); letter-spacing: -0.3px; }
+.aap-subtitle { font-size: 13.5px; color: var(--slate-500); margin-top: 5px; }
+.aap-subtitle strong { color: var(--green-600); font-weight: 600; }
+
+.aap-body { display: grid; grid-template-columns: 420px 1fr; gap: 20px; align-items: start; }
+
+.aap-form-wrap {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.aap-success {
+  background: var(--green-100);
+  color: var(--green-700);
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.aap-error {
+  background: var(--red-100);
+  color: #b91c1c;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.aap-form { display: flex; flex-direction: column; gap: 14px; }
+.aap-field { display: flex; flex-direction: column; gap: 6px; }
+.aap-label { font-size: 13px; font-weight: 600; color: var(--slate-700); }
+.aap-req { color: var(--red-500); }
+
+.aap-input, .aap-select, .aap-textarea {
+  padding: 9px 13px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--slate-200);
+  font-size: 13.5px;
+  outline: none;
+  font-family: var(--font);
+  background: white;
+  transition: border-color 0.15s;
+  color: var(--slate-900);
+}
+.aap-input:focus, .aap-select:focus, .aap-textarea:focus { border-color: var(--blue-500); }
+.aap-input::placeholder, .aap-textarea::placeholder { color: var(--slate-400); }
+.aap-input--readonly { background: var(--slate-50); color: var(--slate-500); cursor: not-allowed; }
+.aap-textarea { resize: vertical; }
+
+.aap-img-preview { position: relative; border-radius: var(--radius-lg); overflow: hidden; }
+.aap-img-preview img { width: 100%; height: 160px; object-fit: cover; display: block; }
+.aap-img-remove {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(239,68,68,0.9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font);
+}
+
+.aap-upload-box {
+  border: 1.5px dashed var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--slate-50);
+  transition: all 0.15s;
+}
+.aap-upload-box:hover { background: var(--blue-50); border-color: var(--blue-400); }
+.aap-upload-icon { color: var(--slate-400); margin-bottom: 8px; }
+.aap-upload-text { font-size: 13px; font-weight: 600; color: var(--slate-700); }
+.aap-upload-sub { font-size: 11px; color: var(--slate-400); margin-top: 3px; }
+
+.aap-coords-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.aap-map-hint {
+  font-size: 12px;
+  color: var(--blue-700);
+  background: var(--blue-50);
+  padding: 9px 13px;
+  border-radius: var(--radius);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aap-submit {
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--blue-600);
+  color: white;
+  font-family: var(--font);
+  transition: all 0.18s;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.aap-submit:hover:not(:disabled) { background: var(--blue-700); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(29,78,216,0.25); }
+.aap-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.aap-map-wrap { height: 560px; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-sm); position: sticky; top: 20px; }
+
+/* ── MULTI-PHOTO STYLES ────────────────────────── */
+.aap-photo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.aap-photo-header .aap-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.aap-photo-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-400);
+  background: var(--slate-100);
+  padding: 2px 9px;
+  border-radius: 99px;
+}
+
+.aap-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.aap-photo-thumb {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: var(--slate-100);
+}
+
+.aap-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.aap-photo-thumb--primary {
+  grid-column: span 2;
+  grid-row: span 2;
+  border-radius: 12px;
+  border: 2px solid var(--blue-500);
+}
+
+.aap-photo-primary-tag {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: var(--blue-600);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: 0.3px;
+}
+
+.aap-photo-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  background: rgba(15,23,42,0.65);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.aap-photo-thumb:hover .aap-photo-remove { opacity: 1; }
+
+.aap-photo-add-more {
+  border: 1.5px dashed var(--slate-200);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--slate-400);
+  font-size: 11px;
+  font-weight: 600;
+  aspect-ratio: 1;
+  transition: all 0.15s;
+  background: var(--slate-50);
+}
+.aap-photo-add-more:hover {
+  border-color: var(--blue-400);
+  color: var(--blue-500);
+  background: var(--blue-50);
+}

@@ -1,0 +1,66 @@
+/* AdminLayout.css — LoKally Admin v2 */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --blue-950: #080f1e;
+  --blue-900: #0c1e3a;
+  --blue-800: #0f2d5c;
+  --blue-700: #1a4080;
+  --blue-600: #1d4ed8;
+  --blue-500: #3b82f6;
+  --blue-400: #60a5fa;
+  --blue-100: #dbeafe;
+  --blue-50:  #eff6ff;
+
+  --green-700: #15803d;
+  --green-600: #16a34a;
+  --green-500: #22c55e;
+  --green-100: #dcfce7;
+  --green-50:  #f0fdf4;
+
+  --slate-900: #0f172a;
+  --slate-700: #334155;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50:  #f8fafc;
+
+  --amber-500: #f59e0b;
+  --amber-100: #fef3c7;
+  --red-500:   #ef4444;
+  --red-100:   #fee2e2;
+
+  --white: #ffffff;
+  --bg: #f0f4f9;
+
+  --shadow-xs: 0 1px 2px rgba(15,23,42,0.05);
+  --shadow-sm: 0 1px 4px rgba(15,23,42,0.07), 0 0 0 1px rgba(15,23,42,0.03);
+  --shadow-md: 0 4px 16px rgba(15,23,42,0.08);
+  --shadow-lg: 0 12px 40px rgba(15,23,42,0.12);
+
+  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+
+  --font: 'DM Sans', sans-serif;
+  --font-head: 'Outfit', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
+
+.adl-root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: var(--font);
+}
+
+.adl-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--bg);
+}
