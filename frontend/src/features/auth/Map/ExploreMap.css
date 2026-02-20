@@ -620,3 +620,31 @@
     height: 160px;
   }
 }
+/* Add these styles to your existing ExploreMap.css */
+
+/* Success message */
+.exmap-submitMsg {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.exmap-submitMsg--success {
+  background: #dcfce7;
+  color: #14532d;
+  border: 1px solid #bbf7d0;
+}
+
+.exmap-submitMsg--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Disabled submit button while loading */
+.exmap-addBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

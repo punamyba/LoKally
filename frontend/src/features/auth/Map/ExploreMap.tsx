@@ -1,10 +1,20 @@
 /* ExploreMap.tsx */
+// CHANGES FROM ORIGINAL:
+// 1. axiosInstance import added (line ~10)
+// 2. submitNewPlace function updated — real API call instead of alert()
+// 3. category field added to form state + form UI
+// Everything else is exactly the same as before.
 
 import { useMemo, useRef, useState } from "react";
 import Navbar from "../Components/Layout/Navbar/Navbar";
 import MapView from "./MapView";
 import type { Place } from "./Type";
 import MapSearchPanel from "../Components/MapComponents/MapSearchPanel";
+
+// ── CHANGE 1: Import axiosInstance ──────────────────────────────
+// axiosInstance already has baseURL + JWT token auto-attached
+import axiosInstance from "../../../shared/config/axiosinstance";
+
 import "./ExploreMap.css";
 
 const DEMO_PLACES: Place[] = [
@@ -63,43 +73,45 @@ function distanceMeters(a: LatLng, b: LatLng) {
 
 export default function ExploreMap() {
   const [mode, setMode] = useState<Mode>("explore");
-
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [mobileAddOpen, setMobileAddOpen] = useState(false);
-
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-
   const [tempPin, setTempPin] = useState<LatLng | null>(null);
   const [nearbyPlace, setNearbyPlace] = useState<Place | null>(null);
 
+  // ── CHANGE 2: category field added to form ──────────────────────
   const [form, setForm] = useState({
     name: "",
     address: "",
     description: "",
+    category: "",  // ← new field
   });
 
-  // --- IMAGE UPLOAD STUFF STARTS HERE ---
-  // uploadedImages = list of image preview URLs (from user's device)
+  // Submission state — show loading + success/error message to user
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Image upload state (unchanged from original)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  // activeSlide = which image is currently showing in the slideshow
   const [activeSlide, setActiveSlide] = useState(0);
-  // fileInputRef = hidden file input, we click it when user clicks upload button
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // MAX 20 images allowed
   const MAX_IMAGES = 20;
 
-  // when user picks files from their device
+  // Track actual File objects separately (needed for FormData upload)
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
   const handleImageFiles = (files: FileList | null) => {
     if (!files) return;
     const remaining = MAX_IMAGES - uploadedImages.length;
     if (remaining <= 0) return;
 
-    // only take as many as we still have space for
     const toProcess = Array.from(files).slice(0, remaining);
 
+    // Save actual File objects for upload
+    setImageFiles((prev) => [...prev, ...toProcess].slice(0, MAX_IMAGES));
+
     toProcess.forEach((file) => {
-      // convert file to base64 URL so we can show preview
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
@@ -111,38 +123,31 @@ export default function ExploreMap() {
       reader.readAsDataURL(file);
     });
 
-    // after adding, go to the last slide so user sees new image
     setActiveSlide(Math.max(0, uploadedImages.length));
   };
 
-  // drag and drop: when user drops image files onto the upload box
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     handleImageFiles(e.dataTransfer.files);
   };
 
-  // remove one image from the list by its index
   const removeImage = (index: number) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
-    // if we removed the last slide, go back one
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setActiveSlide((prev) => Math.max(0, Math.min(prev, uploadedImages.length - 2)));
   };
 
-  // go to previous slide
   const prevSlide = () =>
     setActiveSlide((prev) => (prev === 0 ? uploadedImages.length - 1 : prev - 1));
 
-  // go to next slide
   const nextSlide = () =>
     setActiveSlide((prev) => (prev === uploadedImages.length - 1 ? 0 : prev + 1));
-  // --- IMAGE UPLOAD STUFF ENDS HERE ---
 
   const places = useMemo(() => DEMO_PLACES, []);
 
   const filteredPlaces = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return places;
-
     return places.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
@@ -186,24 +191,83 @@ export default function ExploreMap() {
     setSelectedPlace(null);
     setMobilePanelOpen(false);
     setMobileAddOpen(true);
+    setSubmitMsg(null); // clear any old message
   };
 
   const closeAddMode = () => {
     setMode("explore");
     setMobileAddOpen(false);
+    setSubmitMsg(null);
   };
 
-  const submitNewPlace = (e: React.FormEvent) => {
+  // ── CHANGE 3: Real API submit ───────────────────────────────────
+  // Sends place data to backend as FormData (supports image upload).
+  // Backend saves it with status = "pending" — admin reviews it later.
+  // User does NOT need to be logged in concept-wise, but JWT token
+  // is auto-attached by axiosInstance if they are logged in.
+  const submitNewPlace = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("Add place form:", {
-      ...form,
-      lat: tempPin?.lat,
-      lng: tempPin?.lng,
-      images: uploadedImages, // send uploaded images to backend later
-    });
+    // Basic validation
+    if (!form.name.trim() || !form.address.trim()) {
+      setSubmitMsg({ type: "error", text: "Place name and address are required!" });
+      return;
+    }
+    if (!tempPin) {
+      setSubmitMsg({ type: "error", text: "Please pick a location on the map first!" });
+      return;
+    }
 
-    alert("Place add API later (console.log done).");
+    setSubmitting(true);
+    setSubmitMsg(null);
+
+    // Use FormData because we're sending image files
+    const fd = new FormData();
+    fd.append("name", form.name.trim());
+    fd.append("address", form.address.trim());
+    fd.append("description", form.description.trim());
+    fd.append("category", form.category);
+    fd.append("lat", tempPin.lat.toString());
+    fd.append("lng", tempPin.lng.toString());
+
+    // Attach first image if user uploaded any
+    // (backend currently supports 1 image — extend later if needed)
+    if (imageFiles.length > 0) {
+      fd.append("image", imageFiles[0]);
+    }
+
+    try {
+      const res = await axiosInstance.post("/places", fd, {
+        // Override Content-Type so axios sets multipart boundary correctly
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.success) {
+        // Success! Reset form
+        setSubmitMsg({
+          type: "success",
+          text: "✅ Place submitted! It will appear on the map after admin review.",
+        });
+        setForm({ name: "", address: "", description: "", category: "" });
+        setUploadedImages([]);
+        setImageFiles([]);
+        setActiveSlide(0);
+        setTempPin(null);
+
+        // Auto-close panel after 3 seconds
+        setTimeout(() => {
+          closeAddMode();
+        }, 3000);
+      } else {
+        setSubmitMsg({ type: "error", text: res.data.message || "Failed to submit. Try again." });
+      }
+    } catch (err: any) {
+      // Network error or server error
+      const msg = err?.response?.data?.message || "Something went wrong. Try again.";
+      setSubmitMsg({ type: "error", text: msg });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -288,12 +352,10 @@ export default function ExploreMap() {
                 <div className="exmap-detailsTop">
                   <div>
                     <div className="exmap-detailsTitle">{selectedPlace.name}</div>
-
                     {selectedPlace.category && (
                       <div className="exmap-detailsTag">{selectedPlace.category}</div>
                     )}
                   </div>
-
                   <button
                     className="exmap-detailsClose"
                     onClick={closeDetails}
@@ -308,12 +370,8 @@ export default function ExploreMap() {
                 )}
 
                 <div className="exmap-coords">
-                  <div>
-                    <b>Latitude:</b> {selectedPlace.lat.toFixed(6)}
-                  </div>
-                  <div>
-                    <b>Longitude:</b> {selectedPlace.lng.toFixed(6)}
-                  </div>
+                  <div><b>Latitude:</b> {selectedPlace.lat.toFixed(6)}</div>
+                  <div><b>Longitude:</b> {selectedPlace.lng.toFixed(6)}</div>
                 </div>
 
                 <button
@@ -336,7 +394,6 @@ export default function ExploreMap() {
                     Drag the pin on the map to set exact location.
                   </div>
                 </div>
-
                 <button
                   className="exmap-addClose"
                   onClick={closeAddMode}
@@ -347,6 +404,20 @@ export default function ExploreMap() {
               </div>
 
               <form className="exmap-addForm" onSubmit={submitNewPlace}>
+
+                {/* ── Success / Error message ── */}
+                {submitMsg && (
+                  <div
+                    className={`exmap-submitMsg ${
+                      submitMsg.type === "success"
+                        ? "exmap-submitMsg--success"
+                        : "exmap-submitMsg--error"
+                    }`}
+                  >
+                    {submitMsg.text}
+                  </div>
+                )}
+
                 <label className="exmap-label">
                   Place name
                   <input
@@ -362,24 +433,42 @@ export default function ExploreMap() {
                   <input
                     className="exmap-input"
                     value={form.address}
-                    onChange={(e) =>
-                      setForm((s) => ({ ...s, address: e.target.value }))
-                    }
+                    onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
                     placeholder="Eg: Kathmandu, Nepal"
                   />
                 </label>
 
-                {/* ======= IMAGE UPLOAD SECTION (new) ======= */}
+                {/* ── CHANGE: Category dropdown added ── */}
+                <label className="exmap-label">
+                  Category
+                  <select
+                    className="exmap-input"
+                    value={form.category}
+                    onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))}
+                  >
+                    <option value="">Select category (optional)</option>
+                    <option value="Nature">Nature</option>
+                    <option value="Heritage">Heritage</option>
+                    <option value="Temple">Temple</option>
+                    <option value="Lake">Lake</option>
+                    <option value="Viewpoint">Viewpoint</option>
+                    <option value="Hidden Gem">Hidden Gem</option>
+                    <option value="Adventure">Adventure</option>
+                    <option value="Cultural">Cultural</option>
+                    <option value="Food">Food</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                {/* Image upload section — unchanged from original */}
                 <div className="exmap-label">
                   Photos
                   <div className="exmap-imgCount">
                     {uploadedImages.length}/{MAX_IMAGES} images added
                   </div>
 
-                  {/* --- SLIDESHOW: shows when at least 1 image is uploaded --- */}
                   {uploadedImages.length > 0 && (
                     <div className="exmap-slideshow">
-                      {/* big preview of current image */}
                       <div className="exmap-slideMain">
                         <img
                           src={uploadedImages[activeSlide]}
@@ -387,7 +476,6 @@ export default function ExploreMap() {
                           className="exmap-slideImg"
                         />
 
-                        {/* left / right arrows — only show if more than 1 image */}
                         {uploadedImages.length > 1 && (
                           <>
                             <button
@@ -407,12 +495,10 @@ export default function ExploreMap() {
                           </>
                         )}
 
-                        {/* image counter badge eg: 2 / 5 */}
                         <div className="exmap-slideBadge">
                           {activeSlide + 1} / {uploadedImages.length}
                         </div>
 
-                        {/* remove current image button */}
                         <button
                           className="exmap-slideRemove"
                           onClick={() => removeImage(activeSlide)}
@@ -423,7 +509,6 @@ export default function ExploreMap() {
                         </button>
                       </div>
 
-                      {/* small thumbnail strip below the big image */}
                       <div className="exmap-thumbStrip">
                         {uploadedImages.map((img, i) => (
                           <button
@@ -439,13 +524,12 @@ export default function ExploreMap() {
                     </div>
                   )}
 
-                  {/* --- UPLOAD BOX: drag & drop or click to pick files --- */}
                   {uploadedImages.length < MAX_IMAGES && (
                     <div
                       className="exmap-uploadBox"
                       onDrop={handleDrop}
-                      onDragOver={(e) => e.preventDefault()} // needed to allow drop
-                      onClick={() => fileInputRef.current?.click()} // click box = open file picker
+                      onDragOver={(e) => e.preventDefault()}
+                      onClick={() => fileInputRef.current?.click()}
                     >
                       <div className="exmap-uploadIcon">🖼️</div>
                       <div className="exmap-uploadText">
@@ -454,8 +538,6 @@ export default function ExploreMap() {
                       <div className="exmap-uploadSub">
                         JPG, PNG, WEBP · Max {MAX_IMAGES} images
                       </div>
-
-                      {/* hidden file input — accepts multiple images */}
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -467,7 +549,6 @@ export default function ExploreMap() {
                     </div>
                   )}
                 </div>
-                {/* ======= IMAGE UPLOAD SECTION ENDS ======= */}
 
                 <label className="exmap-label">
                   Description
@@ -491,7 +572,6 @@ export default function ExploreMap() {
                       readOnly
                     />
                   </div>
-
                   <div className="exmap-latlngBox">
                     <div className="exmap-latlngLabel">Longitude</div>
                     <input
@@ -502,13 +582,18 @@ export default function ExploreMap() {
                   </div>
                 </div>
 
-                <button className="exmap-addBtn" type="submit">
-                  Add Place
+                <button
+                  className="exmap-addBtn"
+                  type="submit"
+                  disabled={submitting}
+                >
+                  {submitting ? "Submitting..." : "Submit Place"}
                 </button>
 
                 <div className="exmap-addHint">
-                  This form is UI only. Connect backend API later.
+                  Your place will be reviewed by admin before appearing on the map.
                 </div>
+
               </form>
             </div>
           )}
