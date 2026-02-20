@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../../shared/config/axiosinstance";
 import "./auth.css";
-import AuthLayout from "../Components/authlayout/AuthLayout";
+import AuthLayout from "../Components/Authlayout/AuthLayout";
 
 interface Props {
   email: string;
