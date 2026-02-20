@@ -16,7 +16,7 @@ import LogoTitle from "../Components/FormComponents/LogoTitle";
 import RadioInput from "../Components/FormComponents/RadioInput";
 
 import { registerApi } from "../../../shared/config/api";
-import AuthLayout from "../Components/authlayout/AuthLayout";
+import AuthLayout from "../Components/Authlayout/AuthLayout";
 
 
 type RegisterFormData = {

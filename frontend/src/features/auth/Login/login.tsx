@@ -8,7 +8,7 @@ import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
 import { useEffect } from "react";
 import { loginApi } from "../../../shared/config/api";
-import AuthLayout from "../Components/authlayout/AuthLayout";
+import AuthLayout from "../Components/Authlayout/AuthLayout";
 
 type LoginFormData = {
   email: string;
