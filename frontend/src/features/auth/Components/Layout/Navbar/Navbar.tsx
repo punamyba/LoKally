@@ -88,7 +88,7 @@ const Navbar = () => {
                   isActive ? "lk-link lk-link--active" : "lk-link"
                 }
               >
-                Dashboard
+                Home
               </NavLink>
             )}
             <NavLink
