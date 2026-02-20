@@ -1,70 +1,37 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import pool from "../config/db.js";
 import crypto from "crypto";
+import { Op } from "sequelize";
+import { User } from "../models/db.sync.js";
 import sendEmail from "../utils/sendEmail.js";
 
-/* =========================
-   HELPERS
-========================= */
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 const generateSessionToken = () => crypto.randomBytes(32).toString("hex");
 
-/* =========================
-   REGISTER USER
-========================= */
+/* REGISTER */
 export const registerUser = async (req, res) => {
   try {
-    const {
-      first_name,
-      last_name,
-      email,
-      phone,
-      dob,
-      address,
-      gender,
-      password,
-      confirm_password,
-    } = req.body;
+    const { first_name, last_name, email, phone, dob, address, gender, password, confirm_password } = req.body;
 
-    if (!email || !password || !confirm_password) {
+    if (!email || !password || !confirm_password)
       return res.status(400).json({ message: "Required fields missing" });
-    }
 
-    if (password !== confirm_password) {
+    if (password !== confirm_password)
       return res.status(400).json({ message: "Passwords do not match" });
-    }
 
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE email=$1",
-      [email]
-    );
-
-    if (existingUser.rows.length > 0) {
+    const existing = await User.findOne({ where: { email } });
+    if (existing)
       return res.status(400).json({ message: "Email already exists" });
-    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    await pool.query(
-      `
-      INSERT INTO users
-      (first_name, last_name, email, phone, dob, address, gender, password, is_verified, verification_token)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,$9)
-      `,
-      [
-        first_name,
-        last_name,
-        email,
-        phone,
-        dob,
-        address,
-        gender,
-        hashedPassword,
-        verificationToken,
-      ]
-    );
+    await User.create({
+      first_name, last_name, email, phone, dob, address, gender,
+      password: hashedPassword,
+      is_verified: false,
+      verification_token: verificationToken,
+    });
 
     try {
       const verifyLink = `http://localhost:5001/api/verify-email/${verificationToken}`;
@@ -73,50 +40,34 @@ export const registerUser = async (req, res) => {
       console.error("Register email failed:", e.message);
     }
 
-    return res.status(201).json({
-      message: "Registered successfully! Please verify your email",
-    });
+    return res.status(201).json({ message: "Registered successfully! Please verify your email" });
   } catch (err) {
     console.error("registerUser error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* =========================
-   LOGIN USER
-========================= */
+/* LOGIN */
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password)
       return res.status(400).json({ message: "Email and password required" });
-    }
 
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email=$1",
-      [email]
-    );
-
-    if (result.rows.length === 0) {
+    const user = await User.findOne({ where: { email } });
+    if (!user)
       return res.status(400).json({ message: "User not found" });
-    }
 
-    const user = result.rows[0];
-
-    if (!user.is_verified) {
-      return res
-        .status(403)
-        .json({ message: "Please verify your email before logging in" });
-    }
+    if (!user.is_verified)
+      return res.status(403).json({ message: "Please verify your email before logging in" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid password" });
-    }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -129,6 +80,7 @@ export const loginUser = async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -137,51 +89,31 @@ export const loginUser = async (req, res) => {
   }
 };
 
-/* =========================
-   FORGOT PASSWORD (SEND OTP)
-========================= */
+/* FORGOT PASSWORD */
 export const forgotPasswordSendCode = async (req, res) => {
   try {
     const { email } = req.body;
+    if (!email) return res.json({ message: "If account exists, code was sent." });
 
-    if (!email) {
-      return res.json({ message: "If account exists, code was sent." });
-    }
-
-    const userRes = await pool.query(
-      "SELECT id FROM users WHERE email=$1",
-      [email]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.json({ message: "If account exists, code was sent." });
-    }
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.json({ message: "If account exists, code was sent." });
 
     const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
 
-    await pool.query(
-      `
-      UPDATE users
-      SET reset_code_hash=$1,
-          reset_code_expires=NOW() + INTERVAL '10 minutes',
-          reset_session_hash=NULL,
-          reset_session_expires=NULL
-      WHERE email=$2
-      `,
-      [otpHash, email]
-    );
+    await user.update({
+      reset_code_hash: otpHash,
+      reset_code_expires: new Date(Date.now() + 10 * 60 * 1000),
+      reset_session_hash: null,
+      reset_session_expires: null,
+    });
 
     try {
-      await sendEmail(
-        email,
-        "Password reset code",
-        `
-          <p>Your password reset code is:</p>
-          <h2>${otp}</h2>
-          <p>This code expires in 10 minutes.</p>
-        `
-      );
+      await sendEmail(email, "Password reset code", `
+        <p>Your password reset code is:</p>
+        <h2>${otp}</h2>
+        <p>This code expires in 10 minutes.</p>
+      `);
     } catch (e) {
       console.error("Forgot password email failed:", e.message);
     }
@@ -193,119 +125,79 @@ export const forgotPasswordSendCode = async (req, res) => {
   }
 };
 
-/* =========================
-   RESEND OTP
-========================= */
+/* RESEND OTP */
 export const resendForgotCode = async (req, res) => {
   return forgotPasswordSendCode(req, res);
 };
 
-/* =========================
-   VERIFY OTP  (FIXED – NO TIMEZONE BUG)
-========================= */
+/* VERIFY OTP */
 export const forgotPasswordVerifyCode = async (req, res) => {
   try {
     const { email, code } = req.body;
-
-    if (!email || !code) {
+    if (!email || !code)
       return res.status(400).json({ message: "Email and code required" });
-    }
 
-    const result = await pool.query(
-      `
-      SELECT id, reset_code_hash
-      FROM users
-      WHERE email = $1
-        AND reset_code_hash IS NOT NULL
-        AND reset_code_expires > NOW()
-      `,
-      [email]
-    );
+    const user = await User.findOne({
+      where: {
+        email,
+        reset_code_hash: { [Op.ne]: null },
+        reset_code_expires: { [Op.gt]: new Date() },
+      },
+    });
 
-    if (result.rows.length === 0) {
+    if (!user)
       return res.status(400).json({ message: "Code expired or invalid" });
-    }
-
-    const user = result.rows[0];
 
     const validOtp = await bcrypt.compare(code, user.reset_code_hash);
-    if (!validOtp) {
+    if (!validOtp)
       return res.status(400).json({ message: "Invalid code" });
-    }
 
     const resetSessionToken = generateSessionToken();
     const resetSessionHash = await bcrypt.hash(resetSessionToken, 10);
 
-    await pool.query(
-      `
-      UPDATE users
-      SET reset_session_hash=$1,
-          reset_session_expires=NOW() + INTERVAL '10 minutes'
-      WHERE id=$2
-      `,
-      [resetSessionHash, user.id]
-    );
-
-    return res.json({
-      message: "Code verified",
-      resetSessionToken,
+    await user.update({
+      reset_session_hash: resetSessionHash,
+      reset_session_expires: new Date(Date.now() + 10 * 60 * 1000),
     });
+
+    return res.json({ message: "Code verified", resetSessionToken });
   } catch (err) {
     console.error("forgotPasswordVerifyCode error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* =========================
-   RESET PASSWORD
-========================= */
+/* RESET PASSWORD */
 export const resetPasswordWithSession = async (req, res) => {
   try {
     const { email, resetSessionToken, newPassword } = req.body;
-
-    if (!email || !resetSessionToken || !newPassword) {
+    if (!email || !resetSessionToken || !newPassword)
       return res.status(400).json({ message: "Invalid request" });
-    }
 
-    const result = await pool.query(
-      `
-      SELECT id, reset_session_hash
-      FROM users
-      WHERE email=$1
-        AND reset_session_expires > NOW()
-      `,
-      [email]
-    );
+    const user = await User.findOne({
+      where: {
+        email,
+        reset_session_expires: { [Op.gt]: new Date() },
+      },
+    });
 
-    if (result.rows.length === 0) {
+    if (!user)
       return res.status(400).json({ message: "Reset session expired or invalid" });
-    }
 
-    const user = result.rows[0];
-
-    const validSession = await bcrypt.compare(
-      resetSessionToken,
-      user.reset_session_hash
-    );
-
-    if (!validSession) {
+    const validSession = await bcrypt.compare(resetSessionToken, user.reset_session_hash);
+    if (!validSession)
       return res.status(400).json({ message: "Invalid reset session" });
-    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await pool.query(
-      `UPDATE users
-       SET password=$1,
-           is_verified=true,
-           reset_code_hash=NULL,
-           reset_code_expires=NULL,
-           reset_session_hash=NULL,
-           reset_session_expires=NULL
-       WHERE id=$2`,
-      [hashedPassword, user.id]
-    );
-    
+    await user.update({
+      password: hashedPassword,
+      is_verified: true,
+      reset_code_hash: null,
+      reset_code_expires: null,
+      reset_session_hash: null,
+      reset_session_expires: null,
+    });
 
     return res.json({ message: "Password updated successfully" });
   } catch (err) {

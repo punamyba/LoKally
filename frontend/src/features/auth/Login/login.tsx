@@ -1,14 +1,12 @@
-
 import "./login.css";
 import { useForm } from "react-hook-form";
 import { FaEnvelope, FaLock } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 import FormInput from "../Components/FormComponents/FormInput";
 import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { loginApi } from "../../../shared/config/api";
 import AuthLayout from "../Components/authlayout/AuthLayout";
 
@@ -19,6 +17,7 @@ type LoginFormData = {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     register,
@@ -29,37 +28,41 @@ const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const res = await loginApi(data);
-  
+
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("currentUser", JSON.stringify(res.data.user));
-  
-      navigate("/home"); // verified user only
+
+      // role check (admin vs user)
+      const role = res.data.user?.role;
+
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/home");
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message;
-  
+
       if (msg?.includes("verify")) {
-        alert("📧 Please verify your email before logging in");
+        alert("Please verify your email before logging in");
       } else {
         alert(msg || "Login failed");
       }
     }
-
   };
-  
-  const location = useLocation();
 
-useEffect(() => {
-  const params = new URLSearchParams(location.search);
-  const status = params.get("verify");
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("verify");
 
-  if (status === "success") {
-    alert(" Email verified successfully. Please login.");
-  }
+    if (status === "success") {
+      alert("Email verified successfully. Please login.");
+    }
 
-  if (status === "invalid") {
-    alert(" Invalid or expired verification link.");
-  }
-}, []);
+    if (status === "invalid") {
+      alert("Invalid or expired verification link.");
+    }
+  }, [location.search]);
 
   return (
     <AuthLayout>
@@ -67,7 +70,6 @@ useEffect(() => {
         <LogoTitle title="LoKally" />
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          {/* Email */}
           <FormInput
             icon={<FaEnvelope className="icon" />}
             type="email"
@@ -78,7 +80,6 @@ useEffect(() => {
             error={errors.email?.message}
           />
 
-          {/* Password */}
           <FormInput
             icon={<FaLock className="icon" />}
             type="password"
@@ -90,9 +91,9 @@ useEffect(() => {
           />
 
           <div className="forgot-wrapper">
-          <a href="/forgot-password" className="forgot-text">
-            Forgot password?
-          </a>    
+            <a href="/forgot-password" className="forgot-text">
+              Forgot password?
+            </a>
           </div>
 
           <AuthButton text="Sign In" />
@@ -102,7 +103,7 @@ useEffect(() => {
           Don’t have an account? <Link to="/register">Sign Up</Link>
         </p>
       </div>
-      </AuthLayout>
+    </AuthLayout>
   );
 };
 

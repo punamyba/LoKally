@@ -174,7 +174,7 @@ const Navbar = () => {
               onClick={() => setOpen(false)}
             >
               <User size={18} />
-              <span>Dashboard</span>
+              <span>Home</span>
             </NavLink>
           )}
 
