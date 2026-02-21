@@ -648,3 +648,72 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+/* ── ADD TO EXISTING ExploreMap.css ── */
+
+/* Minimize/maximize button for add panel */
+.pd-back { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+.exmap-addHeaderBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.exmap-minimizeBtn {
+  background: #eef2f7;
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+.exmap-minimizeBtn:hover { background: #dde5f0; }
+
+/* Minimized state — only shows header, no form */
+.exmap-addPanel.minimized {
+  max-height: 64px;
+  overflow: hidden;
+}
+
+/* Loading dots for places loading */
+.exmap-placesLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+.exmap-loadingDot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #167ee0;
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+.exmap-loadingDot:nth-child(2) { animation-delay: 0.2s; background: #1b8d28; }
+.exmap-loadingDot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40%           { transform: scale(1.2); opacity: 1; }
+}
+
+/* Submit message */
+.exmap-submitMsg {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+}
+.exmap-submitMsg--success {
+  background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0;
+}
+.exmap-submitMsg--error {
+  background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
+}
+.exmap-addBtn:disabled { opacity: 0.65; cursor: not-allowed; }

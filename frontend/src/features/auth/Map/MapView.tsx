@@ -1,65 +1,81 @@
+// MapView.tsx
+// Location: src/features/auth/Map/MapView.tsx
+// Changes:
+// 1. zoomTarget prop added — zooms to zoom 15 when list item clicked
+// 2. Animated GPS-style current location pin (pulsing blue rings)
+// 3. Everything else same as before
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-  useMapEvents,
-  ZoomControl,
+  MapContainer, TileLayer, Marker, Popup,
+  useMap, useMapEvents, ZoomControl,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Place } from "./Type";
 import "./MapView.css";
 
-/* Leaflet default marker fix (Vite) */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
 type Mode = "explore" | "add";
-
 type LatLng = { lat: number; lng: number };
 
 type MapViewProps = {
   fullHeight?: boolean;
   places: Place[];
   selectedPlace: Place | null;
+  zoomTarget?: Place | null;        // ← NEW: fly to this place at zoom 15
   onSelectPlace: (place: Place) => void;
-
-  // click on map -> temporary pin
   onMapPick: (pos: LatLng) => void;
-
-  // temporary pin + setter (drag)
   tempPin: LatLng | null;
   setTempPin: (pos: LatLng | null) => void;
-
-  // mode
   mode: Mode;
-
-  // temp popup actions
   nearbyPlace: Place | null;
   onClickAddPlace: () => void;
   onClickViewPlaceDetails: () => void;
 };
 
-function FlyToSelected({ selectedPlace }: { selectedPlace: Place | null }) {
+// Fly to selected place from sidebar card click
+function FlyToTarget({ target }: { target: Place | null }) {
   const map = useMap();
-
   useEffect(() => {
-    if (!selectedPlace) return;
-    map.flyTo([selectedPlace.lat, selectedPlace.lng], 12, { duration: 0.8 });
-  }, [selectedPlace, map]);
-
+    if (!target) return;
+    // zoom 15 = much closer than default 12, like Google Maps pin click
+    map.flyTo([target.lat, target.lng], 15, { duration: 0.9 });
+  }, [target, map]);
   return null;
 }
 
-/* Round photo marker for database places */
+// Fly when selectedPlace changes (from popup or details click)
+function FlyToSelected({ selectedPlace }: { selectedPlace: Place | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!selectedPlace) return;
+    map.flyTo([selectedPlace.lat, selectedPlace.lng], 13, { duration: 0.8 });
+  }, [selectedPlace, map]);
+  return null;
+}
+
+// Animated GPS location pin — blue pulsing rings
+function makeUserLocationIcon() {
+  return L.divIcon({
+    className: "lk-gpsPin",
+    html: `
+      <div class="lk-gpsPin__pulse"></div>
+      <div class="lk-gpsPin__pulse lk-gpsPin__pulse--delay"></div>
+      <div class="lk-gpsPin__dot"></div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+}
+
+// Round photo marker for places
 function makePlaceIcon(p: Place) {
   const img = p.image || "";
   return L.divIcon({
@@ -76,33 +92,18 @@ function makePlaceIcon(p: Place) {
   });
 }
 
-/* User dot marker */
-const userDotIcon = L.divIcon({
-  className: "lk-userDot",
-  html: `<div class="lk-userDot__dot"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-/* Temporary pin icon (different from photo markers) */
+// Temp pin (default leaflet blue marker)
 const tempPinIcon = new L.Icon({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
 
-function ClickHandler({
-  onMapPick,
-}: {
-  onMapPick: (pos: LatLng) => void;
-}) {
+function ClickHandler({ onMapPick }: { onMapPick: (pos: LatLng) => void }) {
   useMapEvents({
-    click(e) {
-      onMapPick({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
+    click(e) { onMapPick({ lat: e.latlng.lat, lng: e.latlng.lng }); },
   });
   return null;
 }
@@ -111,6 +112,7 @@ export default function MapView({
   fullHeight = false,
   places,
   selectedPlace,
+  zoomTarget,
   onSelectPlace,
   onMapPick,
   tempPin,
@@ -122,16 +124,11 @@ export default function MapView({
 }: MapViewProps) {
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const fallbackPos = useMemo<[number, number]>(() => [27.7172, 85.324], []);
-
-  // keep ref to temp marker to open popup reliably
   const tempMarkerRef = useRef<L.Marker | null>(null);
+  const gpsIcon = useMemo(() => makeUserLocationIcon(), []);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setUserPos(fallbackPos);
-      return;
-    }
-
+    if (!navigator.geolocation) { setUserPos(fallbackPos); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
       () => setUserPos(fallbackPos),
@@ -146,10 +143,8 @@ export default function MapView({
     return fallbackPos;
   }, [selectedPlace, tempPin, userPos, fallbackPos]);
 
-  // when tempPin changes, open the popup programmatically
   useEffect(() => {
-    if (!tempPin) return;
-    if (!tempMarkerRef.current) return;
+    if (!tempPin || !tempMarkerRef.current) return;
     tempMarkerRef.current.openPopup();
   }, [tempPin]);
 
@@ -159,11 +154,9 @@ export default function MapView({
       zoom={7}
       className={fullHeight ? "lk-map lk-map--full" : "lk-map"}
       zoomControl={false}
-      closePopupOnClick={false} /* important: popup won't auto-close */
+      closePopupOnClick={false}
     >
-      {/* Keep zoom controls visible top-right */}
       <ZoomControl position="topright" />
-
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -171,91 +164,66 @@ export default function MapView({
 
       <ClickHandler onMapPick={onMapPick} />
       <FlyToSelected selectedPlace={selectedPlace} />
+      <FlyToTarget target={zoomTarget || null} />   {/* ← zoom to list click */}
 
-      {/* User marker as small dot */}
+      {/* GPS location marker — animated pulsing blue dot */}
       {userPos && (
-        <Marker position={userPos} icon={userDotIcon}>
+        <Marker position={userPos} icon={gpsIcon}>
           <Popup autoClose={false} closeOnClick={false}>
-            <b>Your Location</b>
-            <br />
-            Lat: {userPos[0].toFixed(6)}
-            <br />
-            Lng: {userPos[1].toFixed(6)}
+            <b>📍 Your Location</b><br />
+            Lat: {userPos[0].toFixed(5)}<br />
+            Lng: {userPos[1].toFixed(5)}
           </Popup>
         </Marker>
       )}
 
-      {/* Database place markers: round photo marker */}
+      {/* Database place markers */}
       {places.map((p) => (
         <Marker
           key={p.id}
           position={[p.lat, p.lng]}
           icon={makePlaceIcon(p)}
-          eventHandlers={{
-            click: () => onSelectPlace(p),
-          }}
+          eventHandlers={{ click: () => onSelectPlace(p) }}
         />
       ))}
 
-      {/* Temporary pin marker: different icon, draggable in add mode */}
+      {/* Temporary pin — draggable in add mode */}
       {tempPin && (
         <Marker
           position={[tempPin.lat, tempPin.lng]}
           icon={tempPinIcon}
           draggable={mode === "add"}
           ref={(ref) => {
-            // react-leaflet gives Leaflet element under ref?.leafletElement in some versions
-            // but in v4 it returns the element directly
-            // we handle both safely
             const anyRef = ref as any;
-            tempMarkerRef.current =
-              anyRef?.leafletElement || anyRef || null;
+            tempMarkerRef.current = anyRef?.leafletElement || anyRef || null;
           }}
           eventHandlers={{
             dragend: (e) => {
-              const marker = e.target as L.Marker;
-              const ll = marker.getLatLng();
+              const ll = (e.target as L.Marker).getLatLng();
               setTempPin({ lat: ll.lat, lng: ll.lng });
             },
           }}
         >
-          {/* This popup must stay open until user closes it */}
           <Popup autoClose={false} closeOnClick={false} closeButton>
             <div className="lk-pickPopup">
               <div className="lk-pickPopup__title">Selected location</div>
-
               <div className="lk-pickPopup__coords">
-                <div>
-                  <b>Lat:</b> {tempPin.lat.toFixed(6)}
-                </div>
-                <div>
-                  <b>Lng:</b> {tempPin.lng.toFixed(6)}
-                </div>
+                <div><b>Lat:</b> {tempPin.lat.toFixed(6)}</div>
+                <div><b>Lng:</b> {tempPin.lng.toFixed(6)}</div>
               </div>
-
-              <button
-                className="lk-pickPopup__btn lk-pickPopup__btn--primary"
-                onClick={onClickAddPlace}
-                type="button"
-              >
-                Add Place
+              <button className="lk-pickPopup__btn lk-pickPopup__btn--primary"
+                onClick={onClickAddPlace} type="button">
+                Add Place Here
               </button>
-
-              {/* Show View details only if nearby place exists */}
-              {nearbyPlace ? (
-                <button
-                  className="lk-pickPopup__btn"
-                  onClick={onClickViewPlaceDetails}
-                  type="button"
-                >
-                  View Place Details
+              {nearbyPlace && (
+                <button className="lk-pickPopup__btn" onClick={onClickViewPlaceDetails} type="button">
+                  View Nearby Place Details
                 </button>
-              ) : null}
-
+              )}
               <div className="lk-pickPopup__hint">
                 {nearbyPlace
-                  ? "A place is nearby. You can view details or add another place."
-                  : "No place found here. You can add a new one."}
+                  ? `"${nearbyPlace.name}" is nearby.`
+                  : "No place found here. Add a new one!"}
               </div>
             </div>
           </Popup>
