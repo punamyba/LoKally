@@ -1,10 +1,12 @@
-// AdminAddPlace.tsx — LoKally Admin v2 (Multiple Photos)
+// AdminAddPlace.tsx — LoKally Admin v2 (Multiple Photos — FIXED)
+// FIX: Changed FormData field from "image"/"image_1" to "images" array
+// Backend multer must use upload.array("images", 20) 
 import { useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Upload, MapPin, CheckCircle, X, Images, Plus } from "lucide-react";
-import { adminApi } from "../AdminApi";
+import { adminApi } from "../adminApi";
 import "./AdminAddPlace.css";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -52,12 +54,9 @@ export default function AdminAddPlace() {
   const handleImages = (files: FileList) => {
     const remaining = MAX_PHOTOS - imageFiles.length;
     const newFiles = Array.from(files).slice(0, remaining);
-
     newFiles.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreviews((prev) => [...prev, e.target?.result as string]);
-      };
+      reader.onload = (e) => setImagePreviews((prev) => [...prev, e.target?.result as string]);
       reader.readAsDataURL(file);
     });
     setImageFiles((prev) => [...prev, ...newFiles]);
@@ -87,9 +86,10 @@ export default function AdminAddPlace() {
     fd.append("lat", pin.lat.toString());
     fd.append("lng", pin.lng.toString());
 
-    // Append all images — primary image first
-    imageFiles.forEach((file, i) => {
-      fd.append(i === 0 ? "image" : `image_${i}`, file);
+    // ── KEY FIX: all images under "images" field (not "image" + "image_1")
+    // Backend multer: upload.array("images", 20)
+    imageFiles.forEach((file) => {
+      fd.append("images", file);
     });
 
     const res = await adminApi.addPlace(fd);
@@ -117,8 +117,6 @@ export default function AdminAddPlace() {
       </div>
 
       <div className="aap-body">
-
-        {/* ── FORM ─────────────────────────────── */}
         <div className="aap-form-wrap">
           {success && (
             <div className="aap-success">
@@ -163,19 +161,14 @@ export default function AdminAddPlace() {
                 placeholder="What makes this place special?" rows={3} />
             </div>
 
-            {/* ── PHOTOS SECTION ─────────────────── */}
             <div className="aap-field">
               <div className="aap-photo-header">
                 <label className="aap-label">
-                  <Images size={14} strokeWidth={2} />
-                  Photos
+                  <Images size={14} strokeWidth={2} /> Photos
                 </label>
-                <span className="aap-photo-count">
-                  {imageFiles.length} / {MAX_PHOTOS}
-                </span>
+                <span className="aap-photo-count">{imageFiles.length} / {MAX_PHOTOS}</span>
               </div>
 
-              {/* Preview grid */}
               {imagePreviews.length > 0 && (
                 <div className="aap-photos-grid">
                   {imagePreviews.map((src, i) => (
@@ -187,8 +180,6 @@ export default function AdminAddPlace() {
                       </button>
                     </div>
                   ))}
-
-                  {/* Add more button in grid */}
                   {imageFiles.length < MAX_PHOTOS && (
                     <div className="aap-photo-add-more" onClick={() => fileRef.current?.click()}>
                       <Plus size={20} strokeWidth={2} />
@@ -198,31 +189,22 @@ export default function AdminAddPlace() {
                 </div>
               )}
 
-              {/* Upload dropzone — only show if no photos yet */}
               {imagePreviews.length === 0 && (
-                <div
-                  className="aap-upload-box"
+                <div className="aap-upload-box"
                   onClick={() => fileRef.current?.click()}
                   onDrop={handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                >
+                  onDragOver={(e) => e.preventDefault()}>
                   <Upload size={24} strokeWidth={1.5} className="aap-upload-icon" />
                   <div className="aap-upload-text">Click or drag to upload photos</div>
                   <div className="aap-upload-sub">Up to {MAX_PHOTOS} photos · JPG, PNG, WEBP · Max 5MB each</div>
                 </div>
               )}
 
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
+              <input ref={fileRef} type="file" accept="image/*" multiple
                 style={{ display: "none" }}
-                onChange={(e) => e.target.files && handleImages(e.target.files)}
-              />
+                onChange={(e) => e.target.files && handleImages(e.target.files)} />
             </div>
 
-            {/* Coordinates */}
             <div className="aap-coords-row">
               <div className="aap-field">
                 <label className="aap-label">Latitude</label>
@@ -240,14 +222,14 @@ export default function AdminAddPlace() {
             </div>
 
             <button className="aap-submit" type="submit" disabled={loading}>
-              {loading ? "Adding..." : (
-                <><CheckCircle size={16} strokeWidth={2.5} /> Add Place (Auto Approved)</>
-              )}
+              {loading
+                ? "Adding..."
+                : <><CheckCircle size={16} strokeWidth={2.5} /> Add Place (Auto Approved)</>
+              }
             </button>
           </form>
         </div>
 
-        {/* ── MAP ─────────────────────────────── */}
         <div className="aap-map-wrap">
           <MapContainer center={[pin.lat, pin.lng]} zoom={7}
             style={{ height: "100%", width: "100%", borderRadius: "16px" }}>

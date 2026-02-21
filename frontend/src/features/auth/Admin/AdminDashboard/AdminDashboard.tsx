@@ -5,7 +5,7 @@ import {
   Users, MapPin, Clock, CheckCircle, XCircle,
   ArrowRight, Zap
 } from "lucide-react";
-import { adminApi } from "../AdminApi";
+import { adminApi } from "../adminApi";
 import type { AdminStats, Place } from "../AdminTypes";
 import "./AdminDashboard.css";
 

@@ -4,7 +4,7 @@ import {
   MapPin, Search, Trash2, CheckCircle, Clock, XCircle,
   X, User, Calendar, Tag, Eye
 } from "lucide-react";
-import { adminApi } from "../AdminApi";
+import { adminApi } from "../adminApi";
 import type { Place } from "../AdminTypes";
 import "./AdminPlaces.css";
 
