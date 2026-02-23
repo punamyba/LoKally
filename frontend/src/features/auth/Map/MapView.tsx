@@ -1,9 +1,3 @@
-// MapView.tsx
-// Location: src/features/auth/Map/MapView.tsx
-// Changes:
-// 1. zoomTarget prop added — zooms to zoom 15 when list item clicked
-// 2. Animated GPS-style current location pin (pulsing blue rings)
-// 3. Everything else same as before
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {

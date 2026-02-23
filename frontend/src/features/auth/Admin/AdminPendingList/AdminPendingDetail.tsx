@@ -1,6 +1,4 @@
-// AdminPendingDetail.tsx
-// Location: src/features/auth/Admin/AdminPendingList/AdminPendingDetail.tsx
-// Route: /admin/pending/:id  — full page for admin to review and decide
+
 
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -22,18 +20,15 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-function parseImages(place: Place): string[] {
-  // First check place.images array (from PlaceImage table)
-  if (place.images && place.images.length > 0) {
-    return place.images.map((img: any) => `http://localhost:5001${img.image_path}`);
+// Handles: single string | JSON array
+function parseImages(image: string | null | undefined): string[] {
+  if (!image) return [];
+  const base = "http://localhost:5001";
+  if (image.startsWith("[")) {
+    try { return (JSON.parse(image) as string[]).map(p => `${base}${p}`); }
+    catch { return [`${base}${image}`]; }
   }
-  // Fallback to single image field
-  if (!place.image) return [];
-  if (place.image.startsWith("[")) {
-    try { return (JSON.parse(place.image) as string[]).map(p => `http://localhost:5001${p}`); }
-    catch { }
-  }
-  return [`http://localhost:5001${place.image}`];
+  return [`${base}${image}`];
 }
 
 export default function AdminPendingDetail() {
@@ -57,7 +52,7 @@ export default function AdminPendingDetail() {
         const found = res.data.find((p: Place) => String(p.id) === id);
         if (found) {
           setPlace(found);
-          setPhotos(parseImages(found));
+          setPhotos(parseImages(found.image));
         }
       }
       setLoading(false);
@@ -69,7 +64,6 @@ export default function AdminPendingDetail() {
     setProcessing(true);
     const res = await adminApi.approvePlace(place.id);
     if (res.success) setDone("approved");
-    else { alert("Failed to approve. Try again."); }
     setProcessing(false);
   };
 
@@ -78,7 +72,6 @@ export default function AdminPendingDetail() {
     setProcessing(true);
     const res = await adminApi.rejectPlace(place.id, rejectReason);
     if (res.success) setDone("rejected");
-    else { alert("Failed to reject. Try again."); }
     setProcessing(false);
   };
 
@@ -127,17 +120,14 @@ export default function AdminPendingDetail() {
 
   return (
     <div className="apd2-wrap">
-
       <button className="apd2-back" onClick={() => navigate("/admin/pending")}>
         <ArrowLeft size={16} strokeWidth={2.5} /> Back to Pending
       </button>
 
       <div className="apd2-layout">
-
-        {/* ── LEFT: Images + Info ── */}
+        {/* LEFT: Images + Info */}
         <div className="apd2-left">
 
-          {/* Gallery */}
           <div className="apd2-gallery">
             {photos.length > 0 ? (
               <>
@@ -177,36 +167,28 @@ export default function AdminPendingDetail() {
             )}
           </div>
 
-          {/* Place details */}
           <div className="apd2-card">
             <div className="apd2-name-row">
               <h1 className="apd2-name">{place.name}</h1>
               <span className="apd2-badge-pending">Pending</span>
             </div>
-
             <div className="apd2-meta-row">
               {place.category && (
                 <span className="apd2-cat-tag"><Tag size={11} strokeWidth={2.5} /> {place.category}</span>
               )}
               <span className="apd2-addr"><MapPin size={12} strokeWidth={2} /> {place.address}</span>
             </div>
-
             {place.description && (
               <div className="apd2-section">
                 <div className="apd2-label">Description</div>
                 <p className="apd2-desc">{place.description}</p>
               </div>
             )}
-
             <div className="apd2-info-grid">
               <div className="apd2-info-item">
                 <div className="apd2-info-label"><User size={11} /> Submitted By</div>
-                <div className="apd2-info-val">
-                  {place.submitter?.first_name} {place.submitter?.last_name}
-                </div>
-                {place.submitter?.email && (
-                  <div className="apd2-info-email">{place.submitter.email}</div>
-                )}
+                <div className="apd2-info-val">{place.submitter?.first_name} {place.submitter?.last_name}</div>
+                {place.submitter?.email && <div className="apd2-info-email">{place.submitter.email}</div>}
               </div>
               <div className="apd2-info-item">
                 <div className="apd2-info-label"><Calendar size={11} /> Submitted On</div>
@@ -224,10 +206,8 @@ export default function AdminPendingDetail() {
           </div>
         </div>
 
-        {/* ── RIGHT: Map + Decision ── */}
+        {/* RIGHT: Map + Decision */}
         <div className="apd2-right">
-
-          {/* Map */}
           <div className="apd2-card apd2-map-card">
             <div className="apd2-section-label"><MapPin size={13} /> Location on Map</div>
             <div className="apd2-map">
@@ -244,13 +224,11 @@ export default function AdminPendingDetail() {
             </a>
           </div>
 
-          {/* Decision card */}
           <div className="apd2-card apd2-decision-card">
             <div className="apd2-section-label">Admin Decision</div>
             <p className="apd2-decision-hint">
               Review the photos and details carefully before approving or rejecting.
             </p>
-
             {!rejectMode ? (
               <div className="apd2-actions">
                 <button className="apd2-btn apd2-btn--approve"
@@ -260,15 +238,12 @@ export default function AdminPendingDetail() {
                 </button>
                 <button className="apd2-btn apd2-btn--reject"
                   onClick={() => setRejectMode(true)} disabled={processing}>
-                  <XCircle size={16} strokeWidth={2.5} />
-                  Reject
+                  <XCircle size={16} strokeWidth={2.5} /> Reject
                 </button>
               </div>
             ) : (
               <div className="apd2-reject-form">
-                <label className="apd2-reject-label">
-                  Reason for rejection <span>*</span>
-                </label>
+                <label className="apd2-reject-label">Reason for rejection <span>*</span></label>
                 <textarea className="apd2-reject-textarea" rows={4} autoFocus
                   value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                   placeholder="e.g. Blurry images, duplicate, incorrect location..." />

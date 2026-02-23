@@ -1,9 +1,12 @@
+
+// Stores as JSON string if multiple, single path if one image
+
 import { Place, User } from "../models/db.sync.js";
 
 const placeWithUser = {
   include: [
     { model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] },
-    { model: User, as: "approver", attributes: ["id", "first_name", "last_name"] },
+    { model: User, as: "approver",  attributes: ["id", "first_name", "last_name"] },
   ],
 };
 
@@ -109,14 +112,26 @@ export const getUsers = async (req, res) => {
   }
 };
 
-/* ADMIN ADD PLACE (auto approved) */
+/* ADMIN ADD PLACE (auto approved) — UPDATED: supports multiple images */
 export const addPlace = async (req, res) => {
   try {
     const { name, address, description, category, lat, lng } = req.body;
     if (!name || !address || !lat || !lng)
       return res.status(400).json({ success: false, message: "name, address, lat, lng chainxa" });
 
-    const image = req.file ? `/uploads/places/${req.file.filename}` : null;
+    // ── Multiple image handling ──────────────────────────────────
+    // req.files = array (from upload.array("images", 20))
+    // Single image  → stores as plain string: "/uploads/places/abc.jpg"
+    // Multiple images → stores as JSON string: '["/uploads/places/a.jpg", "/uploads/places/b.jpg"]'
+    // Frontend parseImages() handles both formats automatically
+    let imageValue = null;
+    if (req.files && req.files.length > 0) {
+      const paths = req.files.map(f => `/uploads/places/${f.filename}`);
+      imageValue = paths.length === 1 ? paths[0] : JSON.stringify(paths);
+    } else if (req.file) {
+      // fallback if single middleware used
+      imageValue = `/uploads/places/${req.file.filename}`;
+    }
 
     const place = await Place.create({
       name,
@@ -125,7 +140,7 @@ export const addPlace = async (req, res) => {
       category: category || null,
       lat: parseFloat(lat),
       lng: parseFloat(lng),
-      image,
+      image: imageValue,
       submitted_by: req.user.id,
       status: "approved",
       approved_by: req.user.id,

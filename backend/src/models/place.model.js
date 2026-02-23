@@ -34,7 +34,7 @@ const Place = sequelize.define(
       allowNull: false,
     },
     image: {
-      type: DataTypes.STRING(500),
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     submitted_by: {

@@ -1,7 +1,7 @@
-// AdminUsers.tsx — LoKally Admin v2
+
 import { useEffect, useState } from "react";
 import { Users, Search, ShieldCheck, User, BadgeCheck, BadgeX } from "lucide-react";
-import { adminApi } from "../AdminApi";
+import { adminApi } from "../adminApi";
 import type { User as UserType } from "../AdminTypes";
 import "./AdminUsers.css";
 

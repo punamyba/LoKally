@@ -1,719 +1,294 @@
-/* ExploreMap.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Red+Rose:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 .exmap-page {
-  min-height: 100vh;
-  width: 100%;
+  min-height: 100vh; width: 100%;
   background: linear-gradient(#9dd0fa, #fdfdfd, #affda2);
 }
+.exmap-body { height: calc(100vh - 72px); position: relative; }
+.exmap-mapArea { height: 100%; width: 100%; position: relative; overflow: hidden; }
 
-.exmap-body {
-  height: calc(100vh - 72px);
-  position: relative;
-}
-
-.exmap-mapArea {
-  height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-}
-
+/* FAB */
 .exmap-fab {
-  position: absolute;
-  right: 22px;
-  bottom: 22px;
-  z-index: 1200;
-  border: none;
-  cursor: pointer;
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-weight: 700;
-  color: #fff;
+  position: absolute; right: 22px; bottom: 22px; z-index: 1200;
+  border: none; cursor: pointer; padding: 12px 20px; border-radius: 14px;
+  font-weight: 700; color: #fff; font-size: 13px;
   background: linear-gradient(135deg, #167ee0, #1b8d28);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
+.fab-plus { display: none; }
+.exmap-openSidebar { display: none; }
 
-.fab-plus {
-  display: none;
-}
-
-.exmap-openSidebar {
-  display: none;
-}
-
-/* =============================================
-   LEFT OVERLAY — explore/search panel
-   Desktop: 420px wide, nearly full map height
-============================================= */
+/* LEFT OVERLAY */
 .exmap-leftOverlay {
-  position: absolute;
-  top: 18px;
-  left: 18px;
-  z-index: 1100;
-
-  width: 420px;
-  max-width: calc(100vw - 36px);
-  height: calc(100% - 36px);
-  border-radius: 22px;
-  overflow: hidden;
-
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
-
-  display: flex;
-  flex-direction: column;
+  position: absolute; top: 18px; left: 18px; z-index: 1100;
+  width: 420px; max-width: calc(100vw - 36px); height: calc(100% - 36px);
+  border-radius: 22px; overflow: hidden;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column;
 }
+.exmap-drawerHeader { display: none; }
 
-.exmap-drawerHeader {
-  display: none;
-}
-
-/* place details card — right side desktop */
+/* DETAILS CARD */
 .exmap-details {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 380px;
-  max-width: calc(100vw - 40px);
-  background: white;
-  border-radius: 18px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  z-index: 1200;
+  position: absolute; top: 20px; right: 20px; width: 380px;
+  max-width: calc(100vw - 40px); background: white; border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15); overflow: hidden; z-index: 1200;
 }
-
-.exmap-detailsImageWrap {
-  height: 190px;
-  overflow: hidden;
-}
-
-.exmap-detailsImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.exmap-detailsContent {
-  padding: 15px;
-}
-
-.exmap-detailsTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
+.exmap-detailsImageWrap { height: 190px; overflow: hidden; }
+.exmap-detailsImage { width: 100%; height: 100%; object-fit: cover; }
+.exmap-detailsContent { padding: 15px; }
+.exmap-detailsTop { display: flex; justify-content: space-between; align-items: flex-start; }
 .exmap-detailsTitle {
-  font-size: 18px;
-  font-weight: bold;
-  color: #1b8d28;
+  font-family: 'Red Rose', sans-serif;
+  font-size: 18px; font-weight: 700; color: #1b8d28;
 }
-
 .exmap-detailsTag {
-  margin-top: 6px;
-  display: inline-block;
-  padding: 5px 10px;
-  border-radius: 20px;
-  background: #167ee020;
-  color: #167ee0;
-  font-size: 12px;
-  font-weight: bold;
+  margin-top: 6px; display: inline-block; padding: 4px 10px;
+  border-radius: 20px; background: #167ee020; color: #167ee0;
+  font-size: 12px; font-weight: 700;
 }
-
 .exmap-detailsClose {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
+  background: #f1f5f9; border: none; width: 30px; height: 30px;
+  border-radius: 8px; cursor: pointer; display: grid; place-items: center; color: #475569;
 }
-
-.exmap-detailsDesc {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #444;
-}
-
-.exmap-coords {
-  margin-top: 10px;
-  font-size: 13px;
-  background: #f2f2f2;
-  padding: 8px;
-  border-radius: 8px;
-}
-
+.exmap-detailsDesc { margin-top: 10px; font-size: 13px; color: #444; line-height: 1.6; }
+.exmap-coords { margin-top: 10px; font-size: 12px; background: #f8fafc; padding: 8px 10px; border-radius: 8px; }
 .exmap-detailsBtn {
-  margin-top: 12px;
-  width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, #167ee0, #1b8d28);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
+  margin-top: 12px; width: 100%; padding: 10px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #167ee0, #1b8d28); color: white; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px;
 }
 
-/* add place panel — right side desktop */
+/* ─────────────────────────────────────
+   ADD PLACE PANEL — Admin style
+───────────────────────────────────── */
 .exmap-addPanel {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 1300;
-
-  width: 420px;
-  max-width: calc(100vw - 36px);
-
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 18px;
-  overflow: hidden auto;
-  max-height: calc(100vh - 100px);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+  position: absolute; top: 18px; right: 18px; z-index: 1300;
+  width: 400px; max-width: calc(100vw - 36px);
+  background: white; border-radius: 18px;
+  overflow: hidden auto; max-height: calc(100vh - 100px);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.18);
+  border: 1px solid #e8edf2;
 }
-
 .exmap-addHeader {
-  padding: 14px 14px 10px 14px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  padding: 18px 18px 12px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  border-bottom: 1px solid #f1f5f9;
 }
-
 .exmap-addTitle {
-  font-weight: 800;
-  font-size: 16px;
-  color: #0b3d2e;
+  font-family: 'Red Rose', sans-serif;
+  font-weight: 700; font-size: 18px; color: #111827;
 }
-
-.exmap-addSub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #4b5563;
+.exmap-addSub { margin-top: 3px; font-size: 12px; color: #6b7280; }
+.exmap-addHeaderBtns { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.exmap-minimizeBtn {
+  background: #f1f5f9; border: none; border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center;
+  color: #475569; transition: background 0.15s;
 }
-
+.exmap-minimizeBtn:hover { background: #e2e8f0; }
 .exmap-addClose {
-  border: none;
-  background: #eef2f7;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 16px;
-  flex-shrink: 0;
+  background: #fee2e2; border: none; border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center;
+  color: #ef4444; transition: background 0.15s;
 }
+.exmap-addClose:hover { background: #fecaca; }
 
-.exmap-addForm {
-  padding: 12px 14px 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* Form */
+.exmap-addForm { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
 
-.exmap-label {
-  font-size: 12px;
-  color: #1f2937;
-  font-weight: 700;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.exmap-field { display: flex; flex-direction: column; gap: 5px; }
+.exmap-fieldLabel {
+  font-size: 12px; font-weight: 700; color: #374151;
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
+.exmap-req { color: #ef4444; }
 
 .exmap-input {
-  height: 40px;
-  border-radius: 12px;
-  border: 1px solid #dbe5f1;
-  padding: 0 12px;
-  outline: none;
-  background: #fff;
+  padding: 9px 13px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; font-size: 13px; outline: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: white; transition: border-color 0.15s; color: #111827;
 }
-
+.exmap-input:focus { border-color: #167ee0; }
+.exmap-input::placeholder { color: #9ca3af; }
+.exmap-input--readonly { background: #f8fafc; color: #6b7280; cursor: not-allowed; }
 .exmap-textarea {
-  border-radius: 12px;
-  border: 1px solid #dbe5f1;
-  padding: 10px 12px;
-  outline: none;
-  resize: vertical;
-  background: #fff;
+  padding: 9px 13px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; font-size: 13px; outline: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: white; resize: vertical; transition: border-color 0.15s; color: #111827;
 }
+.exmap-textarea:focus { border-color: #167ee0; }
 
-.exmap-latlngRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 4px;
+/* Photos — admin-style grid */
+.exmap-photoHeader { display: flex; align-items: center; justify-content: space-between; }
+.exmap-photoCount {
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  background: #f1f5f9; padding: 2px 9px; border-radius: 99px;
 }
-
-.exmap-latlngBox {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.exmap-photosGrid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 6px;
 }
-
-.exmap-latlngLabel {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1f2937;
+.exmap-photoThumb {
+  position: relative; border-radius: 9px; overflow: hidden;
+  aspect-ratio: 1; background: #f1f5f9;
 }
-
-.exmap-addBtn {
-  margin-top: 8px;
-  height: 42px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #167ee0, #1b8d28);
+.exmap-photoThumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.exmap-photoThumb--primary {
+  grid-column: span 2; grid-row: span 2;
+  border-radius: 11px; border: 2px solid #167ee0;
 }
-
-.exmap-addHint {
-  font-size: 12px;
-  color: #6b7280;
-  line-height: 1.3;
+.exmap-photoCoverTag {
+  position: absolute; bottom: 7px; left: 7px;
+  background: #167ee0; color: white; font-size: 9px; font-weight: 800;
+  padding: 2px 7px; border-radius: 99px; letter-spacing: 0.3px;
 }
-
-/* ============================================
-   IMAGE UPLOAD + SLIDESHOW STYLES
-============================================ */
-
-.exmap-imgCount {
-  font-size: 11px;
-  font-weight: 500;
-  color: #6b7280;
-  margin-top: -2px;
+.exmap-photoRemove {
+  position: absolute; top: 4px; right: 4px;
+  width: 19px; height: 19px; background: rgba(15,23,42,0.6);
+  color: white; border: none; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
 }
-
-.exmap-slideshow {
-  border-radius: 14px;
-  overflow: hidden;
-  background: #000;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+.exmap-photoThumb:hover .exmap-photoRemove { opacity: 1; }
+.exmap-photoAddMore {
+  border: 1.5px dashed #e2e8f0; border-radius: 9px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer; color: #9ca3af; font-size: 10px; font-weight: 700;
+  aspect-ratio: 1; transition: all 0.15s; background: #f8fafc;
 }
-
-/* taller preview on desktop */
-.exmap-slideMain {
-  position: relative;
-  width: 100%;
-  height: 220px;
-  overflow: hidden;
-  background: #111;
-}
-
-.exmap-slideImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: opacity 0.2s ease;
-}
-
-.exmap-slideArrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255,255,255,0.82);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  z-index: 2;
-  transition: background 0.15s;
-}
-
-.exmap-slideArrow:hover { background: rgba(255,255,255,1); }
-.exmap-slideArrow--left { left: 8px; }
-.exmap-slideArrow--right { right: 8px; }
-
-.exmap-slideBadge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 20px;
-}
-
-.exmap-slideRemove {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(220, 38, 38, 0.85);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-
-.exmap-slideRemove:hover { background: rgba(220, 38, 38, 1); }
-
-.exmap-thumbStrip {
-  display: flex;
-  gap: 6px;
-  padding: 8px;
-  overflow-x: auto;
-  background: #1a1a1a;
-  scrollbar-width: none;
-}
-
-.exmap-thumbStrip::-webkit-scrollbar { display: none; }
-
-.exmap-thumb {
-  flex-shrink: 0;
-  width: 52px;
-  height: 40px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  padding: 0;
-  cursor: pointer;
-  background: none;
-  transition: border-color 0.15s;
-}
-
-.exmap-thumb.active { border-color: #167ee0; }
-
-.exmap-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+.exmap-photoAddMore:hover { border-color: #167ee0; color: #167ee0; background: #eff6ff; }
 
 .exmap-uploadBox {
-  border: 2px dashed #c3d9f5;
-  border-radius: 14px;
-  padding: 22px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  background: #f5f9ff;
-  transition: background 0.15s, border-color 0.15s;
-  text-align: center;
-  margin-top: 6px;
+  border: 1.5px dashed #e2e8f0; border-radius: 12px; padding: 22px;
+  text-align: center; cursor: pointer; background: #f8fafc;
+  transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.exmap-uploadBox:hover { background: #eff6ff; border-color: #167ee0; }
+.exmap-uploadIcon { color: #9ca3af; }
+.exmap-uploadText { font-size: 13px; font-weight: 700; color: #374151; }
+.exmap-uploadSub { font-size: 11px; color: #9ca3af; }
+
+.exmap-coordsRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.exmap-mapHint {
+  font-size: 11px; color: #1d4ed8; background: #eff6ff;
+  padding: 8px 12px; border-radius: 9px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
 }
 
-.exmap-uploadBox:hover {
-  background: #eaf3ff;
-  border-color: #167ee0;
+.exmap-submitBtn {
+  padding: 11px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700;
+  cursor: pointer; background: linear-gradient(135deg, #167ee0, #1b8d28); color: white;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
 }
+.exmap-submitBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(22,126,224,0.3); }
+.exmap-submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.exmap-uploadIcon { font-size: 28px; }
+.exmap-addHint { font-size: 11px; color: #9ca3af; text-align: center; line-height: 1.4; }
 
-.exmap-uploadText {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.exmap-uploadSub {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-/* ============================================
-/* ============================================
-   MOBILE BREAKPOINT
-   Key idea:
-   - panel slides up from bottom, takes 52vh
-   - inside panel: flex column so list scrolls
-   - drawer header stays pinned at top
-   - smooth cubic-bezier spring animation
-============================================= */
-@media (max-width: 768px) {
-
-  /* "Open sidebar" button — floats over map */
-  .exmap-openSidebar {
-    display: block;
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    z-index: 1550;
-    border: none;
-    padding: 9px 16px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.97);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    font-weight: 800;
-    font-size: 13px;
-    color: #0f3d2e;
-  }
-
-  /* BOTTOM SHEET PANEL
-     - fixed position so it sits over the map
-     - 52vh height = about half screen
-     - starts hidden below screen, slides up when .open
-     - flex column so header is pinned, list scrolls
-  */
-  .exmap-leftOverlay {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: auto;
-    width: 100%;
-    max-width: none;
-    height: 52vh;
-    border-radius: 22px 22px 0 0;
-    transform: translateY(100%);
-    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-    z-index: 1600;
-    background: #fff;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .exmap-leftOverlay.open {
-    transform: translateY(0);
-  }
-
-  /* DRAWER HEADER — pinned at top of sheet, never scrolls */
-  .exmap-drawerHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 16px 12px;
-    background: #fff;
-    flex-shrink: 0;
-    position: relative;
-    border-bottom: 1px solid #f1f5f9;
-  }
-
-  /* drag handle pill at top center */
-  .exmap-drawerHeader::before {
-    content: "";
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 4px;
-    border-radius: 99px;
-    background: #e2e8f0;
-  }
-
-  .exmap-drawerTitle {
-    font-weight: 900;
-    font-size: 15px;
-    color: #0f3d2e;
-  }
-
-  .exmap-drawerClose {
-    border: none;
-    background: #f1f5f9;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 900;
-    color: #374151;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* FAB — round + icon only */
-  .exmap-fab {
-    width: 52px;
-    height: 52px;
-    border-radius: 999px;
-    padding: 0;
-    display: grid;
-    place-items: center;
-    right: 14px;
-    bottom: 14px;
-  }
-
-  .fab-text { display: none; }
-
-  .fab-plus {
-    display: block;
-    font-size: 26px;
-    line-height: 1;
-  }
-
-  /* DETAILS — bottom sheet */
-  .exmap-details {
-    position: fixed;
-    top: auto;
-    right: 0;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: none;
-    border-radius: 22px 22px 0 0;
-    height: auto;
-    max-height: 58vh;
-    z-index: 1700;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
-  }
-
-  .exmap-detailsImageWrap {
-    height: 170px;
-    flex: 0 0 auto;
-    overflow: hidden;
-  }
-
-  /* scrollable content inside details */
-  .exmap-detailsContent {
-    padding: 14px;
-    flex: 1 1 auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .exmap-detailsBtn {
-    position: sticky;
-    bottom: 0;
-    margin-top: 12px;
-  }
-
-  /* ADD PANEL — bottom sheet */
-  .exmap-addPanel {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: auto;
-    bottom: 0;
-    width: 100%;
-    max-width: none;
-    border-radius: 22px 22px 0 0;
-    transform: translateY(100%);
-    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-    height: 72vh;
-    max-height: none;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.14);
-  }
-
-  .exmap-addPanel.open {
-    transform: translateY(0);
-  }
-
-  /* smaller image preview on mobile */
-  .exmap-slideMain {
-    height: 160px;
-  }
-}
-/* Add these styles to your existing ExploreMap.css */
-
-/* Success message */
 .exmap-submitMsg {
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
+  padding: 10px 13px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 7px; line-height: 1.4;
 }
+.exmap-submitMsg--success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.exmap-submitMsg--error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
-.exmap-submitMsg--success {
-  background: #dcfce7;
-  color: #14532d;
-  border: 1px solid #bbf7d0;
-}
+/* Minimized */
+.exmap-addPanel.minimized { max-height: 64px; overflow: hidden; }
 
-.exmap-submitMsg--error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-/* Disabled submit button while loading */
-.exmap-addBtn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-/* ── ADD TO EXISTING ExploreMap.css ── */
-
-/* Minimize/maximize button for add panel */
-.pd-back { font-family: 'Plus Jakarta Sans', sans-serif; }
-
-.exmap-addHeaderBtns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.exmap-minimizeBtn {
-  background: #eef2f7;
-  border: none;
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-  color: #475569;
-  display: grid;
-  place-items: center;
-  transition: background 0.15s;
-}
-.exmap-minimizeBtn:hover { background: #dde5f0; }
-
-/* Minimized state — only shows header, no form */
-.exmap-addPanel.minimized {
-  max-height: 64px;
-  overflow: hidden;
-}
-
-/* Loading dots for places loading */
-.exmap-placesLoading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
-}
+/* Loading dots */
+.exmap-placesLoading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 20px; }
 .exmap-loadingDot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #167ee0;
+  width: 8px; height: 8px; border-radius: 50%; background: #167ee0;
   animation: dotBounce 1.2s ease-in-out infinite;
 }
 .exmap-loadingDot:nth-child(2) { animation-delay: 0.2s; background: #1b8d28; }
 .exmap-loadingDot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes dotBounce {
   0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-  40%           { transform: scale(1.2); opacity: 1; }
+  40% { transform: scale(1.2); opacity: 1; }
 }
 
-/* Submit message */
-.exmap-submitMsg {
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 13px; font-weight: 600; line-height: 1.4;
+/* ──────────────────── MOBILE ──────────────────── */
+@media (max-width: 768px) {
+  .exmap-openSidebar {
+    display: flex; align-items: center; gap: 6px;
+    position: absolute; top: 14px; left: 14px; z-index: 1550;
+    border: none; padding: 9px 16px; border-radius: 20px;
+    background: rgba(255,255,255,0.97); box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    font-weight: 800; font-size: 13px; color: #0f3d2e;
+    font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer;
+  }
+  .exmap-leftOverlay {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
+    max-width: none; height: 52vh; border-radius: 22px 22px 0 0;
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+    z-index: 1600; background: #fff; box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .exmap-leftOverlay.open { transform: translateY(0); }
+  .exmap-drawerHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 16px 12px; background: #fff; flex-shrink: 0; position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .exmap-drawerHeader::before {
+    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 4px; border-radius: 99px; background: #e2e8f0;
+  }
+  .exmap-drawerTitle { font-weight: 900; font-size: 15px; color: #0f3d2e; font-family: 'Red Rose', sans-serif; }
+  .exmap-drawerClose {
+    border: none; background: #f1f5f9; width: 32px; height: 32px;
+    border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: #374151;
+  }
+  .exmap-fab {
+    width: 52px; height: 52px; border-radius: 999px; padding: 0;
+    display: grid; place-items: center; right: 14px; bottom: 14px;
+  }
+  .fab-text { display: none; }
+  .fab-plus { display: flex; }
+  .exmap-details {
+    position: fixed; top: auto; right: 0; left: 0; bottom: 0; width: 100%;
+    max-width: none; border-radius: 22px 22px 0 0; height: auto; max-height: 58vh;
+    z-index: 1700; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .exmap-detailsImageWrap { height: 160px; flex: 0 0 auto; }
+  .exmap-detailsContent { padding: 14px; flex: 1; overflow-y: auto; }
+  .exmap-addPanel {
+    position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: 100%;
+    max-width: none; border-radius: 22px 22px 0 0;
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+    height: 80vh; max-height: none; overflow-y: auto;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
+  }
+  .exmap-addPanel.open { transform: translateY(0); }
+  .exmap-addPanel.minimized { height: 64px; overflow: hidden; }
 }
-.exmap-submitMsg--success {
-  background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0;
+
+/* Category filter banner */
+.exmap-cat-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 16px; margin: 8px 12px 0;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1.5px solid rgba(22,126,224,0.2); border-radius: 12px;
+  font-size: 13px; color: #1e293b; font-weight: 500;
+  flex-shrink: 0;
 }
-.exmap-submitMsg--error {
-  background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
+.exmap-cat-banner strong { color: #167ee0; font-weight: 800; }
+.exmap-cat-clear {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(239,68,68,0.1); color: #dc2626;
+  border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
+  padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s;
 }
-.exmap-addBtn:disabled { opacity: 0.65; cursor: not-allowed; }
+.exmap-cat-clear:hover { background: #dc2626; color: white; }

@@ -1,9 +1,4 @@
-// AdminSidebar.tsx
-// Location: src/features/auth/Admin/Sidebar/AdminSidebar.tsx
-//
-// Left navigation menu for admin dashboard.
-// Uses Lucide React icons (same as your Home page).
-// NavLink automatically adds active class when URL matches.
+
 
 import { NavLink, useNavigate } from "react-router-dom";
 import {
@@ -46,7 +41,7 @@ export default function AdminSidebar() {
   return (
     <aside className="asb-root">
 
-      {/* ── LOGO ──────────────────────────────────── */}
+      
       <div className="asb-logo">
         <div className="asb-logo-mark">L</div>
         <div className="asb-logo-text">
@@ -55,7 +50,7 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* ── NAV LINKS ─────────────────────────────── */}
+      {/*  NAV LINKS  */}
       <nav className="asb-nav">
         <div className="asb-nav-label">MAIN MENU</div>
 
@@ -76,7 +71,7 @@ export default function AdminSidebar() {
         ))}
       </nav>
 
-      {/* ── PROFILE + LOGOUT ──────────────────────── */}
+      {/* ─ PROFILE + LOGOUT  */}
       <div className="asb-bottom">
         <div className="asb-profile">
           <div className="asb-avatar">{initials}</div>

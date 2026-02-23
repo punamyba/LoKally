@@ -1,6 +1,4 @@
-// AdminAddPlace.tsx — LoKally Admin v2 (Multiple Photos — FIXED)
-// FIX: Changed FormData field from "image"/"image_1" to "images" array
-// Backend multer must use upload.array("images", 20) 
+
 import { useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -86,7 +84,7 @@ export default function AdminAddPlace() {
     fd.append("lat", pin.lat.toString());
     fd.append("lng", pin.lng.toString());
 
-    // ── KEY FIX: all images under "images" field (not "image" + "image_1")
+    //  KEY FIX: all images under "images" field (not "image" + "image_1")
     // Backend multer: upload.array("images", 20)
     imageFiles.forEach((file) => {
       fd.append("images", file);

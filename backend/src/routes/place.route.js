@@ -21,8 +21,8 @@ router.get("/stats", getPlaceStats);
 router.get("/", getPlaces);
 router.get("/:id", getPlaceById);
 
-// protected
-router.post("/", authMiddleware, upload.single("image"), createPlace);
+// protected — CHANGED: single → array for multiple image upload
+router.post("/", authMiddleware, upload.array("images", 20), createPlace);
 router.put("/:id", authMiddleware, upload.single("image"), updatePlace);
 router.delete("/:id", authMiddleware, deletePlace);
 

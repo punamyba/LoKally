@@ -1,4 +1,4 @@
-// AdminDashboard.tsx — LoKally Admin v2
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -9,7 +9,7 @@ import { adminApi } from "../adminApi";
 import type { AdminStats, Place } from "../AdminTypes";
 import "./AdminDashboard.css";
 
-// ── Bar Chart (pure SVG/CSS, no library) ──────────────────
+// ── Bar Chart (pure SVG/CSS, no library)
 function BarChart() {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"];
   const submitted = [3, 6, 9, 5, 12, 8, 10, 7, 14];
@@ -33,7 +33,7 @@ function BarChart() {
   );
 }
 
-// ── Donut Chart ────────────────────────────────────────────
+//  Donut Chart
 function DonutChart({ approved, total }: { approved: number; total: number }) {
   const pct = total > 0 ? Math.round((approved / total) * 100) : 0;
   const r = 44;
@@ -81,7 +81,7 @@ function DonutChart({ approved, total }: { approved: number; total: number }) {
   );
 }
 
-// ── Main ───────────────────────────────────────────────────
+//  Main
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [pendingPreview, setPendingPreview] = useState<Place[]>([]);
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
   return (
     <div className="adh-root">
 
-      {/* ── HEADER ─────────────────────────────────── */}
+      {/* HEADER  */}
       <div className="adh-header">
         <div>
           <h1 className="adh-title">Dashboard</h1>
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── STAT CARDS ─────────────────────────────── */}
+      {/*  STAT CARDS  */}
       <div className="adh-stats">
         {STAT_CARDS.map(({ label, value, Icon, color, badge }) => (
           <div key={label} className={`adh-card adh-card--${color}`}>
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* ── CHARTS ─────────────────────────────────── */}
+      {/*  CHARTS  */}
       <div className="adh-charts-row">
         <div className="adh-chart-card">
           <div className="adh-chart-header">
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── PENDING PREVIEW ────────────────────────── */}
+      {/*  PENDING PREVIEW */}
       <div className="adh-section">
         <div className="adh-section-header">
           <h2 className="adh-section-title">
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ── QUICK ACTIONS ──────────────────────────── */}
+      {/*  QUICK ACTIONS */}
       <div className="adh-section">
         <h2 className="adh-section-title" style={{ marginBottom: 14 }}>
           <Zap size={16} strokeWidth={2} />

@@ -1,4 +1,4 @@
-/* AdminDashboard.css — LoKally Admin v2 */
+
 
 .adh-root {
     padding: 32px 36px;
@@ -22,7 +22,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   
-  /* ── HEADER ────────────────────────────────────── */
+
   .adh-header {
     display: flex;
     align-items: flex-start;
@@ -55,7 +55,7 @@
     box-shadow: var(--shadow-sm);
   }
   
-  /* ── STATS GRID ────────────────────────────────── */
+
   .adh-stats {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -166,7 +166,7 @@
     transition: width 0.6s ease;
   }
   
-  /* ── CHARTS ROW ────────────────────────────────── */
+
   .adh-charts-row {
     display: grid;
     grid-template-columns: 3fr 2fr;
@@ -333,7 +333,7 @@
     margin-top: 1px;
   }
   
-  /* ── SECTION ───────────────────────────────────── */
+
   .adh-section { margin-bottom: 24px; }
   
   .adh-section-header {
@@ -380,7 +380,7 @@
   .adh-empty-icon { color: var(--slate-300); }
   .adh-empty-text { font-size: 14px; color: var(--slate-500); font-weight: 500; }
   
-  /* ── PENDING CARDS GRID ─────────────────────────── */
+
   .adh-pending-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -502,7 +502,7 @@
   .adh-badge--approved { background: var(--green-100); color: var(--green-700); }
   .adh-badge--rejected { background: var(--red-100);   color: #b91c1c; }
   
-  /* ── QUICK ACTIONS — Creative Cards ────────────── */
+
   .adh-actions {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

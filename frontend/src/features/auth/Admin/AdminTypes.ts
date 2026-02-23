@@ -1,4 +1,4 @@
-// types.ts
+
 // TypeScript type definitions for admin dashboard.
 // These describe the shape of data coming from the backend.
 

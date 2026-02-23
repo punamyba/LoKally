@@ -31,7 +31,7 @@ const Navbar = () => {
     }
   }, [isLoggedIn]);
 
-  // ✅ show first name nicely
+  
   const firstName =
     (currentUser?.first_name || currentUser?.name || "User")
       .toString()
@@ -97,7 +97,7 @@ const Navbar = () => {
                 isActive ? "lk-link lk-link--active" : "lk-link"
               }
             >
-              Explore
+              Map View
             </NavLink>
           </nav>
 

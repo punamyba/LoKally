@@ -134,11 +134,11 @@
 }
 
 .lk-link:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(147, 225, 246, 0.372);
 }
 
 .lk-link--active {
-  color: white;
+  color: rgb(255, 255, 255);
   background: linear-gradient(135deg, var(--lk-secondary), var(--lk-primary));
 }
 

@@ -1,5 +1,4 @@
-// AdminPlaceholder.tsx
-// Location: src/features/auth/Admin/Placeholder/AdminPlaceholder.tsx
+
 
 import { BarChart2, Settings } from "lucide-react";
 import "./AdminPlaceholder.css";

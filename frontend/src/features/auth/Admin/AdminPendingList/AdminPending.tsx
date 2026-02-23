@@ -1,4 +1,4 @@
-// AdminPending.tsx — Updated: click card → navigate to /admin/pending/:id
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, CheckCircle, Clock, User, Calendar, ChevronRight } from "lucide-react";
@@ -53,7 +53,7 @@ export default function AdminPending() {
           {places.map((place) => {
             const photos = parseImages(place.image);
             const coverImg = photos[0] || null;
-            const photoCount = place.images?.length || photos.length;
+            const photoCount = photos.length;
 
             return (
               <div

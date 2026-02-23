@@ -28,7 +28,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/admin", adminRoutes);
 
-// DB connect + model sync
+// DB connect and model sync
 syncDB();   //  replaces createPlacesTable()
 
 export default app;
