@@ -1,21 +1,38 @@
 
+// Features: real places API, category filter, add place panel, geocode search overlay
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import L from "leaflet";
 import Navbar from "../Components/Layout/Navbar/Navbar";
 import MapView from "./MapView";
 import type { Place } from "./Type";
 import MapSearchPanel from "../Components/MapComponents/MapSearchPanel";
+import MapLocationSearch from "../Map/MapComponents/MapLocationSearch";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import {
   MapPin, Upload, X, Plus, Images, CheckCircle,
   ChevronLeft, ChevronRight, Navigation, Search,
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
 import "./ExploreMap.css";
 
-type Mode = "explore" | "add";
+type Mode   = "explore" | "add";
 type LatLng = { lat: number; lng: number };
+
+
+const SERVER = "http://localhost:5001";
+const toFullUrl = (p: string) => p?.startsWith("http") ? p : `${SERVER}${p}`;
+
+function parseImages(img: any): string[] {
+  if (!img) return [];
+  if (Array.isArray(img)) return img;
+  if (typeof img === "string") {
+    const t = img.trim();
+    if (t.startsWith("[")) { try { const a = JSON.parse(t); if (Array.isArray(a)) return a; } catch {} }
+    return [img];
+  }
+  return [];
+}
 
 function distanceMeters(a: LatLng, b: LatLng) {
   const R = 6371000;
@@ -27,35 +44,23 @@ function distanceMeters(a: LatLng, b: LatLng) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
-const SERVER = "http://localhost:5001";
-
-const parseImages = (img: any): string[] => {
-  if (!img) return [];
-  if (Array.isArray(img)) return img;
-  if (typeof img === "string") {
-    const t = img.trim();
-    if (t.startsWith("[")) { try { const a = JSON.parse(t); if (Array.isArray(a)) return a; } catch {} }
-    return [img];
-  }
-  return [];
-};
-
-const toFullUrl = (path: string) => path.startsWith("http") ? path : `${SERVER}${path}`;
-
 const CATEGORIES = [
-  "Nature", "Heritage", "Temple", "Lake", "Viewpoint",
-  "Hidden Gem", "Adventure", "Cultural", "Food", "Other",
+  "Nature","Heritage","Temple","Lake","Viewpoint",
+  "Hidden Gem","Adventure","Cultural","Food","Other",
 ];
-
 const MAX_IMAGES = 20;
 
+/* ── component ───────────────────────────────────────────────── */
 export default function ExploreMap() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [places, setPlaces] = useState<Place[]>([]);
+  // map instance ref for flyTo
+  const mapRef = useRef<L.Map | null>(null);
+
+  /* places */
+  const [places, setPlaces]               = useState<Place[]>([]);
   const [placesLoading, setPlacesLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
 
   useEffect(() => {
     axiosInstance.get("/places").then((res) => {
@@ -63,82 +68,88 @@ export default function ExploreMap() {
         const normalized: Place[] = (res.data.data || []).map((p: any) => {
           const imgs = parseImages(p.image).map(toFullUrl);
           return {
-            ...p, id: String(p.id),
+            ...p,
+            id:  String(p.id),
             lat: typeof p.lat === "string" ? parseFloat(p.lat) : p.lat,
             lng: typeof p.lng === "string" ? parseFloat(p.lng) : p.lng,
             image: imgs[0] || undefined,
           };
         });
         setPlaces(normalized);
-      } else setPlaces([]);
+      }
     }).catch(() => setPlaces([]))
       .finally(() => setPlacesLoading(false));
   }, []);
 
-  // Read ?category= from URL (from Home page category click)
+  /* category filter from URL ?category=Temple */
+  const [categoryFilter, setCategoryFilter] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const cat = params.get("category") || "";
-    setCategoryFilter(cat);
+    setCategoryFilter(params.get("category") || "");
   }, [location.search]);
 
-  const [mode, setMode] = useState<Mode>("explore");
+  /* geocode flyTo target */
+  const [geoTarget, setGeoTarget] = useState<[number, number] | null>(null);
+  const handleLocationPick = (lat: number, lng: number) => {
+    setGeoTarget([lat, lng]);
+  };
+
+  /* UI state */
+  const [mode, setMode]                       = useState<Mode>("explore");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [mobileAddOpen, setMobileAddOpen] = useState(false);
+  const [mobileAddOpen, setMobileAddOpen]     = useState(false);
   const [addPanelMinimized, setAddPanelMinimized] = useState(false);
-  const [query, setQuery] = useState("");
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [zoomTarget, setZoomTarget] = useState<Place | null>(null);
-  const [tempPin, setTempPin] = useState<LatLng | null>(null);
-  const [nearbyPlace, setNearbyPlace] = useState<Place | null>(null);
+  const [query, setQuery]                     = useState("");
+  const [selectedPlace, setSelectedPlace]     = useState<Place | null>(null);
+  const [zoomTarget, setZoomTarget]           = useState<Place | null>(null);
+  const [tempPin, setTempPin]                 = useState<LatLng | null>(null);
+  const [nearbyPlace, setNearbyPlace]         = useState<Place | null>(null);
 
-  const [form, setForm] = useState({ name: "", address: "", description: "", category: "" });
+  /* add place form */
+  const [form, setForm]         = useState({ name: "", address: "", description: "", category: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
+  const [submitMsg, setSubmitMsg]   = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [activeSlide, setActiveSlide] = useState(0);
+  const [imageFiles, setImageFiles]         = useState<File[]>([]);
+  const [activeSlide, setActiveSlide]       = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* filtered places */
+  const filteredPlaces = useMemo(() => {
+    let result = places;
+    if (categoryFilter) result = result.filter(p => (p.category || "").toLowerCase() === categoryFilter.toLowerCase());
+    const q = query.trim().toLowerCase();
+    if (q) result = result.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.category || "").toLowerCase().includes(q) ||
+      (p.address || "").toLowerCase().includes(q)
+    );
+    return result;
+  }, [places, query, categoryFilter]);
+
+  /* image handlers */
   const handleImageFiles = (files: FileList | null) => {
     if (!files) return;
-    const remaining = MAX_IMAGES - imageFiles.length;
-    const toProcess = Array.from(files).slice(0, remaining);
+    const toProcess = Array.from(files).slice(0, MAX_IMAGES - imageFiles.length);
     setImageFiles(prev => [...prev, ...toProcess].slice(0, MAX_IMAGES));
     toProcess.forEach(file => {
       const reader = new FileReader();
-      reader.onload = e => setUploadedImages(prev => prev.length >= MAX_IMAGES ? prev : [...prev, e.target?.result as string]);
+      reader.onload = e => setUploadedImages(prev =>
+        prev.length >= MAX_IMAGES ? prev : [...prev, e.target?.result as string]);
       reader.readAsDataURL(file);
     });
     setActiveSlide(Math.max(0, uploadedImages.length));
   };
 
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); handleImageFiles(e.dataTransfer.files); };
+
   const removeImage = (i: number) => {
     setUploadedImages(prev => prev.filter((_, j) => j !== i));
     setImageFiles(prev => prev.filter((_, j) => j !== i));
     setActiveSlide(prev => Math.max(0, Math.min(prev, uploadedImages.length - 2)));
   };
 
-  const filteredPlaces = useMemo(() => {
-    let result = places;
-    // Filter by category (from Home page URL param)
-    if (categoryFilter) {
-      result = result.filter(p => (p.category || "").toLowerCase() === categoryFilter.toLowerCase());
-    }
-    // Filter by search query
-    const q = query.trim().toLowerCase();
-    if (q) {
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.category || "").toLowerCase().includes(q) ||
-        (p.address || "").toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [places, query, categoryFilter]);
-
+  /* map pick */
   const onMapPickLocation = (pos: LatLng) => {
     setSelectedPlace(null); setTempPin(pos);
     let best: Place | null = null, bestDist = Infinity;
@@ -149,6 +160,7 @@ export default function ExploreMap() {
     setNearbyPlace(best && bestDist <= 120 ? best : null);
   };
 
+  /* add mode */
   const goAddMode = () => {
     setMode("add");
     if (!tempPin) setTempPin({ lat: 27.7172, lng: 85.324 });
@@ -161,6 +173,7 @@ export default function ExploreMap() {
     setSubmitMsg(null); setAddPanelMinimized(false);
   };
 
+  /* submit place */
   const submitNewPlace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.address.trim()) {
@@ -188,28 +201,46 @@ export default function ExploreMap() {
     } finally { setSubmitting(false); }
   };
 
+  /* ── render ─────────────────────────────────────────────────── */
   return (
     <div className="exmap-page">
       <Navbar />
       <div className="exmap-body">
         <div className="exmap-mapArea">
+
           <MapView
-            fullHeight places={filteredPlaces} selectedPlace={selectedPlace}
+            fullHeight
+            places={filteredPlaces}
+            selectedPlace={selectedPlace}
             zoomTarget={zoomTarget}
+            geoTarget={geoTarget}
+            onGeoTargetConsumed={() => setGeoTarget(null)}
+            onMapReady={(map) => { mapRef.current = map; }}
             onSelectPlace={p => { setMode("explore"); setSelectedPlace(p); setMobilePanelOpen(false); setMobileAddOpen(false); }}
-            onMapPick={onMapPickLocation} tempPin={tempPin}
-            setTempPin={pos => setTempPin(pos)} mode={mode}
+            onMapPick={onMapPickLocation}
+            tempPin={tempPin}
+            setTempPin={pos => setTempPin(pos)}
+            mode={mode}
             nearbyPlace={nearbyPlace}
             onClickAddPlace={() => goAddMode()}
-            onClickViewPlaceDetails={() => { if (nearbyPlace) { setSelectedPlace(nearbyPlace); setMode("explore"); } }}
+            onClickViewPlaceDetails={() => {
+              if (nearbyPlace) { setSelectedPlace(nearbyPlace); setMode("explore"); }
+            }}
           />
 
+          {/* ── FLOATING GEOCODE SEARCH (on map, top-center) ── */}
+          <div className="exmap-mapSearchOverlay">
+            <MapLocationSearch onPick={handleLocationPick} />
+          </div>
+
+          {/* mobile open sidebar button */}
           {mode === "explore" && (
             <button className="exmap-openSidebar" onClick={() => setMobilePanelOpen(true)} type="button">
               <Search size={14} strokeWidth={2.5} /> Explore
             </button>
           )}
 
+          {/* FAB */}
           <button className="exmap-fab" onClick={goAddMode} type="button">
             <span className="fab-text"><Plus size={14} strokeWidth={3} /> Add place</span>
             <span className="fab-plus"><Plus size={22} strokeWidth={3} /></span>
@@ -224,7 +255,8 @@ export default function ExploreMap() {
                   <X size={14} strokeWidth={2.5} />
                 </button>
               </div>
-              {/* Category filter banner */}
+
+              {/* category banner */}
               {categoryFilter && (
                 <div className="exmap-cat-banner">
                   <span>Filtering: <strong>{categoryFilter}</strong></span>
@@ -234,14 +266,21 @@ export default function ExploreMap() {
                   </button>
                 </div>
               )}
+
               {placesLoading && (
                 <div className="exmap-placesLoading">
-                  <div className="exmap-loadingDot" /><div className="exmap-loadingDot" /><div className="exmap-loadingDot" />
+                  <div className="exmap-loadingDot" />
+                  <div className="exmap-loadingDot" />
+                  <div className="exmap-loadingDot" />
                 </div>
               )}
-              <MapSearchPanel query={query} setQuery={setQuery} results={filteredPlaces}
+
+              <MapSearchPanel
+                query={query} setQuery={setQuery}
+                results={filteredPlaces}
                 selectedPlaceId={selectedPlace?.id || null}
-                onPick={p => { setSelectedPlace(p); setZoomTarget(p); setMobilePanelOpen(false); }} />
+                onPick={p => { setSelectedPlace(p); setZoomTarget(p); setMobilePanelOpen(false); }}
+              />
             </div>
           )}
 
@@ -268,25 +307,25 @@ export default function ExploreMap() {
                   <div><b>Latitude:</b> {selectedPlace.lat.toFixed(6)}</div>
                   <div><b>Longitude:</b> {selectedPlace.lng.toFixed(6)}</div>
                 </div>
-                <button className="exmap-detailsBtn" onClick={() => navigate(`/place/${selectedPlace.id}`)} type="button">
+                <button className="exmap-detailsBtn"
+                  onClick={() => navigate(`/place/${selectedPlace.id}`)} type="button">
                   <Navigation size={13} strokeWidth={2.5} /> View Full Details
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── ADD PLACE PANEL — Admin-style form ── */}
+          {/* ── ADD PLACE PANEL ── */}
           {mode === "add" && (
             <div className={`exmap-addPanel ${mobileAddOpen ? "open" : ""} ${addPanelMinimized ? "minimized" : ""}`}>
               <div className="exmap-addHeader">
                 <div>
                   <div className="exmap-addTitle">Add a New Place</div>
-                  {!addPanelMinimized && (
-                    <div className="exmap-addSub">Drag the pin on the map to set location</div>
-                  )}
+                  {!addPanelMinimized && <div className="exmap-addSub">Drag the pin on the map to set location</div>}
                 </div>
                 <div className="exmap-addHeaderBtns">
-                  <button className="exmap-minimizeBtn" onClick={() => setAddPanelMinimized(v => !v)} type="button">
+                  <button className="exmap-minimizeBtn"
+                    onClick={() => setAddPanelMinimized(v => !v)} type="button">
                     {addPanelMinimized ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
                   </button>
                   <button className="exmap-addClose" onClick={closeAddMode} type="button">
@@ -301,13 +340,11 @@ export default function ExploreMap() {
                     <div className={`exmap-submitMsg exmap-submitMsg--${submitMsg.type}`}>
                       {submitMsg.type === "success"
                         ? <CheckCircle size={14} strokeWidth={2.5} />
-                        : <X size={14} strokeWidth={2.5} />
-                      }
+                        : <X size={14} strokeWidth={2.5} />}
                       {submitMsg.text}
                     </div>
                   )}
 
-                  {/* Name */}
                   <div className="exmap-field">
                     <label className="exmap-fieldLabel">Place Name <span className="exmap-req">*</span></label>
                     <input className="exmap-input" value={form.name}
@@ -315,7 +352,6 @@ export default function ExploreMap() {
                       placeholder="e.g. Phewa Lake" />
                   </div>
 
-                  {/* Address */}
                   <div className="exmap-field">
                     <label className="exmap-fieldLabel">Address <span className="exmap-req">*</span></label>
                     <input className="exmap-input" value={form.address}
@@ -323,7 +359,6 @@ export default function ExploreMap() {
                       placeholder="e.g. Pokhara, Nepal" />
                   </div>
 
-                  {/* Category */}
                   <div className="exmap-field">
                     <label className="exmap-fieldLabel">Category</label>
                     <select className="exmap-input" value={form.category}
@@ -333,7 +368,6 @@ export default function ExploreMap() {
                     </select>
                   </div>
 
-                  {/* Description */}
                   <div className="exmap-field">
                     <label className="exmap-fieldLabel">Description</label>
                     <textarea className="exmap-textarea" value={form.description} rows={3}
@@ -341,7 +375,7 @@ export default function ExploreMap() {
                       placeholder="What makes this place special?" />
                   </div>
 
-                  {/* Photos — admin-style grid */}
+                  {/* Photos */}
                   <div className="exmap-field">
                     <div className="exmap-photoHeader">
                       <label className="exmap-fieldLabel">
@@ -363,8 +397,7 @@ export default function ExploreMap() {
                         ))}
                         {imageFiles.length < MAX_IMAGES && (
                           <div className="exmap-photoAddMore" onClick={() => fileInputRef.current?.click()}>
-                            <Plus size={18} strokeWidth={2} />
-                            <span>Add</span>
+                            <Plus size={18} strokeWidth={2} /><span>Add</span>
                           </div>
                         )}
                       </div>
@@ -376,7 +409,8 @@ export default function ExploreMap() {
                         <div className="exmap-uploadSub">Up to {MAX_IMAGES} · JPG, PNG, WEBP</div>
                       </div>
                     )}
-                    <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+                    <input ref={fileInputRef} type="file" accept="image/*" multiple
+                      style={{ display: "none" }}
                       onChange={e => handleImageFiles(e.target.files)} />
                   </div>
 
@@ -384,11 +418,13 @@ export default function ExploreMap() {
                   <div className="exmap-coordsRow">
                     <div className="exmap-field">
                       <label className="exmap-fieldLabel">Latitude</label>
-                      <input className="exmap-input exmap-input--readonly" value={tempPin ? tempPin.lat.toFixed(6) : ""} readOnly />
+                      <input className="exmap-input exmap-input--readonly"
+                        value={tempPin ? tempPin.lat.toFixed(6) : ""} readOnly />
                     </div>
                     <div className="exmap-field">
                       <label className="exmap-fieldLabel">Longitude</label>
-                      <input className="exmap-input exmap-input--readonly" value={tempPin ? tempPin.lng.toFixed(6) : ""} readOnly />
+                      <input className="exmap-input exmap-input--readonly"
+                        value={tempPin ? tempPin.lng.toFixed(6) : ""} readOnly />
                     </div>
                   </div>
 
@@ -404,6 +440,7 @@ export default function ExploreMap() {
               )}
             </div>
           )}
+
         </div>
       </div>
     </div>

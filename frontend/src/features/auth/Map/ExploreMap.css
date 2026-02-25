@@ -1,4 +1,4 @@
-
+/* ExploreMap.css — Admin-style form + Red Rose font + Lucide icons */
 @import url('https://fonts.googleapis.com/css2?family=Red+Rose:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 .exmap-page {
@@ -292,3 +292,107 @@
   font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s;
 }
 .exmap-cat-clear:hover { background: #dc2626; color: white; }
+
+/* ── FLOATING GEOCODE SEARCH OVERLAY ──────────────────────
+   Positioned on map top-center. NOT in sidebar.
+   z-index above map (400+) but below panels (1100+)
+──────────────────────────────────────────────────────────── */
+.exmap-mapSearchOverlay {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  width: 400px;
+  max-width: calc(100vw - 160px); /* don't overlap sidebar/panels */
+  pointer-events: auto;
+}
+
+/* Search input wrapper */
+.exmap-locWrap {
+  position: relative;
+  width: 100%;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.exmap-locInputRow {
+  display: flex; align-items: center;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(22,126,224,0.2);
+  border-radius: 14px;
+  padding: 0 12px;
+  height: 46px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  gap: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.exmap-locInputRow:focus-within {
+  border-color: #167ee0;
+  box-shadow: 0 0 0 3px rgba(22,126,224,0.12), 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.exmap-locIcon { color: #64748b; flex-shrink: 0; }
+
+.exmap-locInput {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 13.5px; color: #1e293b;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500;
+}
+.exmap-locInput::placeholder { color: #94a3b8; }
+
+.exmap-locClear {
+  background: #f1f5f9; border: none; border-radius: 50%;
+  width: 24px; height: 24px; display: grid; place-items: center;
+  cursor: pointer; color: #475569; flex-shrink: 0; transition: background 0.15s;
+}
+.exmap-locClear:hover { background: #fee2e2; color: #dc2626; }
+
+/* Loading spinner */
+.exmap-locSpinner {
+  width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid #e2e8f0; border-top-color: #167ee0;
+  animation: locSpin 0.6s linear infinite;
+}
+@keyframes locSpin { to { transform: rotate(360deg); } }
+
+/* Results dropdown */
+.exmap-locResults {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: rgba(255,255,255,0.98); backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(22,126,224,0.15); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+  overflow: hidden; z-index: 901;
+  max-height: 280px; overflow-y: auto;
+}
+.exmap-locResults::-webkit-scrollbar { width: 4px; }
+.exmap-locResults::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+.exmap-locItem {
+  display: flex; align-items: flex-start; gap: 10px;
+  width: 100%; padding: 11px 14px; border: none; background: none;
+  cursor: pointer; text-align: left; transition: background 0.12s;
+  border-bottom: 1px solid #f1f5f9; font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.exmap-locItem:last-child { border-bottom: none; }
+.exmap-locItem:hover { background: #f0f9ff; }
+
+.exmap-locItemIcon { color: #167ee0; flex-shrink: 0; margin-top: 2px; }
+.exmap-locItemText { font-size: 12.5px; color: #374151; line-height: 1.5; font-weight: 500; }
+
+.exmap-locEmpty {
+  padding: 16px 14px; font-size: 13px; color: #94a3b8;
+  text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Mobile: full width with margins */
+@media (max-width: 768px) {
+  .exmap-mapSearchOverlay {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+}

@@ -1,4 +1,5 @@
 
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer, TileLayer, Marker, Popup,
@@ -12,50 +13,76 @@ import "./MapView.css";
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-type Mode = "explore" | "add";
+type Mode   = "explore" | "add";
 type LatLng = { lat: number; lng: number };
 
-type MapViewProps = {
-  fullHeight?: boolean;
-  places: Place[];
-  selectedPlace: Place | null;
-  zoomTarget?: Place | null;        // ← NEW: fly to this place at zoom 15
-  onSelectPlace: (place: Place) => void;
-  onMapPick: (pos: LatLng) => void;
-  tempPin: LatLng | null;
-  setTempPin: (pos: LatLng | null) => void;
-  mode: Mode;
-  nearbyPlace: Place | null;
-  onClickAddPlace: () => void;
-  onClickViewPlaceDetails: () => void;
+export type MapViewProps = {
+  fullHeight?:              boolean;
+  places:                   Place[];
+  selectedPlace:            Place | null;
+  zoomTarget?:              Place | null;
+  geoTarget?:               [number, number] | null;
+  onGeoTargetConsumed?:     () => void;
+  onMapReady?:              (map: L.Map) => void;
+  onSelectPlace:            (place: Place) => void;
+  onMapPick:                (pos: LatLng) => void;
+  tempPin:                  LatLng | null;
+  setTempPin:               (pos: LatLng | null) => void;
+  mode:                     Mode;
+  nearbyPlace:              Place | null;
+  onClickAddPlace:          () => void;
+  onClickViewPlaceDetails:  () => void;
 };
 
-// Fly to selected place from sidebar card click
+/* ── inner hooks (must be children of MapContainer) ─────────────── */
+
+function MapReadyEmitter({ onMapReady }: { onMapReady?: (map: L.Map) => void }) {
+  const map = useMap();
+  useEffect(() => { if (onMapReady) onMapReady(map); }, [map]); // eslint-disable-line
+  return null;
+}
+
+function FlyToGeo({
+  target, onConsumed,
+}: { target?: [number, number] | null; onConsumed?: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!target) return;
+    map.flyTo(target, 12, { duration: 1.2 });
+    if (onConsumed) onConsumed();
+  }, [target]); // eslint-disable-line
+  return null;
+}
+
 function FlyToTarget({ target }: { target: Place | null }) {
   const map = useMap();
   useEffect(() => {
     if (!target) return;
-    // zoom 15 = much closer than default 12, like Google Maps pin click
     map.flyTo([target.lat, target.lng], 15, { duration: 0.9 });
-  }, [target, map]);
+  }, [target]); // eslint-disable-line
   return null;
 }
 
-// Fly when selectedPlace changes (from popup or details click)
 function FlyToSelected({ selectedPlace }: { selectedPlace: Place | null }) {
   const map = useMap();
   useEffect(() => {
     if (!selectedPlace) return;
     map.flyTo([selectedPlace.lat, selectedPlace.lng], 13, { duration: 0.8 });
-  }, [selectedPlace, map]);
+  }, [selectedPlace]); // eslint-disable-line
   return null;
 }
 
-// Animated GPS location pin — blue pulsing rings
+function ClickHandler({ onMapPick }: { onMapPick: (pos: LatLng) => void }) {
+  useMapEvents({ click(e) { onMapPick({ lat: e.latlng.lat, lng: e.latlng.lng }); } });
+  return null;
+}
+
+/* ── icons ──────────────────────────────────────────────────────── */
+
 function makeUserLocationIcon() {
   return L.divIcon({
     className: "lk-gpsPin",
@@ -64,12 +91,11 @@ function makeUserLocationIcon() {
       <div class="lk-gpsPin__pulse lk-gpsPin__pulse--delay"></div>
       <div class="lk-gpsPin__dot"></div>
     `,
-    iconSize: [36, 36],
+    iconSize:   [36, 36],
     iconAnchor: [18, 18],
   });
 }
 
-// Round photo marker for places
 function makePlaceIcon(p: Place) {
   const img = p.image || "";
   return L.divIcon({
@@ -80,33 +106,30 @@ function makePlaceIcon(p: Place) {
       </div>
       <div class="lk-photoMarker__pin"></div>
     `,
-    iconSize: [54, 70],
-    iconAnchor: [27, 68],
-    popupAnchor: [0, -62],
+    iconSize:     [54, 70],
+    iconAnchor:   [27, 68],
+    popupAnchor:  [0, -62],
   });
 }
 
-// Temp pin (default leaflet blue marker)
 const tempPinIcon = new L.Icon({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
+  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize:   [25, 41],
   iconAnchor: [12, 41],
 });
 
-function ClickHandler({ onMapPick }: { onMapPick: (pos: LatLng) => void }) {
-  useMapEvents({
-    click(e) { onMapPick({ lat: e.latlng.lat, lng: e.latlng.lng }); },
-  });
-  return null;
-}
+/* ── main component ─────────────────────────────────────────────── */
 
 export default function MapView({
   fullHeight = false,
   places,
   selectedPlace,
   zoomTarget,
+  geoTarget,
+  onGeoTargetConsumed,
+  onMapReady,
   onSelectPlace,
   onMapPick,
   tempPin,
@@ -125,15 +148,15 @@ export default function MapView({
     if (!navigator.geolocation) { setUserPos(fallbackPos); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-      () => setUserPos(fallbackPos),
+      ()    => setUserPos(fallbackPos),
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }, [fallbackPos]);
 
   const center = useMemo<[number, number]>(() => {
     if (selectedPlace) return [selectedPlace.lat, selectedPlace.lng];
-    if (tempPin) return [tempPin.lat, tempPin.lng];
-    if (userPos) return userPos;
+    if (tempPin)       return [tempPin.lat, tempPin.lng];
+    if (userPos)       return userPos;
     return fallbackPos;
   }, [selectedPlace, tempPin, userPos, fallbackPos]);
 
@@ -144,11 +167,9 @@ export default function MapView({
 
   return (
     <MapContainer
-      center={center}
-      zoom={7}
+      center={center} zoom={7}
       className={fullHeight ? "lk-map lk-map--full" : "lk-map"}
-      zoomControl={false}
-      closePopupOnClick={false}
+      zoomControl={false} closePopupOnClick={false}
     >
       <ZoomControl position="topright" />
       <TileLayer
@@ -156,11 +177,14 @@ export default function MapView({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <ClickHandler onMapPick={onMapPick} />
+      {/* inner hook components */}
+      <MapReadyEmitter onMapReady={onMapReady} />
+      <FlyToGeo target={geoTarget} onConsumed={onGeoTargetConsumed} />
       <FlyToSelected selectedPlace={selectedPlace} />
-      <FlyToTarget target={zoomTarget || null} />   {/* ← zoom to list click */}
+      <FlyToTarget target={zoomTarget ?? null} />
+      <ClickHandler onMapPick={onMapPick} />
 
-      {/* GPS location marker — animated pulsing blue dot */}
+      {/* GPS location pulse marker */}
       {userPos && (
         <Marker position={userPos} icon={gpsIcon}>
           <Popup autoClose={false} closeOnClick={false}>
@@ -171,25 +195,23 @@ export default function MapView({
         </Marker>
       )}
 
-      {/* Database place markers */}
+      {/* Place markers */}
       {places.map((p) => (
         <Marker
-          key={p.id}
-          position={[p.lat, p.lng]}
+          key={p.id} position={[p.lat, p.lng]}
           icon={makePlaceIcon(p)}
           eventHandlers={{ click: () => onSelectPlace(p) }}
         />
       ))}
 
-      {/* Temporary pin — draggable in add mode */}
+      {/* Temp pin (add mode) */}
       {tempPin && (
         <Marker
           position={[tempPin.lat, tempPin.lng]}
-          icon={tempPinIcon}
-          draggable={mode === "add"}
+          icon={tempPinIcon} draggable={mode === "add"}
           ref={(ref) => {
-            const anyRef = ref as any;
-            tempMarkerRef.current = anyRef?.leafletElement || anyRef || null;
+            const a = ref as any;
+            tempMarkerRef.current = a?.leafletElement || a || null;
           }}
           eventHandlers={{
             dragend: (e) => {
@@ -210,8 +232,9 @@ export default function MapView({
                 Add Place Here
               </button>
               {nearbyPlace && (
-                <button className="lk-pickPopup__btn" onClick={onClickViewPlaceDetails} type="button">
-                  View Nearby Place Details
+                <button className="lk-pickPopup__btn"
+                  onClick={onClickViewPlaceDetails} type="button">
+                  View Nearby Place
                 </button>
               )}
               <div className="lk-pickPopup__hint">
