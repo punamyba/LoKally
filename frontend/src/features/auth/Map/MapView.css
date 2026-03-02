@@ -143,3 +143,15 @@
   line-height: 1.4;
   margin-top: 6px;
 }
+
+/* Geo pin popup danger button */
+.lk-pickPopup__btn--danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: rgba(220,38,38,0.2);
+  margin-top: 4px;
+}
+.lk-pickPopup__btn--danger:hover {
+  background: #dc2626;
+  color: white;
+}
