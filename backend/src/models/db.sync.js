@@ -1,6 +1,7 @@
 import sequelize from "../config/db.js";
 import User from "./user.model.js";
 import Place from "./place.model.js";
+import ContactMessage from "./contactMessage.model.js"; // Registers model so table can be created
 
 // Associations
 Place.belongsTo(User, { foreignKey: "submitted_by", as: "submitter" });
@@ -11,7 +12,10 @@ const syncDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("PostgreSQL connected via Sequelize");
+
+    // Creates/updates tables for all imported models
     await sequelize.sync({ alter: true });
+
     console.log("Models synced");
   } catch (err) {
     console.error("DB sync error:", err.message);
@@ -19,4 +23,4 @@ const syncDB = async () => {
   }
 };
 
-export { sequelize, User, Place, syncDB };
+export { sequelize, User, Place, ContactMessage, syncDB };

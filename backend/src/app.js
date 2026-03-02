@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import placeRoutes from "./routes/place.route.js";
 import adminRoutes from "./routes/admin.route.js";
+import contactRoutes from "./routes/contact.route.js";
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use("/api", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use("/api/contact", contactRoutes);
 // DB connect and model sync
 syncDB();   //  replaces createPlacesTable()
 
