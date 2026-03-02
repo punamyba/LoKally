@@ -3,44 +3,87 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Op } from "sequelize";
 import { User } from "../models/db.sync.js";
-import sendEmail from "../utils/sendEmail.js";
+import { sendMail } from "../services/mailer.js";
 
+/* Generates 6 digit OTP */
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
+
+/* Generates random token for reset session */
 const generateSessionToken = () => crypto.randomBytes(32).toString("hex");
 
 /* REGISTER */
 export const registerUser = async (req, res) => {
   try {
-    const { first_name, last_name, email, phone, dob, address, gender, password, confirm_password } = req.body;
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      dob,
+      address,
+      gender,
+      password,
+      confirm_password,
+    } = req.body;
 
-    if (!email || !password || !confirm_password)
+    // Basic validation
+    if (!email || !password || !confirm_password) {
       return res.status(400).json({ message: "Required fields missing" });
+    }
 
-    if (password !== confirm_password)
+    if (password !== confirm_password) {
       return res.status(400).json({ message: "Passwords do not match" });
+    }
 
+    // Check if email already exists
     const existing = await User.findOne({ where: { email } });
-    if (existing)
+    if (existing) {
       return res.status(400).json({ message: "Email already exists" });
+    }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create verification token stored in DB
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
+    // Create user in database
     await User.create({
-      first_name, last_name, email, phone, dob, address, gender,
+      first_name,
+      last_name,
+      email,
+      phone,
+      dob,
+      address,
+      gender,
       password: hashedPassword,
       is_verified: false,
       verification_token: verificationToken,
     });
 
+    // Send verification email (registration should not fail if email fails)
     try {
+      // IMPORTANT: Your app.js mounts authRoutes at "/api"
+      // auth.route.js has GET "/verify-email/:token"
+      // So final URL must be "/api/verify-email/:token"
       const verifyLink = `http://localhost:5001/api/verify-email/${verificationToken}`;
-      await sendEmail(email, verifyLink);
+
+      await sendMail({
+        to: email,
+        subject: "Verify your email",
+        html: `
+          <h3>Verify your email</h3>
+          <p>Click the link below to verify your account:</p>
+          <a href="${verifyLink}">${verifyLink}</a>
+        `,
+      });
     } catch (e) {
       console.error("Register email failed:", e.message);
     }
 
-    return res.status(201).json({ message: "Registered successfully! Please verify your email" });
+    return res
+      .status(201)
+      .json({ message: "Registered successfully! Please verify your email" });
   } catch (err) {
     console.error("registerUser error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -52,20 +95,29 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    // Validate request
+    if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
+    }
 
     const user = await User.findOne({ where: { email } });
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "User not found" });
+    }
 
-    if (!user.is_verified)
-      return res.status(403).json({ message: "Please verify your email before logging in" });
+    // Block login if email is not verified
+    if (!user.is_verified) {
+      return res
+        .status(403)
+        .json({ message: "Please verify your email before logging in" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
+    }
 
+    // Create JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -89,15 +141,18 @@ export const loginUser = async (req, res) => {
   }
 };
 
-/* FORGOT PASSWORD */
+/* FORGOT PASSWORD - SEND OTP */
 export const forgotPasswordSendCode = async (req, res) => {
   try {
     const { email } = req.body;
+
+    // Always respond same message for security (no user enumeration)
     if (!email) return res.json({ message: "If account exists, code was sent." });
 
     const user = await User.findOne({ where: { email } });
     if (!user) return res.json({ message: "If account exists, code was sent." });
 
+    // Generate OTP and store hash in DB
     const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
 
@@ -108,12 +163,17 @@ export const forgotPasswordSendCode = async (req, res) => {
       reset_session_expires: null,
     });
 
+    // Send OTP to email
     try {
-      await sendEmail(email, "Password reset code", `
-        <p>Your password reset code is:</p>
-        <h2>${otp}</h2>
-        <p>This code expires in 10 minutes.</p>
-      `);
+      await sendMail({
+        to: email,
+        subject: "Password reset code",
+        html: `
+          <p>Your password reset code is:</p>
+          <h2>${otp}</h2>
+          <p>This code expires in 10 minutes.</p>
+        `,
+      });
     } catch (e) {
       console.error("Forgot password email failed:", e.message);
     }
@@ -134,8 +194,10 @@ export const resendForgotCode = async (req, res) => {
 export const forgotPasswordVerifyCode = async (req, res) => {
   try {
     const { email, code } = req.body;
-    if (!email || !code)
+
+    if (!email || !code) {
       return res.status(400).json({ message: "Email and code required" });
+    }
 
     const user = await User.findOne({
       where: {
@@ -145,13 +207,16 @@ export const forgotPasswordVerifyCode = async (req, res) => {
       },
     });
 
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "Code expired or invalid" });
+    }
 
     const validOtp = await bcrypt.compare(code, user.reset_code_hash);
-    if (!validOtp)
+    if (!validOtp) {
       return res.status(400).json({ message: "Invalid code" });
+    }
 
+    // Create reset session token for next step
     const resetSessionToken = generateSessionToken();
     const resetSessionHash = await bcrypt.hash(resetSessionToken, 10);
 
@@ -171,8 +236,10 @@ export const forgotPasswordVerifyCode = async (req, res) => {
 export const resetPasswordWithSession = async (req, res) => {
   try {
     const { email, resetSessionToken, newPassword } = req.body;
-    if (!email || !resetSessionToken || !newPassword)
+
+    if (!email || !resetSessionToken || !newPassword) {
       return res.status(400).json({ message: "Invalid request" });
+    }
 
     const user = await User.findOne({
       where: {
@@ -181,13 +248,20 @@ export const resetPasswordWithSession = async (req, res) => {
       },
     });
 
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "Reset session expired or invalid" });
+    }
 
-    const validSession = await bcrypt.compare(resetSessionToken, user.reset_session_hash);
-    if (!validSession)
+    const validSession = await bcrypt.compare(
+      resetSessionToken,
+      user.reset_session_hash
+    );
+
+    if (!validSession) {
       return res.status(400).json({ message: "Invalid reset session" });
+    }
 
+    // Update user password and clear reset fields
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await user.update({
