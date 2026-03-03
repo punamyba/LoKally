@@ -49,3 +49,19 @@ export type AdminStats = {
     created_at: string;
   };
   
+  // src/features/auth/Admin/AdminTypes.ts
+
+export type ContactStatus = "new" | "in_progress" | "replied" | "closed";
+
+export type ContactMessage = {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: ContactStatus;
+  admin_reply: string | null;
+  replied_at: string | null;
+  created_at: string;
+  updated_at: string;
+};

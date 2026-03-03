@@ -1,0 +1,101 @@
+.aci-wrap { padding: 22px; }
+.aci-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.aci-title { margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; }
+.aci-sub { margin: 6px 0 0; font-size: 13px; color: #64748b; }
+
+.aci-alert {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.aci-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #3b82f6, #22c55e);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.aci-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.aci-grid { margin-top: 14px; display: grid; grid-template-columns: 340px 1fr; gap: 14px; }
+
+.aci-left, .aci-right {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 70vh;
+}
+
+.aci-filters { display: flex; gap: 6px; padding: 12px; flex-wrap: wrap; border-bottom: 1px solid #f1f5f9; }
+.aci-tab { background: #f1f5f9; border: none; border-radius: 999px; padding: 7px 10px; cursor: pointer; font-weight: 700; font-size: 12px; color: #334155; }
+.aci-tab-on { background: #1d4ed8; color: #fff; }
+
+.aci-search {
+  width: calc(100% - 24px);
+  margin: 10px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  outline: none;
+}
+.aci-search:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+
+.aci-list { padding: 6px; overflow: auto; max-height: calc(70vh - 110px); }
+
+.aci-item {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.aci-item:hover { background: #f8fafc; }
+.aci-item-on { border-color: #93c5fd; background: #eff6ff; }
+
+.aci-item-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.aci-item-name { font-weight: 800; color: #0f172a; font-size: 13px; }
+.aci-item-status { font-size: 12px; font-weight: 800; color: #334155; }
+
+.aci-item-subject { margin-top: 6px; font-size: 13px; color: #334155; font-weight: 700; }
+.aci-item-email { margin-top: 4px; font-size: 12px; color: #64748b; }
+
+.aci-empty { padding: 18px; color: #64748b; }
+
+.aci-detail { padding: 16px; }
+.aci-detail-head { border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+.aci-detail-subject { margin: 0; font-size: 18px; color: #0f172a; font-weight: 900; }
+.aci-detail-meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.aci-detail-name { font-weight: 800; color: #0f172a; }
+.aci-detail-email2 { color: #64748b; font-size: 12px; }
+.aci-detail-date { color: #64748b; font-size: 12px; }
+
+.aci-statusbar { margin-top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.aci-sbtn { border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 7px 10px; cursor: pointer; font-weight: 800; font-size: 12px; color: #334155; }
+.aci-sbtn-on { border-color: #93c5fd; background: #eff6ff; }
+
+.aci-message, .aci-replied, .aci-replybox { margin-top: 14px; }
+.aci-message h3, .aci-replied h3, .aci-replybox h3 { margin: 0 0 6px; color: #0f172a; font-size: 14px; }
+.aci-message p, .aci-replied p { margin: 0; color: #334155; line-height: 1.7; white-space: pre-wrap; }
+
+.aci-replybox textarea {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+}
+.aci-replybox textarea:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+
+@media (max-width: 900px) {
+  .aci-grid { grid-template-columns: 1fr; }
+  .aci-left, .aci-right { min-height: auto; }
+}

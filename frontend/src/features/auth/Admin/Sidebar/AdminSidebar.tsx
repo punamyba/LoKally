@@ -9,19 +9,21 @@ import {
   Users,            // Users list
   BarChart2,        // Reports
   Settings,         // Settings
-  LogOut,           // Logout button
+  LogOut,
+  MessageSquare,           // Logout button
 } from "lucide-react";
 import "./AdminSidebar.css";
 
 // Each nav item: where it goes, what label, which icon component
 const NAV_ITEMS = [
-  { to: "/admin",           label: "Dashboard",  Icon: LayoutDashboard, end: true },
-  { to: "/admin/pending",   label: "Pending",    Icon: Clock },
-  { to: "/admin/places",    label: "All Places", Icon: MapPin },
-  { to: "/admin/add-place", label: "Add Place",  Icon: PlusCircle },
-  { to: "/admin/users",     label: "Users",      Icon: Users },
-  { to: "/admin/reports",   label: "Reports",    Icon: BarChart2 },
-  { to: "/admin/settings",  label: "Settings",   Icon: Settings },
+  { to: "/admin",           label: "Dashboard",         Icon: LayoutDashboard, end: true },
+  { to: "/admin/pending",   label: "Pending",           Icon: Clock },
+  { to: "/admin/places",    label: "All Places",        Icon: MapPin },
+  { to: "/admin/add-place", label: "Add Place",         Icon: PlusCircle },
+  { to: "/admin/users",     label: "Users",             Icon: Users },
+  { to: "/admin/contact",   label: "Contact Messages",  Icon: MessageSquare },  // ← NEW
+  { to: "/admin/reports",   label: "Reports",           Icon: BarChart2 },
+  { to: "/admin/settings",  label: "Settings",          Icon: Settings },
 ];
 
 export default function AdminSidebar() {
