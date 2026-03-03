@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./Navbar.css";
-import { User, LogOut, Menu, X, Compass, Bell, Search } from "lucide-react";
+import { User, LogOut, Menu, X, Compass, Bell, Search, Mail } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -31,7 +31,6 @@ const Navbar = () => {
     }
   }, [isLoggedIn]);
 
-  
   const firstName =
     (currentUser?.first_name || currentUser?.name || "User")
       .toString()
@@ -40,15 +39,13 @@ const Navbar = () => {
 
   const onSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // later: navigate(`/explore-map?search=${encodeURIComponent(q)}`)
-    // for now just go explore-map
     navigate("/explore-map");
   };
 
   return (
     <header className={`lk-nav ${scrolled ? "lk-nav--scrolled" : ""}`}>
       <div className="lk-nav__inner">
-        {/* LEFT: Brand text only (no pin icon) */}
+        {/* LEFT: Brand */}
         <Link to={isLoggedIn ? "/home" : "/"} className="lk-brand">
           <div className="lk-brand__text">
             <div className="lk-brand__main">LoKally</div>
@@ -56,7 +53,7 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* CENTER: Komoot-style search pill */}
+        {/* CENTER: Search */}
         <form className="lk-search" onSubmit={onSearchSubmit}>
           <Search size={18} className="lk-search__icon" />
           <input
@@ -79,7 +76,7 @@ const Navbar = () => {
 
         {/* RIGHT: actions */}
         <div className="lk-actions">
-          {/* Desktop nav links (small + clean) */}
+          {/* Desktop nav links */}
           <nav className="lk-links">
             {isLoggedIn && (
               <NavLink
@@ -91,6 +88,7 @@ const Navbar = () => {
                 Home
               </NavLink>
             )}
+
             <NavLink
               to="/explore-map"
               className={({ isActive }) =>
@@ -98,6 +96,16 @@ const Navbar = () => {
               }
             >
               Map View
+            </NavLink>
+
+            {/* NEW: Contact */}
+            <NavLink
+              to="/contact"
+              className={({ isActive }) =>
+                isActive ? "lk-link lk-link--active" : "lk-link"
+              }
+            >
+              Contact
             </NavLink>
           </nav>
 
@@ -107,7 +115,7 @@ const Navbar = () => {
             <span className="lk-dot" />
           </button>
 
-          {/* User chip (simple) */}
+          {/* User chip */}
           {isLoggedIn ? (
             <button
               className="lk-userChip"
@@ -163,6 +171,18 @@ const Navbar = () => {
           >
             <Compass size={18} />
             <span>Explore</span>
+          </NavLink>
+
+          {/* NEW: Contact (mobile) */}
+          <NavLink
+            to="/contact"
+            className={({ isActive }) =>
+              isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"
+            }
+            onClick={() => setOpen(false)}
+          >
+            <Mail size={18} />
+            <span>Contact</span>
           </NavLink>
 
           {isLoggedIn && (

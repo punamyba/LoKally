@@ -1,0 +1,86 @@
+.cu-page { background: #fff; min-height: 100vh; }
+
+.cu-hero {
+  background: linear-gradient(135deg, #e0f2fe, #dcfce7);
+  padding: 56px 18px;
+}
+.cu-hero-inner { max-width: 980px; margin: 0 auto; text-align: center; }
+.cu-title { margin: 0; font-size: 36px; font-weight: 800; color: #0f172a; }
+.cu-subtitle { margin: 10px 0 0; color: #334155; line-height: 1.6; }
+
+.cu-main { background: #f8fafc; padding: 40px 18px 70px; }
+.cu-container {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 18px;
+  align-items: start;
+}
+
+.cu-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.cu-head h2 { margin: 0; font-size: 18px; color: #0f172a; }
+.cu-head p { margin: 6px 0 0; color: #64748b; font-size: 13px; }
+
+.cu-alert {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.cu-alert-ok { background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534; }
+.cu-alert-err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+.cu-form { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.cu-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.cu-field { display: flex; flex-direction: column; gap: 6px; }
+.cu-field label { font-weight: 600; font-size: 13px; color: #0f172a; }
+
+.cu-input {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+  background: #fff;
+}
+.cu-input:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+.cu-input-err { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+.cu-error { color: #ef4444; font-size: 12px; }
+
+.cu-btn {
+  margin-top: 4px;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #3b82f6, #22c55e);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cu-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.cu-side { display: flex; flex-direction: column; gap: 12px; }
+.cu-side-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+}
+.cu-side-card h3 { margin: 0; font-size: 14px; color: #0f172a; }
+.cu-side-card p { margin: 8px 0 0; font-size: 13px; color: #475569; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .cu-container { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .cu-row2 { grid-template-columns: 1fr; }
+}
