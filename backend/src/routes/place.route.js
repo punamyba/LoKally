@@ -1,5 +1,4 @@
 import express from "express";
-
 import {
   getPlaces,
   getPlaceById,
@@ -21,7 +20,7 @@ router.get("/stats", getPlaceStats);
 router.get("/", getPlaces);
 router.get("/:id", getPlaceById);
 
-// protected — CHANGED: single → array for multiple image upload
+// protected
 router.post("/", authMiddleware, upload.array("images", 20), createPlace);
 router.put("/:id", authMiddleware, upload.single("image"), updatePlace);
 router.delete("/:id", authMiddleware, deletePlace);

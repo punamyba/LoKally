@@ -7,18 +7,14 @@ import {
   adminReplyToMessage,
 } from "../controllers/contact.controller.js";
 
-import authMiddleware, { adminOnly } from "../middleware/auth.middleware.js";
+import { authMiddleware, adminOnly } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-/*
-  Public route: user submits contact form
-*/
+// Public route
 router.post("/", createContactMessage);
 
-/*
-  Admin routes: protected
-*/
+// Admin routes
 router.get("/admin", authMiddleware, adminOnly, adminListMessages);
 router.get("/admin/:id", authMiddleware, adminOnly, adminGetMessage);
 router.patch("/admin/:id/status", authMiddleware, adminOnly, adminUpdateStatus);

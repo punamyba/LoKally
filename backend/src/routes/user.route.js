@@ -4,7 +4,7 @@ import authMiddleware from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 router.get("/profile", authMiddleware, (req, res) => {
-  res.json({
+  return res.json({
     message: "Profile fetched",
     user: req.user,
   });
