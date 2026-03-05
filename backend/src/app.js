@@ -3,13 +3,12 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { syncDB } from "./models/db.sync.js";   
-
-import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import placeRoutes from "./routes/place.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import contactRoutes from "./routes/contact.route.js";
+
+import { syncDB } from "./models/db.sync.js";
 
 const app = express();
 
@@ -23,13 +22,12 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Routes
-app.use("/api", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/places", placeRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/contact", contactRoutes);
-// DB connect and model sync
-syncDB();   //  replaces createPlacesTable()
+
+// DB connect + sync
+syncDB();
 
 export default app;

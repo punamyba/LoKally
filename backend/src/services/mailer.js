@@ -1,8 +1,5 @@
 import nodemailer from "nodemailer";
 
-/*
-  Creates SMTP transporter using .env credentials (Mailtrap)
-*/
 function createTransporter() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 587);
@@ -20,18 +17,9 @@ function createTransporter() {
   });
 }
 
-/*
-  Sends email via SMTP.
-*/
 export async function sendMail({ to, subject, text, html }) {
   const transporter = createTransporter();
   const from = process.env.EMAIL_FROM || "no-reply@lokally.test";
 
-  return transporter.sendMail({
-    from,
-    to,
-    subject,
-    text,
-    html,
-  });
+  return transporter.sendMail({ from, to, subject, text, html });
 }

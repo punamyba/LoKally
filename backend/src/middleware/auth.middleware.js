@@ -1,20 +1,21 @@
 import jwt from "jsonwebtoken";
 
 /*
-  JWT auth middleware
-  Header format: Authorization: Bearer <token>
+  Reads JWT token from Authorization header:
+  Authorization: Bearer <token>
   Sets req.user = decoded payload
 */
-export function authMiddleware(req, res, next) {
+const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
     return res.status(401).json({ message: "No token provided" });
   }
 
-  const [scheme, token] = authHeader.split(" ");
+  const parts = authHeader.split(" ");
+  const token = parts.length === 2 ? parts[1] : null;
 
-  if (scheme !== "Bearer" || !token) {
+  if (!token) {
     return res.status(401).json({ message: "Invalid authorization format" });
   }
 
@@ -25,20 +26,17 @@ export function authMiddleware(req, res, next) {
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
   }
-}
+};
 
 /*
-  Admin-only middleware
-  Use after authMiddleware
+  Admin-only middleware.
+  Use after authMiddleware.
 */
-export function adminOnly(req, res, next) {
+export const adminOnly = (req, res, next) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ message: "Admin only" });
   }
   return next();
-}
+};
 
-/*
-  Default export for old imports (backward compatible)
-*/
 export default authMiddleware;

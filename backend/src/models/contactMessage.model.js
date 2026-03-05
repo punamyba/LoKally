@@ -1,38 +1,17 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
-/*
-  Stores messages submitted from Contact Us page.
-  Admin can reply and update status.
-*/
 const ContactMessage = sequelize.define(
   "ContactMessage",
   {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 
-    name: {
-      type: DataTypes.STRING(120),
-      allowNull: false,
-    },
+    name: { type: DataTypes.STRING(120), allowNull: false },
+    email: { type: DataTypes.STRING(180), allowNull: false },
 
-    email: {
-      type: DataTypes.STRING(180),
-      allowNull: false,
-    },
+    subject: { type: DataTypes.STRING(180), allowNull: false, defaultValue: "General Inquiry" },
 
-    subject: {
-      type: DataTypes.STRING(180),
-      allowNull: false,
-    },
-
-    message: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
+    message: { type: DataTypes.TEXT, allowNull: false },
 
     status: {
       type: DataTypes.ENUM("new", "in_progress", "replied", "closed"),
@@ -40,15 +19,13 @@ const ContactMessage = sequelize.define(
       defaultValue: "new",
     },
 
-    admin_reply: {
-      type: DataTypes.TEXT,
-      allowNull: true,
+    allow_user_reply: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
 
-    replied_at: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
+    replied_at: { type: DataTypes.DATE, allowNull: true },
   },
   {
     tableName: "contact_messages",
