@@ -1,36 +1,41 @@
-// src/features/auth/Contact/contactApi.ts
-// Contact API calls using axiosInstance (baseURL already set and token auto-attached)
-
+// contactApi.ts — all contact-related API calls in one place
 import axiosInstance from "../../../shared/config/axiosinstance";
-import type { ContactStatus } from "../Admin/AdminTypes";
 
-export type SubmitContactPayload = {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-};
+export type ContactStatus = "new" | "open" | "replied" | "closed";
 
 export const contactApi = {
-  // Public: user submits message
-  submit: (payload: SubmitContactPayload) =>
-    axiosInstance.post("/contact", payload).then((r) => r.data),
+  // ── USER ────────────────────────────────────────────────────────────────
+  sendMessage: (data: {
+    name: string; email: string; subject?: string; message: string;
+  }) => axiosInstance.post("/contact", data).then(r => r.data),
 
-  // Admin: list messages, optional filter
-  adminList: (status?: ContactStatus) => {
-    const url = status ? `/contact/admin?status=${status}` : "/contact/admin";
-    return axiosInstance.get(url).then((r) => r.data);
-  },
+  getMyConversations: () =>
+    axiosInstance.get("/contact/my-messages").then(r => r.data),
 
-  // Admin: get single message
-  adminGet: (id: number) =>
-    axiosInstance.get(`/contact/admin/${id}`).then((r) => r.data),
+  getMyConversationDetail: (id: number) =>
+    axiosInstance.get(`/contact/my-messages/${id}`).then(r => r.data),
 
-  // Admin: update status
+  userReply: (id: number, body: string) =>
+    axiosInstance.post(`/contact/my-messages/${id}/reply`, { body }).then(r => r.data),
+
+  // ── ADMIN ────────────────────────────────────────────────────────────────
+  adminGetAll: (status?: ContactStatus) =>
+    axiosInstance
+      .get("/contact/admin", { params: status ? { status } : {} })
+      .then(r => r.data),
+
+  adminGetDetail: (id: number) =>
+    axiosInstance.get(`/contact/admin/${id}`).then(r => r.data),
+
+  adminReply: (id: number, body: string) =>
+    axiosInstance.post(`/contact/admin/${id}/reply`, { body }).then(r => r.data),
+
   adminUpdateStatus: (id: number, status: ContactStatus) =>
-    axiosInstance.patch(`/contact/admin/${id}/status`, { status }).then((r) => r.data),
+    axiosInstance.patch(`/contact/admin/${id}/status`, { status }).then(r => r.data),
 
-  // Admin: send reply
-  adminReply: (id: number, reply: string) =>
-    axiosInstance.post(`/contact/admin/${id}/reply`, { reply }).then((r) => r.data),
+  adminToggleUserReply: (id: number) =>
+    axiosInstance.patch(`/contact/admin/${id}/toggle-reply`).then(r => r.data),
+
+  adminDelete: (id: number) =>
+    axiosInstance.delete(`/contact/admin/${id}`).then(r => r.data),
 };

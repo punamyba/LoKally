@@ -1,245 +1,344 @@
-import { useEffect, useMemo, useState } from "react";
+// AdminContactInbox.tsx — matches AdminDashboard style exactly (adh-* / apd-*)
+import { useEffect, useState } from "react";
+import {
+  MessageSquare, RefreshCw, Send, Trash2,
+  ToggleLeft, ToggleRight, ChevronRight,
+  Clock, AlertCircle, MessageCircle, CheckCircle,
+} from "lucide-react";
 import { contactApi } from "../../ContactUs/ContactApi";
-import type { ContactMessage, ContactStatus } from "../AdminTypes";
+import type { ContactStatus } from "../../ContactUs/ContactApi";
 import "./AdminContactInbox.css";
 
-const FILTERS: { label: string; value: ContactStatus | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "New", value: "new" },
-  { label: "In Progress", value: "in_progress" },
-  { label: "Replied", value: "replied" },
-  { label: "Closed", value: "closed" },
+type Conv = {
+  id: number; ref_number: string; name: string; email: string;
+  subject: string; status: ContactStatus;
+  allow_user_reply: boolean; created_at: string; updated_at: string;
+};
+type ConvMsg = {
+  id: number; sender_type: "user" | "admin"; body: string; created_at: string;
+  sender?: { first_name: string; last_name: string } | null;
+};
+type ConvDetail = Conv & {
+  message: string; messages: ConvMsg[];
+  user: { id: number; first_name: string; last_name: string; email: string } | null;
+};
+type Counts = { new: number; open: number; replied: number; closed: number };
+
+const FILTERS: { key: ContactStatus | "all"; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "new", label: "New" },
+  { key: "open", label: "In Progress" },
+  { key: "replied", label: "Replied" },
+  { key: "closed", label: "Closed" },
 ];
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleString();
+const STATUS: Record<ContactStatus, { label: string; cls: string }> = {
+  new:     { label: "New",         cls: "aci-badge--new"     },
+  open:    { label: "In Progress", cls: "aci-badge--open"    },
+  replied: { label: "Replied",     cls: "aci-badge--replied" },
+  closed:  { label: "Closed",      cls: "aci-badge--closed"  },
+};
+
+function ago(d: string) {
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  return days < 7 ? `${days}d ago` : new Date(d).toLocaleDateString();
 }
 
 export default function AdminContactInbox() {
-  const [items, setItems] = useState<ContactMessage[]>([]);
-  const [filter, setFilter] = useState<ContactStatus | "all">("all");
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<ContactMessage | null>(null);
+  const [convs, setConvs]       = useState<Conv[]>([]);
+  const [counts, setCounts]     = useState<Counts>({ new: 0, open: 0, replied: 0, closed: 0 });
+  const [filter, setFilter]     = useState<ContactStatus | "all">("all");
+  const [search, setSearch]     = useState("");
+  const [loading, setLoading]   = useState(true);
+  const [selId, setSelId]       = useState<number | null>(null);
+  const [detail, setDetail]     = useState<ConvDetail | null>(null);
+  const [detailLoad, setDetailLoad] = useState(false);
+  const [replyBody, setReplyBody]   = useState("");
+  const [replying, setReplying]     = useState(false);
+  const [err, setErr]               = useState("");
+  const [ok, setOk]                 = useState("");
 
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
-  const [replyText, setReplyText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  const fetchList = async () => {
-    setLoadingList(true);
-    setErrorMsg("");
+  const load = async () => {
+    setLoading(true);
     try {
-      const status = filter === "all" ? undefined : filter;
-      const res = await contactApi.adminList(status);
-      if (res?.success) setItems(res.data || []);
-      else setErrorMsg(res?.message || "Failed to load messages.");
-    } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || "Failed to load messages.");
-    }
-    setLoadingList(false);
+      const r = await contactApi.adminGetAll(filter === "all" ? undefined : filter);
+      if (r.success) { setConvs(r.data); setCounts(r.counts || { new:0,open:0,replied:0,closed:0 }); }
+    } catch {}
+    setLoading(false);
   };
 
-  useEffect(() => {
-    fetchList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  useEffect(() => { load(); }, [filter]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((m) => {
-      return (
-        m.name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q) ||
-        m.subject.toLowerCase().includes(q)
-      );
-    });
-  }, [items, search]);
-
-  const openOne = async (msg: ContactMessage) => {
-    setSelected(msg);
-    setReplyText("");
-    setLoadingDetail(true);
-    setErrorMsg("");
-
+  const openConv = async (id: number) => {
+    setSelId(id); setDetailLoad(true); setDetail(null);
+    setReplyBody(""); setErr(""); setOk("");
     try {
-      const res = await contactApi.adminGet(msg.id);
-      if (res?.success) setSelected(res.data);
-      else setErrorMsg(res?.message || "Failed to load message.");
-    } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || "Failed to load message.");
-    }
-
-    setLoadingDetail(false);
-  };
-
-  const setStatus = async (status: ContactStatus) => {
-    if (!selected || busy) return;
-    setBusy(true);
-    setErrorMsg("");
-
-    try {
-      const res = await contactApi.adminUpdateStatus(selected.id, status);
-      if (res?.success) {
-        setSelected(res.data);
-        setItems((prev) => prev.map((x) => (x.id === res.data.id ? res.data : x)));
-      } else {
-        setErrorMsg(res?.message || "Failed to update status.");
+      const r = await contactApi.adminGetDetail(id);
+      if (r.success) {
+        setDetail(r.data);
+        setConvs(p => p.map(c => c.id === id && c.status === "new" ? { ...c, status: "open" as ContactStatus } : c));
       }
-    } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || "Failed to update status.");
-    }
-
-    setBusy(false);
+    } catch {}
+    setDetailLoad(false);
   };
 
   const sendReply = async () => {
-    if (!selected || busy) return;
-    const reply = replyText.trim();
-    if (!reply) return;
-
-    setBusy(true);
-    setErrorMsg("");
-
+    if (!detail || !replyBody.trim()) return;
+    setReplying(true); setErr(""); setOk("");
     try {
-      const res = await contactApi.adminReply(selected.id, reply);
-      if (res?.success) {
-        setSelected(res.data);
-        setItems((prev) => prev.map((x) => (x.id === res.data.id ? res.data : x)));
-        setReplyText("");
-      } else {
-        setErrorMsg(res?.message || "Failed to send reply.");
-      }
-    } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || "Failed to send reply.");
-    }
-
-    setBusy(false);
+      const r = await contactApi.adminReply(detail.id, replyBody.trim());
+      if (r.success) {
+        setReplyBody("");
+        setOk("Reply sent — email delivered.");
+        setDetail(p => p ? { ...p, messages: [...p.messages, r.data], status: "replied" as ContactStatus } : p);
+        setConvs(p => p.map(c => c.id === detail.id ? { ...c, status: "replied" as ContactStatus } : c));
+        setTimeout(() => setOk(""), 3000);
+      } else setErr(r.message || "Failed.");
+    } catch { setErr("Something went wrong."); }
+    setReplying(false);
   };
 
+  const changeStatus = async (s: ContactStatus) => {
+    if (!detail) return;
+    try {
+      await contactApi.adminUpdateStatus(detail.id, s);
+      setDetail(p => (p ? { ...p, status: s } : p));
+      setConvs(p => p.map(c => c.id === detail.id ? { ...c, status: s } : c));
+      setOk(`Marked as "${STATUS[s].label}".`);
+      setTimeout(() => setOk(""), 2500);
+    } catch { setErr("Failed."); }
+  };
+
+  const toggleReply = async () => {
+    if (!detail) return;
+    try {
+      const r = await contactApi.adminToggleUserReply(detail.id);
+      if (r.success) {
+        const v = r.data.allow_user_reply;
+        setDetail(p => (p ? { ...p, allow_user_reply: v } : p));
+        setConvs(p => p.map(c => c.id === detail.id ? { ...c, allow_user_reply: v } : c));
+      }
+    } catch { setErr("Failed."); }
+  };
+
+  const deleteConv = async () => {
+    if (!detail || !confirm(`Delete ${detail.ref_number}? Cannot be undone.`)) return;
+    try {
+      await contactApi.adminDelete(detail.id);
+      setConvs(p => p.filter(c => c.id !== detail.id));
+      setDetail(null); setSelId(null);
+    } catch { setErr("Failed."); }
+  };
+
+  const filtered = convs.filter(c => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+      || c.subject.toLowerCase().includes(q) || c.ref_number.toLowerCase().includes(q);
+  });
+
+  const total = counts.new + counts.open + counts.replied + counts.closed;
+  const STATS = [
+    { label: "New",         val: counts.new,     Icon: Clock,         color: "blue"  },
+    { label: "In Progress", val: counts.open,    Icon: AlertCircle,   color: "amber" },
+    { label: "Replied",     val: counts.replied, Icon: MessageCircle, color: "green" },
+    { label: "Closed",      val: counts.closed,  Icon: CheckCircle,   color: "teal"  },
+  ];
+
   return (
-    <div className="aci-wrap">
+    <div className="aci-root">
+
+      {/* Header — same as adh-header */}
       <div className="aci-header">
         <div>
-          <h1 className="aci-title">Contact Inbox</h1>
-          <p className="aci-sub">View messages from users and reply from admin.</p>
+          <h1 className="aci-title"><MessageSquare size={22} strokeWidth={2} /> Contact Inbox</h1>
+          <p className="aci-subtitle">Manage support conversations and reply to users.</p>
         </div>
-
-        <button className="aci-btn" onClick={fetchList} disabled={loadingList}>
-          Refresh
+        <button className="aci-refresh" onClick={load}>
+          <RefreshCw size={14} strokeWidth={2.5} /> Refresh
         </button>
       </div>
 
-      {errorMsg && <div className="aci-alert">{errorMsg}</div>}
+      {/* Stat cards — exactly adh-card */}
+      <div className="aci-stats">
+        {STATS.map(({ label, val, Icon, color }) => (
+          <div key={label} className={`aci-card aci-card--${color}`}>
+            <div className="aci-card-top">
+              <div className={`aci-card-icon aci-card-icon--${color}`}><Icon size={17} strokeWidth={2} /></div>
+              <span className={`aci-card-badge aci-card-badge--${color}`}>{label.toLowerCase()}</span>
+            </div>
+            <div className="aci-card-val">{val}</div>
+            <div className="aci-card-label">{label}</div>
+            <div className="aci-card-bar">
+              <div className="aci-card-fill" style={{ width: `${Math.min(100, total ? (val/total)*100 : 0)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
 
+      {/* Alerts */}
+      {err && <div className="aci-alert aci-alert--err"><AlertCircle size={14} /> {err}</div>}
+      {ok  && <div className="aci-alert aci-alert--ok" ><CheckCircle size={14} /> {ok}</div>}
+
+      {/* Two-col layout */}
       <div className="aci-grid">
+
+        {/* LEFT — list */}
         <div className="aci-left">
           <div className="aci-filters">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                className={filter === f.value ? "aci-tab aci-tab-on" : "aci-tab"}
-                onClick={() => setFilter(f.value)}
-              >
+            {FILTERS.map(f => (
+              <button key={f.key}
+                className={`aci-filter ${filter === f.key ? "aci-filter--on" : ""}`}
+                onClick={() => setFilter(f.key as ContactStatus | "all")}>
                 {f.label}
               </button>
             ))}
           </div>
 
-          <input
-            className="aci-search"
-            placeholder="Search by name, email, subject..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="aci-search-wrap">
+            <input className="aci-search" placeholder="Search name, email, REF…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
 
           <div className="aci-list">
-            {loadingList ? (
-              <div className="aci-empty">Loading...</div>
+            {loading ? (
+              <div className="aci-spin-wrap"><div className="aci-spinner" /></div>
             ) : filtered.length === 0 ? (
-              <div className="aci-empty">No messages found.</div>
-            ) : (
-              filtered.map((m) => (
-                <div
-                  key={m.id}
-                  className={selected?.id === m.id ? "aci-item aci-item-on" : "aci-item"}
-                  onClick={() => openOne(m)}
-                >
-                  <div className="aci-item-top">
-                    <div className="aci-item-name">{m.name}</div>
-                    <div className="aci-item-status">{m.status}</div>
+              <div className="aci-list-empty">No conversations found.</div>
+            ) : filtered.map(c => (
+              <button key={c.id}
+                className={`aci-item ${selId === c.id ? "aci-item--on" : ""}`}
+                onClick={() => openConv(c.id)}>
+                <div className="aci-item-row">
+                  <div>
+                    <div className="aci-item-name">{c.name}</div>
+                    <div className="aci-item-ref">{c.ref_number}</div>
                   </div>
-                  <div className="aci-item-subject">{m.subject}</div>
-                  <div className="aci-item-email">{m.email}</div>
+                  <div className="aci-item-right">
+                    <span className={`aci-badge ${STATUS[c.status]?.cls}`}>{STATUS[c.status]?.label}</span>
+                    <ChevronRight size={13} strokeWidth={2.5} className="aci-item-arrow" />
+                  </div>
                 </div>
-              ))
-            )}
+                <div className="aci-item-subject">{c.subject}</div>
+                <div className="aci-item-email">{c.email} · {ago(c.updated_at)}</div>
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* RIGHT — detail */}
         <div className="aci-right">
-          {!selected ? (
-            <div className="aci-empty">Select a message to view details.</div>
-          ) : loadingDetail ? (
-            <div className="aci-empty">Loading message...</div>
-          ) : (
+          {!selId ? (
+            <div className="aci-empty-panel">
+              <MessageSquare size={46} strokeWidth={1.2} className="aci-empty-icon" />
+              <p>Select a conversation to view</p>
+            </div>
+          ) : detailLoad ? (
+            <div className="aci-spin-wrap"><div className="aci-spinner" /></div>
+          ) : detail ? (
             <div className="aci-detail">
+              {/* Head */}
               <div className="aci-detail-head">
-                <h2 className="aci-detail-subject">{selected.subject}</h2>
+                <span className="aci-detail-ref">{detail.ref_number}</span>
+                <h2 className="aci-detail-subject">{detail.subject}</h2>
                 <div className="aci-detail-meta">
                   <div>
-                    <div className="aci-detail-name">{selected.name}</div>
-                    <div className="aci-detail-email2">{selected.email}</div>
+                    <div className="aci-detail-name">{detail.name}</div>
+                    <div className="aci-detail-email">{detail.email}</div>
                   </div>
-                  <div className="aci-detail-date">{fmtDate(selected.created_at)}</div>
+                  <span className="aci-detail-time">{ago(detail.created_at)}</span>
                 </div>
               </div>
 
-              <div className="aci-statusbar">
-                <span>Status:</span>
-                {(["new", "in_progress", "replied", "closed"] as ContactStatus[]).map((s) => (
-                  <button
-                    key={s}
-                    className={selected.status === s ? "aci-sbtn aci-sbtn-on" : "aci-sbtn"}
-                    disabled={busy || selected.status === s}
-                    onClick={() => setStatus(s)}
-                  >
-                    {s}
+              {/* Controls */}
+              <div className="aci-controls">
+                <div className="aci-ctrl-row">
+                  <span className="aci-ctrl-label">Status</span>
+                  <div className="aci-status-btns">
+                    {(["new","open","replied","closed"] as ContactStatus[]).map(s => (
+                      <button key={s}
+                        className={`aci-sbtn ${detail.status === s ? "aci-sbtn--on" : ""}`}
+                        onClick={() => changeStatus(s)}>
+                        {STATUS[s].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="aci-ctrl-row">
+                  <span className="aci-ctrl-label">User reply</span>
+                  <button className="aci-toggle" onClick={toggleReply}>
+                    {detail.allow_user_reply
+                      ? <><ToggleRight size={22} className="aci-toggle--on" /> Enabled</>
+                      : <><ToggleLeft  size={22} className="aci-toggle--off" /> Disabled</>}
                   </button>
+                </div>
+              </div>
+
+              {/* Thread */}
+              <div className="aci-thread">
+                <div className="aci-msg aci-msg--user">
+                  <div className="aci-av aci-av--user">{detail.name[0]?.toUpperCase()}</div>
+                  <div className="aci-bubble aci-bubble--user">
+                    <div className="aci-msg-meta"><span>{detail.name}</span><span>{ago(detail.created_at)}</span></div>
+                    <p className="aci-msg-text">{detail.message}</p>
+                  </div>
+                </div>
+
+                {detail.messages.map(msg => (
+                  <div key={msg.id} className={`aci-msg ${msg.sender_type === "admin" ? "aci-msg--admin" : "aci-msg--user"}`}>
+                    <div className={`aci-av ${msg.sender_type === "admin" ? "aci-av--admin" : "aci-av--user"}`}>
+                      {msg.sender_type === "admin"
+                        ? msg.sender?.first_name[0]?.toUpperCase() || "A"
+                        : detail.name[0]?.toUpperCase()}
+                    </div>
+                    <div className={`aci-bubble ${msg.sender_type === "admin" ? "aci-bubble--admin" : "aci-bubble--user"}`}>
+                      <div className="aci-msg-meta">
+                        <span>{msg.sender_type === "admin"
+                          ? (msg.sender ? `${msg.sender.first_name} (Admin)` : "Admin")
+                          : detail.name}</span>
+                        <span>{ago(msg.created_at)}</span>
+                      </div>
+                      <p className="aci-msg-text">{msg.body}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
 
-              <div className="aci-message">
-                <h3>Message</h3>
-                <p>{selected.message}</p>
-              </div>
-
-              {selected.admin_reply && (
-                <div className="aci-replied">
-                  <h3>Last reply</h3>
-                  <p>{selected.admin_reply}</p>
-                  {selected.replied_at && <small>Replied at: {fmtDate(selected.replied_at)}</small>}
+              {/* Reply */}
+              {detail.status !== "closed" ? (
+                <div className="aci-reply-box">
+                  <div className="aci-reply-label">Reply to <strong>{detail.name}</strong> — also sent by email</div>
+                  <textarea className="aci-reply-input" rows={4}
+                    placeholder="Write your reply…"
+                    value={replyBody} onChange={e => setReplyBody(e.target.value)} />
+                  <div className="aci-reply-actions">
+                    <button className="aci-send-btn" onClick={sendReply}
+                      disabled={replying || !replyBody.trim()}>
+                      <Send size={14} strokeWidth={2.5} />
+                      {replying ? "Sending…" : "Send Reply"}
+                    </button>
+                    <button className="aci-delete-btn" onClick={deleteConv}>
+                      <Trash2 size={13} strokeWidth={2.5} /> Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="aci-closed-note">
+                  🔒 Conversation closed.
+                  <button className="aci-delete-btn" onClick={deleteConv}>
+                    <Trash2 size={13} /> Delete
+                  </button>
                 </div>
               )}
-
-              <div className="aci-replybox">
-                <h3>Reply</h3>
-                <textarea
-                  rows={4}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Write reply..."
-                />
-                <button className="aci-btn" onClick={sendReply} disabled={busy || !replyText.trim()}>
-                  {busy ? "Working..." : "Send reply"}
-                </button>
-              </div>
             </div>
-          )}
+          ) : null}
         </div>
+
       </div>
     </div>
   );
