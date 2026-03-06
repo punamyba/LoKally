@@ -1,7 +1,7 @@
 
 // Stores as JSON string if multiple, single path if one image
 
-import { Place, User } from "../models/db.sync.js";
+import { Place, User } from "../models/index.js";
 
 const placeWithUser = {
   include: [

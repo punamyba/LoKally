@@ -1,10 +1,26 @@
 import dotenv from "dotenv";
-dotenv.config(); // 🔥 FIRST LINE
+dotenv.config();
 
 import app from "./app.js";
+import sequelize from "./config/db.js";
+import "./models/index.js";
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
-app.listen(PORT,"0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("PostgreSQL connected");
+
+    await sequelize.sync({ alter: true });
+    console.log("Models synced");
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+startServer();

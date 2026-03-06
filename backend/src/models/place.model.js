@@ -71,4 +71,19 @@ const Place = sequelize.define(
   }
 );
 
+// dynamic import to avoid circular dependency
+(async () => {
+  const { default: User } = await import("./user.model.js");
+
+  Place.belongsTo(User, {
+    foreignKey: "submitted_by",
+    as: "submitter",
+  });
+
+  Place.belongsTo(User, {
+    foreignKey: "approved_by",
+    as: "approver",
+  });
+})();
+
 export default Place;

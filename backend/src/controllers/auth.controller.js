@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Op } from "sequelize";
-import { User } from "../models/db.sync.js";
+import { User } from "../models/index.js";
 import { sendMail } from "../services/mailer.js";
 
 /* Generates 6 digit OTP */
@@ -61,11 +61,8 @@ export const registerUser = async (req, res) => {
       verification_token: verificationToken,
     });
 
-    // Send verification email (registration should not fail if email fails)
+    // Send verification email
     try {
-      // IMPORTANT: Your app.js mounts authRoutes at "/api"
-      // auth.route.js has GET "/verify-email/:token"
-      // So final URL must be "/api/verify-email/:token"
       const verifyLink = `http://localhost:5001/api/verify-email/${verificationToken}`;
 
       await sendMail({
@@ -95,7 +92,6 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate request
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
@@ -105,7 +101,6 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    // Block login if email is not verified
     if (!user.is_verified) {
       return res
         .status(403)
@@ -117,7 +112,6 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Create JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -146,13 +140,15 @@ export const forgotPasswordSendCode = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Always respond same message for security (no user enumeration)
-    if (!email) return res.json({ message: "If account exists, code was sent." });
+    if (!email) {
+      return res.json({ message: "If account exists, code was sent." });
+    }
 
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.json({ message: "If account exists, code was sent." });
+    if (!user) {
+      return res.json({ message: "If account exists, code was sent." });
+    }
 
-    // Generate OTP and store hash in DB
     const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
 
@@ -163,7 +159,6 @@ export const forgotPasswordSendCode = async (req, res) => {
       reset_session_expires: null,
     });
 
-    // Send OTP to email
     try {
       await sendMail({
         to: email,
@@ -216,7 +211,6 @@ export const forgotPasswordVerifyCode = async (req, res) => {
       return res.status(400).json({ message: "Invalid code" });
     }
 
-    // Create reset session token for next step
     const resetSessionToken = generateSessionToken();
     const resetSessionHash = await bcrypt.hash(resetSessionToken, 10);
 
@@ -261,7 +255,6 @@ export const resetPasswordWithSession = async (req, res) => {
       return res.status(400).json({ message: "Invalid reset session" });
     }
 
-    // Update user password and clear reset fields
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await user.update({

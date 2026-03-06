@@ -80,4 +80,11 @@ const User = sequelize.define(
   }
 );
 
+// Associations
+import Place from "./place.model.js";
+import ContactConversation from "./contactconversation.model.js";
+
+User.hasMany(Place, { foreignKey: "submitted_by", as: "places" });
+User.hasMany(ContactConversation, { foreignKey: "user_id", as: "contactConversations" });
+
 export default User;

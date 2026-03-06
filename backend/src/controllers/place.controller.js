@@ -1,4 +1,4 @@
-import { Place, User } from "../models/db.sync.js";
+import { Place, User } from "../models/index.js";
 
 /* PUBLIC: approved places only */
 export const getPlaces = async (req, res) => {

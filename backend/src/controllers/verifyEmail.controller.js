@@ -1,4 +1,4 @@
-import { User } from "../models/db.sync.js";
+import { User } from "../models/index.js";
 
 export const verifyEmail = async (req, res) => {
   try {
