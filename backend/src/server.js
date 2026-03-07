@@ -12,14 +12,15 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log("PostgreSQL connected");
 
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("Models synced");
 
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error(error);
+    console.error("Server start error:", error);
+    process.exit(1);
   }
 };
 
