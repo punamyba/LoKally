@@ -1,4 +1,3 @@
-// App.tsx
 import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -26,9 +25,14 @@ import { AdminReports, AdminSettings } from "./features/auth/Admin/Placeholder/A
 import ContactUs from "./features/auth/ContactUs/ContactUs";
 import AdminContactInbox from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
 
+import CommunityFeed from "./features/auth/Community/CommunityFeed/CommunityFeed";
+import AdminCommunity from "./features/auth/Admin/AdminCommunity/AdminCommunity";
+
 function App() {
   const [email, setEmail] = useState("");
   const [resetToken, setResetToken] = useState("");
+
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
   return (
     <BrowserRouter>
@@ -63,8 +67,27 @@ function App() {
           }
         />
 
-        {/* Public contact page (IMPORTANT: keep OUTSIDE /admin) */}
+        {/* Contact */}
         <Route path="/contact" element={<ContactUs />} />
+
+        {/* Community */}
+        <Route
+          path="/community"
+          element={
+            <AuthGuard>
+              <CommunityFeed currentUser={currentUser} />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/admin/community"
+          element={
+            <AdminGuard>
+              <AdminCommunity />
+            </AdminGuard>
+          }
+        />
 
         {/* Admin routes */}
         <Route
@@ -83,8 +106,6 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="settings" element={<AdminSettings />} />
-
-          {/* Admin contact inbox */}
           <Route path="contact" element={<AdminContactInbox />} />
         </Route>
       </Routes>
