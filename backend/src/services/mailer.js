@@ -1,25 +1,22 @@
 import nodemailer from "nodemailer";
 
-function createTransporter() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
 
-  if (!host) throw new Error("SMTP_HOST missing in .env");
-  if (!user) throw new Error("SMTP_USER missing in .env");
-  if (!pass) throw new Error("SMTP_PASS missing in .env");
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    auth: { user, pass },
+const sendMail = async ({ to, subject, text, html }) => {
+  return transporter.sendMail({
+    from: process.env.MAIL_FROM,
+    to,
+    subject,
+    text,
+    html,
   });
-}
+};
 
-export async function sendMail({ to, subject, text, html }) {
-  const transporter = createTransporter();
-  const from = process.env.EMAIL_FROM || "no-reply@lokally.test";
-
-  return transporter.sendMail({ from, to, subject, text, html });
-}
+export default sendMail;

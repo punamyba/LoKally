@@ -6,17 +6,24 @@ export const verifyEmail = async (req, res) => {
 
     const user = await User.findOne({ where: { verification_token: token } });
 
-    if (!user)
-      return res.redirect("http://localhost:5173/?verify=invalid");
+    if (!user) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=invalid`
+      );
+    }
 
     await user.update({
       is_verified: true,
       verification_token: null,
     });
 
-    return res.redirect("http://localhost:5173/?verify=success");
+    return res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=success`
+    );
   } catch (err) {
-    console.error(err);
-    return res.redirect("http://localhost:5173/?verify=error");
+    console.error("verifyEmail error:", err);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=error`
+    );
   }
 };

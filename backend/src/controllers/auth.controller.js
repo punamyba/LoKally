@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Op } from "sequelize";
 import { User } from "../models/index.js";
-import { sendMail } from "../services/mailer.js";
+import sendMail from "../services/mailer.js";
 
 /* Generates 6 digit OTP */
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
@@ -26,7 +26,6 @@ export const registerUser = async (req, res) => {
       confirm_password,
     } = req.body;
 
-    // Basic validation
     if (!email || !password || !confirm_password) {
       return res.status(400).json({ message: "Required fields missing" });
     }
@@ -35,19 +34,14 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // Check if email already exists
     const existing = await User.findOne({ where: { email } });
     if (existing) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create verification token stored in DB
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    // Create user in database
     await User.create({
       first_name,
       last_name,
@@ -61,9 +55,8 @@ export const registerUser = async (req, res) => {
       verification_token: verificationToken,
     });
 
-    // Send verification email
     try {
-      const verifyLink = `http://localhost:5001/api/verify-email/${verificationToken}`;
+      const verifyLink = `${process.env.BACKEND_URL || "http://localhost:5001"}/api/auth/verify-email/${verificationToken}`;
 
       await sendMail({
         to: email,
@@ -243,7 +236,9 @@ export const resetPasswordWithSession = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Reset session expired or invalid" });
+      return res
+        .status(400)
+        .json({ message: "Reset session expired or invalid" });
     }
 
     const validSession = await bcrypt.compare(

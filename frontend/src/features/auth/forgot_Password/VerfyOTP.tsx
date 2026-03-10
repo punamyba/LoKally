@@ -20,7 +20,7 @@ const VerifyOTP = ({ email, onVerified }: Props) => {
     setMsg("");
 
     try {
-      const res = await axios.post("/forgot-password/verify", {
+      const res = await axios.post("/auth/forgot-password/verify", {
         email,
         code,
       });
@@ -34,27 +34,27 @@ const VerifyOTP = ({ email, onVerified }: Props) => {
 
   return (
     <AuthLayout>
-    <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2 className="title">Verify Code</h2>
-        <p className="subtitle">6 digit code sent to {email}</p>
+      <div className="auth-wrapper">
+        <div className="auth-card">
+          <h2 className="title">Verify Code</h2>
+          <p className="subtitle">6 digit code sent to {email}</p>
 
-        <form onSubmit={verify}>
-          <input
-            className="otp"
-            maxLength={6}
-            placeholder="------"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-          />
+          <form onSubmit={verify}>
+            <input
+              className="otp"
+              maxLength={6}
+              placeholder="------"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+            />
 
-          <button className="btn">Verify</button>
-        </form>
+            <button className="btn">Verify</button>
+          </form>
 
-        {msg && <p className="error">{msg}</p>}
+          {msg && <p className="error">{msg}</p>}
+        </div>
       </div>
-    </div>
     </AuthLayout>
   );
 };

@@ -17,13 +17,13 @@ const ForgotPassword = ({ onNext }: { onNext: (email: string) => void }) => {
     setMsg("");
 
     try {
-      const res = await axios.post("/forgot-password", { email });
+      const res = await axios.post("/auth/forgot-password", { email });
       setMsg(res.data.message);
 
       onNext(email);
       navigate("/verify-otp");
-    } catch {
-      setMsg("Something went wrong");
+    } catch (err: any) {
+      setMsg(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -31,28 +31,28 @@ const ForgotPassword = ({ onNext }: { onNext: (email: string) => void }) => {
 
   return (
     <AuthLayout>
-    <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2 className="title">Forgot Password</h2>
-        <p className="subtitle">Enter your registered email</p>
+      <div className="auth-wrapper">
+        <div className="auth-card">
+          <h2 className="title">Forgot Password</h2>
+          <p className="subtitle">Enter your registered email</p>
 
-        <form onSubmit={submit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            required
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <form onSubmit={submit}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
-          <button className="btn" disabled={loading}>
-            {loading ? "Sending..." : "Send Code"}
-          </button>
-        </form>
+            <button className="btn" disabled={loading}>
+              {loading ? "Sending..." : "Send Code"}
+            </button>
+          </form>
 
-        {msg && <p className="info">{msg}</p>}
+          {msg && <p className="info">{msg}</p>}
+        </div>
       </div>
-    </div>
     </AuthLayout>
   );
 };
