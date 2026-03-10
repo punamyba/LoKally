@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./Navbar.css";
-import { User, LogOut, Menu, X, Compass, Bell, Search, Mail } from "lucide-react";
+import { User, LogOut, Menu, X, Compass, Bell, Search, Mail, Users2 } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -45,6 +45,7 @@ const Navbar = () => {
   return (
     <header className={`lk-nav ${scrolled ? "lk-nav--scrolled" : ""}`}>
       <div className="lk-nav__inner">
+
         {/* LEFT: Brand */}
         <Link to={isLoggedIn ? "/home" : "/"} className="lk-brand">
           <div className="lk-brand__text">
@@ -76,6 +77,7 @@ const Navbar = () => {
 
         {/* RIGHT: actions */}
         <div className="lk-actions">
+
           {/* Desktop nav links */}
           <nav className="lk-links">
             {isLoggedIn && (
@@ -98,7 +100,18 @@ const Navbar = () => {
               Map View
             </NavLink>
 
-            {/* NEW: Contact */}
+            {/* Community — logged in users only */}
+            {isLoggedIn && (
+              <NavLink
+                to="/community"
+                className={({ isActive }) =>
+                  isActive ? "lk-link lk-link--active" : "lk-link"
+                }
+              >
+                Community
+              </NavLink>
+            )}
+
             <NavLink
               to="/contact"
               className={({ isActive }) =>
@@ -140,12 +153,12 @@ const Navbar = () => {
           )}
 
           {/* Logout (desktop) */}
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <button className="lk-logout" onClick={handleLogout} type="button">
               <LogOut size={16} />
               <span>Logout</span>
             </button>
-          ) : null}
+          )}
 
           {/* Mobile menu toggle */}
           <button
@@ -173,7 +186,20 @@ const Navbar = () => {
             <span>Explore</span>
           </NavLink>
 
-          {/* NEW: Contact (mobile) */}
+          {/* Community (mobile) — logged in only */}
+          {isLoggedIn && (
+            <NavLink
+              to="/community"
+              className={({ isActive }) =>
+                isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"
+              }
+              onClick={() => setOpen(false)}
+            >
+              <Users2 size={18} />
+              <span>Community</span>
+            </NavLink>
+          )}
+
           <NavLink
             to="/contact"
             className={({ isActive }) =>

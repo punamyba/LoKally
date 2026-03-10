@@ -1,11 +1,14 @@
 import axiosInstance from "./axiosinstance";
 
-/* FORM TYPES */
+/* FORM TYPES (FRONTEND) */
 export type LoginFormData = {
   email: string;
   password: string;
 };
 
+
+
+/*API PAYLOAD TYPES*/
 export type RegisterPayload = {
   first_name: string;
   last_name: string;
@@ -27,7 +30,7 @@ export const loginApi = (data: LoginFormData) => {
   return axiosInstance.post("/auth/login", data);
 };
 
-/* PROTECTED EXAMPLE */
+/*  PROTECTED EXAMPLE*/ 
 export const getUserListApi = () => {
   return axiosInstance.get("/user-list");
 };

@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MessageSquare, Flag, EyeOff, Eye, Trash2,
   RefreshCw, ChevronRight, CheckCircle, AlertTriangle,
   LayoutGrid,
 } from "lucide-react";
 import { communityApi } from "../../Community/communityApi";
-import type { Post } from "../../Community/CommunityTypes";
+import type { Post, Comment } from "../../Community/CommunityTypes";
 import "./AdminCommunity.css";
 
 const BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5001";
@@ -17,24 +17,35 @@ const ago = (d: string) => {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
   if (m < 1) return "Just now"; if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`; return `${Math.floor(h/24)}d ago`;
+  if (h < 24) return `${h}h ago`; return `${Math.floor(h / 24)}d ago`;
 };
 
 type Filter = "all" | "reported" | "hidden";
+interface Counts { total: number; reported: number; hidden: number }
 
 export default function AdminCommunity() {
   const [filter, setFilter]   = useState<Filter>("all");
   const [posts, setPosts]     = useState<Post[]>([]);
+  const [counts, setCounts]   = useState<Counts>({ total: 0, reported: 0, hidden: 0 });
   const [sel, setSel]         = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [ok, setOk]           = useState("");
   const [err, setErr]         = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const load = async (f: Filter = filter) => {
     setLoading(true); setErr("");
     try {
       const r = await communityApi.adminGetPosts(f);
-      if (r.success) setPosts(r.data);
+      if (r.success) {
+        setPosts(r.data);
+        if (r.counts) setCounts(r.counts);
+        else setCounts({
+          total:    r.data.length,
+          reported: r.data.filter((p: Post) => p.reports_count > 0).length,
+          hidden:   r.data.filter((p: Post) => p.is_hidden).length,
+        });
+      }
     } catch { setErr("Failed to load posts."); }
     setLoading(false);
   };
@@ -45,11 +56,13 @@ export default function AdminCommunity() {
 
   const handleHide = async (post: Post) => {
     try {
-      if (post.is_hidden) { await communityApi.adminUnhidePost(post.id); }
-      else                { await communityApi.adminHidePost(post.id); }
-      setPosts(p => p.map(x => x.id === post.id ? { ...x, is_hidden: !x.is_hidden } : x));
-      setSel(s => s?.id === post.id ? { ...s, is_hidden: !s.is_hidden } : s);
-      flash(post.is_hidden ? "Post is now visible." : "Post hidden from feed.");
+      if (post.is_hidden) await communityApi.adminUnhidePost(post.id);
+      else                await communityApi.adminHidePost(post.id);
+      const nowHidden = !post.is_hidden;
+      setPosts(p => p.map(x => x.id === post.id ? { ...x, is_hidden: nowHidden } : x));
+      setSel(s => s?.id === post.id ? { ...s, is_hidden: nowHidden } : s);
+      setCounts(c => ({ ...c, hidden: nowHidden ? c.hidden + 1 : Math.max(0, c.hidden - 1) }));
+      flash(nowHidden ? "Post hidden from feed." : "Post is now visible.");
     } catch { setErr("Action failed."); }
   };
 
@@ -59,6 +72,7 @@ export default function AdminCommunity() {
       await communityApi.adminDeletePost(post.id);
       setPosts(p => p.filter(x => x.id !== post.id));
       if (sel?.id === post.id) setSel(null);
+      setCounts(c => ({ ...c, total: Math.max(0, c.total - 1) }));
       flash("Post deleted.");
     } catch { setErr("Delete failed."); }
   };
@@ -66,18 +80,14 @@ export default function AdminCommunity() {
   const handleDismiss = async (post: Post) => {
     try {
       await communityApi.adminDismissReports(post.id);
-      setPosts(p => p.map(x => x.id === post.id ? { ...x, reports_count: 0 } : x));
-      setSel(s => s?.id === post.id ? { ...s, reports_count: 0 } : s);
-      flash("Reports dismissed.");
+      setPosts(p => p.map(x => x.id === post.id ? { ...x, reports_count: 0, is_hidden: false } : x));
+      setSel(s => s?.id === post.id ? { ...s, reports_count: 0, is_hidden: false } : s);
+      setCounts(c => ({ ...c, reported: Math.max(0, c.reported - 1) }));
+      flash("Reports dismissed. Post restored.");
     } catch { setErr("Action failed."); }
   };
 
   const selImages = sel ? parseImages(sel.images) : [];
-  const stats = {
-    total:    posts.length,
-    reported: posts.filter(p => p.reports_count > 0).length,
-    hidden:   posts.filter(p => p.is_hidden).length,
-  };
 
   return (
     <div className="acp">
@@ -96,9 +106,9 @@ export default function AdminCommunity() {
       {/* Stats */}
       <div className="acp-stats">
         {[
-          { label: "Total Posts", val: stats.total,    color: "#3b82f6", icon: <LayoutGrid size={15}/> },
-          { label: "Reported",    val: stats.reported, color: "#f59e0b", icon: <Flag size={15}/> },
-          { label: "Hidden",      val: stats.hidden,   color: "#8b5cf6", icon: <EyeOff size={15}/> },
+          { label: "Total Posts", val: counts.total,    color: "#3b82f6", icon: <LayoutGrid size={15}/> },
+          { label: "Reported",    val: counts.reported, color: "#f59e0b", icon: <Flag size={15}/> },
+          { label: "Hidden",      val: counts.hidden,   color: "#8b5cf6", icon: <EyeOff size={15}/> },
         ].map(s => (
           <div key={s.label} className="acp-stat" style={{ borderTopColor: s.color }}>
             <div className="acp-stat-icon" style={{ background: s.color + "1a", color: s.color }}>{s.icon}</div>
@@ -117,7 +127,7 @@ export default function AdminCommunity() {
         {/* Left — list */}
         <div className="acp-list-panel">
           <div className="acp-filters">
-            {(["all","reported","hidden"] as Filter[]).map(f => (
+            {(["all", "reported", "hidden"] as Filter[]).map(f => (
               <button key={f}
                 className={`acp-filter ${filter === f ? "acp-filter--on" : ""}`}
                 onClick={() => setFilter(f)}
@@ -170,6 +180,7 @@ export default function AdminCommunity() {
             </div>
           ) : (
             <div className="acp-detail">
+
               {/* Author */}
               <div className="acp-detail-head">
                 <div className="acp-detail-av">
@@ -230,6 +241,7 @@ export default function AdminCommunity() {
                   <Trash2 size={14}/> Delete
                 </button>
               </div>
+
             </div>
           )}
         </div>

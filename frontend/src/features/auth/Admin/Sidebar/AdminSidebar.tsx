@@ -1,49 +1,45 @@
-
-
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,  // Dashboard home icon
-  Clock,            // Pending review
-  MapPin,           // All places
-  PlusCircle,       // Add place
-  Users,            // Users list
-  BarChart2,        // Reports
-  Settings,         // Settings
+  LayoutDashboard,
+  Clock,
+  MapPin,
+  PlusCircle,
+  Users,
+  BarChart2,
+  Settings,
   LogOut,
-  MessageSquare,           // Logout button
+  MessageSquare,
+  Users2,
 } from "lucide-react";
 import "./AdminSidebar.css";
 
-// Each nav item: where it goes, what label, which icon component
 const NAV_ITEMS = [
-  { to: "/admin",           label: "Dashboard",         Icon: LayoutDashboard, end: true },
-  { to: "/admin/pending",   label: "Pending",           Icon: Clock },
-  { to: "/admin/places",    label: "All Places",        Icon: MapPin },
-  { to: "/admin/add-place", label: "Add Place",         Icon: PlusCircle },
-  { to: "/admin/users",     label: "Users",             Icon: Users },
-  { to: "/admin/contact",   label: "Contact Messages",  Icon: MessageSquare },  // ← NEW
-  { to: "/admin/reports",   label: "Reports",           Icon: BarChart2 },
-  { to: "/admin/settings",  label: "Settings",          Icon: Settings },
+  { to: "/admin",             label: "Dashboard",        Icon: LayoutDashboard, end: true },
+  { to: "/admin/pending",     label: "Pending",          Icon: Clock },
+  { to: "/admin/places",      label: "All Places",       Icon: MapPin },
+  { to: "/admin/add-place",   label: "Add Place",        Icon: PlusCircle },
+  { to: "/admin/users",       label: "Users",            Icon: Users },
+  { to: "/admin/contact",     label: "Contact Messages", Icon: MessageSquare },
+  { to: "/admin/community",   label: "Community",        Icon: Users2 },        // ← NEW
+  { to: "/admin/reports",     label: "Reports",          Icon: BarChart2 },
+  { to: "/admin/settings",    label: "Settings",         Icon: Settings },
 ];
 
 export default function AdminSidebar() {
   const navigate = useNavigate();
 
-  // Logout: clear storage and redirect to login
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("currentUser");
     navigate("/");
   };
 
-  // Get admin name from localStorage (set during login)
   const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
   const initials = user.first_name?.[0]?.toUpperCase() || "A";
 
   return (
     <aside className="asb-root">
 
-      
       <div className="asb-logo">
         <div className="asb-logo-mark">L</div>
         <div className="asb-logo-text">
@@ -52,7 +48,6 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/*  NAV LINKS  */}
       <nav className="asb-nav">
         <div className="asb-nav-label">MAIN MENU</div>
 
@@ -61,7 +56,6 @@ export default function AdminSidebar() {
             key={to}
             to={to}
             end={end}
-            // isActive = true when current URL matches this link
             className={({ isActive }) =>
               `asb-navitem ${isActive ? "asb-navitem--active" : ""}`
             }
@@ -73,7 +67,6 @@ export default function AdminSidebar() {
         ))}
       </nav>
 
-      {/* ─ PROFILE + LOGOUT  */}
       <div className="asb-bottom">
         <div className="asb-profile">
           <div className="asb-avatar">{initials}</div>

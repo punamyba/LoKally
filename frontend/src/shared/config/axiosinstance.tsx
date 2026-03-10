@@ -1,14 +1,11 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5001/api", //  backend
+  baseURL: "http://localhost:5001/api",
   headers: {
     "Content-Type": "application/json",
   },
 });
- 
-
-// REQUEST INTERCEPTOR
 
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -22,9 +19,6 @@ axiosInstance.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
-
-
-// RESPONSE INTERCEPTOR
 
 axiosInstance.interceptors.response.use(
   (response) => response,

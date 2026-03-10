@@ -24,9 +24,9 @@ import { AdminReports, AdminSettings } from "./features/auth/Admin/Placeholder/A
 
 import ContactUs from "./features/auth/ContactUs/ContactUs";
 import AdminContactInbox from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
+import AdminCommunity from "./features/auth/Admin/AdminCommunity/AdminCommunity";
 
 import CommunityFeed from "./features/auth/Community/CommunityFeed/CommunityFeed";
-import AdminCommunity from "./features/auth/Admin/AdminCommunity/AdminCommunity";
 
 function App() {
   const [email, setEmail] = useState("");
@@ -37,76 +37,34 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public auth routes */}
+        {/* Public auth */}
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route
-          path="/forgot-password"
-          element={<ForgotPassword onNext={setEmail} />}
-        />
-        <Route
-          path="/verify-otp"
-          element={<VerifyOTP email={email} onVerified={(t) => setResetToken(t)} />}
-        />
-        <Route
-          path="/reset-password"
-          element={<ResetPassword email={email} resetSessionToken={resetToken} />}
-        />
+        <Route path="/forgot-password" element={<ForgotPassword onNext={setEmail} />} />
+        <Route path="/verify-otp" element={<VerifyOTP email={email} onVerified={(t) => setResetToken(t)} />} />
+        <Route path="/reset-password" element={<ResetPassword email={email} resetSessionToken={resetToken} />} />
 
-        {/* Public app routes */}
+        {/* Public app */}
         <Route path="/explore-map" element={<ExploreMap />} />
         <Route path="/place/:id" element={<PlaceDetail />} />
-
-        {/* Protected user route */}
-        <Route
-          path="/home"
-          element={
-            <AuthGuard>
-              <Home />
-            </AuthGuard>
-          }
-        />
-
-        {/* Contact */}
         <Route path="/contact" element={<ContactUs />} />
 
-        {/* Community */}
-        <Route
-          path="/community"
-          element={
-            <AuthGuard>
-              <CommunityFeed currentUser={currentUser} />
-            </AuthGuard>
-          }
-        />
+        {/* Protected user */}
+        <Route path="/home" element={<AuthGuard><Home /></AuthGuard>} />
+        <Route path="/community" element={<AuthGuard><CommunityFeed currentUser={currentUser} /></AuthGuard>} />
 
-        <Route
-          path="/admin/community"
-          element={
-            <AdminGuard>
-              <AdminCommunity />
-            </AdminGuard>
-          }
-        />
-
-        {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <AdminGuard>
-              <AdminLayout />
-            </AdminGuard>
-          }
-        >
+        {/* Admin — सबै AdminLayout भित्र राख्नुस् — sidebar हुन्छ */}
+        <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
           <Route index element={<AdminDashboard />} />
           <Route path="pending" element={<AdminPending />} />
           <Route path="pending/:id" element={<AdminPendingDetail />} />
           <Route path="places" element={<AdminPlaces />} />
           <Route path="add-place" element={<AdminAddPlace />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="contact" element={<AdminContactInbox />} />
+          <Route path="community" element={<AdminCommunity />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="settings" element={<AdminSettings />} />
-          <Route path="contact" element={<AdminContactInbox />} />
         </Route>
       </Routes>
     </BrowserRouter>
