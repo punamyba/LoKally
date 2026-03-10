@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 
 import app from "./app.js";
 import sequelize from "./config/db.js";
@@ -15,12 +14,11 @@ const startServer = async () => {
     await sequelize.sync();
     console.log("Models synced");
 
-    app.listen(PORT, "0.0.0.0", () => {
+    app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error("Server start error:", error);
-    process.exit(1);
   }
 };
 
