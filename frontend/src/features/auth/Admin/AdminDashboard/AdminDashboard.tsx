@@ -8,6 +8,7 @@ import {
 import { adminApi } from "../adminApi";
 import type { AdminStats, Place } from "../AdminTypes";
 import "./AdminDashboard.css";
+import { getImageUrl } from "../../../../shared/config/imageUrl";
 
 // ── Bar Chart (pure SVG/CSS, no library)
 function BarChart() {
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
               <div key={p.id} className="adh-pending-card">
                 <div className="adh-pending-card-img">
                   {p.image
-                    ? <img src={`http://localhost:5001${p.image}`} alt={p.name} />
+                    ? <img src={getImageUrl(p.image)} alt={p.name} />
                     : <div className="adh-pending-card-img-placeholder"><MapPin size={32} strokeWidth={1.5} /></div>
                   }
                   {p.category && (

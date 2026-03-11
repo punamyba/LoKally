@@ -1,19 +1,24 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, CheckCircle, Clock, User, Calendar, ChevronRight } from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { Place } from "../AdminTypes";
+import { getImageUrl } from "../../../../shared/config/imageUrl";
 import "./AdminPending.css";
 
 // Parse images — single path or JSON array
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
+
   if (image.startsWith("[")) {
-    try { return (JSON.parse(image) as string[]).map(p => `http://localhost:5001${p}`); }
-    catch { return [`http://localhost:5001${image}`]; }
+    try {
+      return (JSON.parse(image) as string[]).map((p) => getImageUrl(p));
+    } catch {
+      return [getImageUrl(image)];
+    }
   }
-  return [`http://localhost:5001${image}`];
+
+  return [getImageUrl(image)];
 }
 
 export default function AdminPending() {
@@ -62,7 +67,6 @@ export default function AdminPending() {
                 onClick={() => navigate(`/admin/pending/${place.id}`)}
                 title="Click to review this place"
               >
-                {/* Cover image */}
                 <div className="apd-card-img">
                   {coverImg
                     ? <img src={coverImg} alt={place.name} />
@@ -106,7 +110,6 @@ export default function AdminPending() {
                     </div>
                   </div>
 
-                  {/* Click to review hint */}
                   <div className="apd-card-review-hint">
                     <span>Click to review & decide</span>
                     <ChevronRight size={15} strokeWidth={2.5} />

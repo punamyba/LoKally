@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
@@ -11,6 +9,7 @@ import {
 } from "lucide-react";
 import { adminApi } from "../adminApi";
 import type { Place } from "../AdminTypes";
+import { getImageUrl } from "../../../../shared/config/imageUrl";
 import "./AdminPendingDetail.css";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -23,12 +22,16 @@ L.Icon.Default.mergeOptions({
 // Handles: single string | JSON array
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
-  const base = "http://localhost:5001";
+
   if (image.startsWith("[")) {
-    try { return (JSON.parse(image) as string[]).map(p => `${base}${p}`); }
-    catch { return [`${base}${image}`]; }
+    try {
+      return (JSON.parse(image) as string[]).map((p) => getImageUrl(p));
+    } catch {
+      return [getImageUrl(image)];
+    }
   }
-  return [`${base}${image}`];
+
+  return [getImageUrl(image)];
 }
 
 export default function AdminPendingDetail() {
@@ -98,7 +101,7 @@ export default function AdminPendingDetail() {
       <div className="apd2-done">
         {done === "approved"
           ? <CheckCircle size={60} strokeWidth={1.2} className="apd2-done-icon--approved" />
-          : <XCircle     size={60} strokeWidth={1.2} className="apd2-done-icon--rejected" />
+          : <XCircle size={60} strokeWidth={1.2} className="apd2-done-icon--rejected" />
         }
         <h2 className="apd2-done-title">
           {done === "approved" ? "Place Approved!" : "Place Rejected"}
@@ -125,9 +128,7 @@ export default function AdminPendingDetail() {
       </button>
 
       <div className="apd2-layout">
-        {/* LEFT: Images + Info */}
         <div className="apd2-left">
-
           <div className="apd2-gallery">
             {photos.length > 0 ? (
               <>
@@ -136,12 +137,18 @@ export default function AdminPendingDetail() {
                   <div className="apd2-gallery-count">{activePhoto + 1} / {photos.length}</div>
                   {photos.length > 1 && (
                     <>
-                      <button className="apd2-arrow apd2-arrow--left" type="button"
-                        onClick={() => setActivePhoto(v => v === 0 ? photos.length - 1 : v - 1)}>
+                      <button
+                        className="apd2-arrow apd2-arrow--left"
+                        type="button"
+                        onClick={() => setActivePhoto(v => v === 0 ? photos.length - 1 : v - 1)}
+                      >
                         <ChevronLeft size={20} />
                       </button>
-                      <button className="apd2-arrow apd2-arrow--right" type="button"
-                        onClick={() => setActivePhoto(v => v === photos.length - 1 ? 0 : v + 1)}>
+                      <button
+                        className="apd2-arrow apd2-arrow--right"
+                        type="button"
+                        onClick={() => setActivePhoto(v => v === photos.length - 1 ? 0 : v + 1)}
+                      >
                         <ChevronRight size={20} />
                       </button>
                     </>
@@ -150,9 +157,12 @@ export default function AdminPendingDetail() {
                 {photos.length > 1 && (
                   <div className="apd2-thumbs">
                     {photos.map((img, i) => (
-                      <button key={i} type="button"
+                      <button
+                        key={i}
+                        type="button"
                         className={`apd2-thumb ${i === activePhoto ? "active" : ""}`}
-                        onClick={() => setActivePhoto(i)}>
+                        onClick={() => setActivePhoto(i)}
+                      >
                         <img src={img} alt="" />
                       </button>
                     ))}
@@ -172,32 +182,39 @@ export default function AdminPendingDetail() {
               <h1 className="apd2-name">{place.name}</h1>
               <span className="apd2-badge-pending">Pending</span>
             </div>
+
             <div className="apd2-meta-row">
               {place.category && (
                 <span className="apd2-cat-tag"><Tag size={11} strokeWidth={2.5} /> {place.category}</span>
               )}
               <span className="apd2-addr"><MapPin size={12} strokeWidth={2} /> {place.address}</span>
             </div>
+
             {place.description && (
               <div className="apd2-section">
                 <div className="apd2-label">Description</div>
                 <p className="apd2-desc">{place.description}</p>
               </div>
             )}
+
             <div className="apd2-info-grid">
               <div className="apd2-info-item">
                 <div className="apd2-info-label"><User size={11} /> Submitted By</div>
                 <div className="apd2-info-val">{place.submitter?.first_name} {place.submitter?.last_name}</div>
                 {place.submitter?.email && <div className="apd2-info-email">{place.submitter.email}</div>}
               </div>
+
               <div className="apd2-info-item">
                 <div className="apd2-info-label"><Calendar size={11} /> Submitted On</div>
                 <div className="apd2-info-val">
                   {new Date(place.created_at).toLocaleDateString("en-US", {
-                    year: "numeric", month: "long", day: "numeric"
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
                   })}
                 </div>
               </div>
+
               <div className="apd2-info-item">
                 <div className="apd2-info-label"><Navigation size={11} /> Coordinates</div>
                 <div className="apd2-info-val">{lat.toFixed(5)}, {lng.toFixed(5)}</div>
@@ -206,20 +223,29 @@ export default function AdminPendingDetail() {
           </div>
         </div>
 
-        {/* RIGHT: Map + Decision */}
         <div className="apd2-right">
           <div className="apd2-card apd2-map-card">
             <div className="apd2-section-label"><MapPin size={13} /> Location on Map</div>
             <div className="apd2-map">
-              <MapContainer center={[lat, lng]} zoom={13}
+              <MapContainer
+                center={[lat, lng]}
+                zoom={13}
                 style={{ height: "240px", width: "100%", borderRadius: "12px" }}
-                zoomControl={false} dragging={false} scrollWheelZoom={false}>
+                zoomControl={false}
+                dragging={false}
+                scrollWheelZoom={false}
+              >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <Marker position={[lat, lng]} />
               </MapContainer>
             </div>
-            <a href={`https://www.google.com/maps?q=${lat},${lng}`}
-              target="_blank" rel="noreferrer" className="apd2-gmaps-btn">
+
+            <a
+              href={`https://www.google.com/maps?q=${lat},${lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="apd2-gmaps-btn"
+            >
               <Navigation size={13} /> Open in Google Maps
             </a>
           </div>
@@ -229,32 +255,43 @@ export default function AdminPendingDetail() {
             <p className="apd2-decision-hint">
               Review the photos and details carefully before approving or rejecting.
             </p>
+
             {!rejectMode ? (
               <div className="apd2-actions">
-                <button className="apd2-btn apd2-btn--approve"
-                  onClick={handleApprove} disabled={processing}>
+                <button className="apd2-btn apd2-btn--approve" onClick={handleApprove} disabled={processing}>
                   <CheckCircle size={16} strokeWidth={2.5} />
                   {processing ? "Processing..." : "Approve Place"}
                 </button>
-                <button className="apd2-btn apd2-btn--reject"
-                  onClick={() => setRejectMode(true)} disabled={processing}>
+                <button className="apd2-btn apd2-btn--reject" onClick={() => setRejectMode(true)} disabled={processing}>
                   <XCircle size={16} strokeWidth={2.5} /> Reject
                 </button>
               </div>
             ) : (
               <div className="apd2-reject-form">
                 <label className="apd2-reject-label">Reason for rejection <span>*</span></label>
-                <textarea className="apd2-reject-textarea" rows={4} autoFocus
-                  value={rejectReason} onChange={e => setRejectReason(e.target.value)}
-                  placeholder="e.g. Blurry images, duplicate, incorrect location..." />
+                <textarea
+                  className="apd2-reject-textarea"
+                  rows={4}
+                  autoFocus
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  placeholder="e.g. Blurry images, duplicate, incorrect location..."
+                />
                 <div className="apd2-reject-actions">
-                  <button className="apd2-btn apd2-btn--cancel"
-                    onClick={() => { setRejectMode(false); setRejectReason(""); }}>
+                  <button
+                    className="apd2-btn apd2-btn--cancel"
+                    onClick={() => {
+                      setRejectMode(false);
+                      setRejectReason("");
+                    }}
+                  >
                     Cancel
                   </button>
-                  <button className="apd2-btn apd2-btn--confirm-reject"
+                  <button
+                    className="apd2-btn apd2-btn--confirm-reject"
                     onClick={handleReject}
-                    disabled={!rejectReason.trim() || processing}>
+                    disabled={!rejectReason.trim() || processing}
+                  >
                     <XCircle size={14} strokeWidth={2.5} />
                     {processing ? "Rejecting..." : "Confirm Reject"}
                   </button>

@@ -54,13 +54,11 @@ body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
 .adl-root {
   display: flex;
   min-height: 100vh;
-  background: var(--bg);
-  font-family: var(--font);
+  background: #f8fafc;
 }
 
 .adl-main {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
-  background: var(--bg);
+  overflow-x: auto;
 }

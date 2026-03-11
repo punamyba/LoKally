@@ -7,9 +7,10 @@ import {
 import { communityApi } from "../../Community/communityApi";
 import type { Post, Comment } from "../../Community/CommunityTypes";
 import "./AdminCommunity.css";
+import { getImageUrl } from "../../../../shared/config/imageUrl";
 
-const BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5001";
-const imgUrl = (p: string) => p?.startsWith("http") ? p : `${BASE}${p}`;
+const imgUrl = (p: string) => getImageUrl(p);
+
 const parseImages = (raw: string | null): string[] => {
   if (!raw) return []; try { return JSON.parse(raw); } catch { return [raw]; }
 };

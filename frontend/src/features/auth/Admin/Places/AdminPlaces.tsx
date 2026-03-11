@@ -7,18 +7,22 @@ import {
 import { adminApi } from "../adminApi";
 import type { Place } from "../AdminTypes";
 import "./AdminPlaces.css";
+import { getImageUrl } from "../../../../shared/config/imageUrl";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 
-// Parse image field — single string OR JSON array
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
-  const base = "http://localhost:5001";
+
   if (image.startsWith("[")) {
-    try { return (JSON.parse(image) as string[]).map(p => `${base}${p}`); }
-    catch { return [`${base}${image}`]; }
+    try {
+      return (JSON.parse(image) as string[]).map((p) => getImageUrl(p));
+    } catch {
+      return [getImageUrl(image)];
+    }
   }
-  return [`${base}${image}`];
+
+  return [getImageUrl(image)];
 }
 
 // Place Detail Modal 
