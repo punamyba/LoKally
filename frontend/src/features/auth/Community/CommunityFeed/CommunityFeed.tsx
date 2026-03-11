@@ -3,7 +3,7 @@ import {
   Bookmark, RefreshCw, Globe, Flame,
 } from "lucide-react";
 import { communityApi } from "../communityApi";
-import CreatePost from "../CreatePost/Createpost";
+import CreatePost from "../CreatePost/CreatePost";
 import PostCard from "../PostCard/PostCard";
 import type { Post } from "../CommunityTypes";
 import Navbar from "../../Components/Layout/Navbar/Navbar";
