@@ -40,7 +40,7 @@ const User = sequelize.define(
     },
     password: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,          // ← allowNull: true (Google users have no password)
     },
     role: {
       type: DataTypes.STRING(20),
@@ -54,6 +54,17 @@ const User = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    // ── Google OAuth ──────────────────────────────────
+    google_id: {                // ← NEW: Google user ID
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+    },
+    avatar: {                   // ← NEW: Google profile picture URL
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // ─────────────────────────────────────────────────
     reset_code_hash: {
       type: DataTypes.STRING(255),
       allowNull: true,
