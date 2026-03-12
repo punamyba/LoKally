@@ -60,7 +60,6 @@
   gap: 12px; color: #475569; font-size: 14px;
 }
 
-/* Photo count badge */
 .pd-hero-badge {
   position: absolute; top: 16px; right: 16px;
   background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
@@ -69,7 +68,6 @@
   display: flex; align-items: center; gap: 6px;
 }
 
-/* Thumbnail strip on hero bottom */
 .pd-hero-strip {
   position: absolute; bottom: 12px; left: 14px;
   display: flex; gap: 8px;
@@ -117,6 +115,18 @@
   background: #f0fdf4; padding: 5px 12px; border-radius: 99px;
   white-space: nowrap;
 }
+
+/* Rating summary row (NEW) */
+.pd-rating-summary {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0 12px;
+}
+.pd-rating-avg {
+  font-size: 26px; font-weight: 800; color: var(--dark); line-height: 1;
+}
+.pd-stars-display { display: flex; gap: 2px; }
+.pd-rating-total  { font-size: 12px; color: #94a3b8; }
+
 .pd-stats-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .pd-cat-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -124,6 +134,25 @@
   border-radius: 99px; background: #eff6ff; color: var(--blue);
 }
 .pd-stat { font-size: 13px; color: var(--slate); display: flex; align-items: center; gap: 5px; }
+
+/* Likes button (clickable) */
+.pd-stat-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--slate); padding: 0; font-family: 'Inter', sans-serif;
+}
+.pd-stat-btn:hover { color: var(--blue); }
+
+/* Who liked popup (NEW) */
+.pd-liked-by {
+  background: #f8faff; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 10px 14px; margin: 4px 0 12px;
+}
+.pd-liked-by-title { font-size: 11px; font-weight: 700; color: #4a5568; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.pd-liked-by-list  { display: flex; flex-wrap: wrap; gap: 8px; }
+.pd-liked-by-user  { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dark); }
+.pd-avatar-sm { width: 24px !important; height: 24px !important; font-size: 10px !important; }
+
 .pd-section { margin-top: 10px; }
 .pd-section-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -136,9 +165,12 @@
 .pd-weather-conditions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .pd-card--weather, .pd-card--conditions { margin-bottom: 0; }
 
+/* Weather emoji (NEW) */
+.pd-weather-icon { font-size: 28px; margin-right: 6px; }
 .pd-weather-temp {
+  display: flex; align-items: center;
   font-family: 'Red Rose', sans-serif;
-  font-size: 38px; font-weight: 700; color: var(--dark); line-height: 1;
+  font-size: 36px; font-weight: 700; color: var(--dark); line-height: 1;
 }
 .pd-weather-cond { font-size: 13px; color: var(--slate); margin: 4px 0 10px; }
 .pd-weather-meta { display: flex; gap: 14px; font-size: 12px; color: var(--slate); margin-bottom: 14px; }
@@ -150,10 +182,13 @@
   flex-direction: column; align-items: center; gap: 4px;
 }
 .pd-forecast-label { font-size: 10px; color: #94a3b8; font-weight: 700; }
-.pd-forecast-icon { color: var(--blue); }
+.pd-forecast-emoji { font-size: 18px; }
 .pd-forecast-temps { display: flex; gap: 4px; font-size: 11px; font-weight: 600; }
 .pd-forecast-temps .hi { color: var(--dark); }
 .pd-forecast-temps .lo { color: #94a3b8; }
+
+/* Conditions admin label (NEW) */
+.pd-cond-admin-label { font-size: 10px; color: #9ca3af; font-weight: 400; margin-left: 4px; }
 
 .pd-conditions { display: flex; flex-direction: column; gap: 8px; }
 .pd-cond {
@@ -164,7 +199,8 @@
 .pd-cond--info { background: #eff6ff; color: var(--blue); }
 .pd-cond--warn { background: #fffbeb; color: #d97706; }
 .pd-cond-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }
-.pd-cond-val { font-size: 13px; font-weight: 700; margin-top: 1px; }
+.pd-cond-val   { font-size: 13px; font-weight: 700; margin-top: 1px; }
+.pd-cond-note  { font-size: 12px; color: #64748b; margin-top: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; }
 
 /* Actions */
 .pd-actions-card { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -175,11 +211,21 @@
   font-size: 13px; font-weight: 700; cursor: pointer;
   color: #374151; transition: all 0.15s; font-family: 'Inter', sans-serif;
 }
-.pd-action-btn--liked  { background: #eff6ff; color: var(--blue); border-color: var(--blue); }
+.pd-action-btn--liked   { background: #eff6ff; color: var(--blue);  border-color: var(--blue);  }
 .pd-action-btn--visited { background: #f0fdf4; color: var(--green); border-color: var(--green); }
 .pd-action-btn:hover { border-color: var(--blue); color: var(--blue); }
-.pd-star-rate { display: flex; gap: 2px; margin-left: 6px; }
+
+.pd-star-rate { display: flex; align-items: center; gap: 2px; margin-left: 6px; }
+.pd-rate-label { font-size: 12px; color: var(--slate); margin-right: 4px; }
 .pd-star-btn { background: none; border: none; padding: 2px; cursor: pointer; display: flex; }
+
+/* Rating breakdown (NEW) */
+.pd-rating-breakdown { padding: 16px 20px; }
+.pd-rating-bar-row   { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.pd-rating-bar-label { font-size: 12px; color: var(--slate); width: 20px; text-align: right; flex-shrink: 0; }
+.pd-rating-bar-track { flex: 1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.pd-rating-bar-fill  { height: 100%; background: #f59e0b; border-radius: 99px; transition: width 0.4s ease; }
+.pd-rating-bar-count { font-size: 12px; color: #9ca3af; width: 16px; flex-shrink: 0; }
 
 /* Comments */
 .pd-comment-form {
@@ -192,6 +238,7 @@
   background: linear-gradient(135deg, var(--blue), var(--green));
   color: white; font-size: 13px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  overflow: hidden;
 }
 .pd-comment-input {
   flex: 1; padding: 9px 13px; border: 1.5px solid #e2e8f0;
@@ -207,10 +254,46 @@
 .pd-comment-send:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
 .pd-comments-list { display: flex; flex-direction: column; gap: 14px; }
 .pd-comment { display: flex; gap: 10px; align-items: flex-start; }
+.pd-comment-body { flex: 1; min-width: 0; }
 .pd-comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
 .pd-comment-user { font-size: 13px; font-weight: 700; color: var(--dark); }
 .pd-comment-time { font-size: 11px; color: #94a3b8; }
 .pd-comment-text { font-size: 13px; color: #475569; line-height: 1.6; }
+
+/* Comment actions (NEW) */
+.pd-comment-actions { display: flex; gap: 12px; margin-top: 5px; }
+.pd-comment-reply-btn,
+.pd-comment-delete-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; padding: 0; font-family: 'Inter', sans-serif;
+}
+.pd-comment-reply-btn        { color: var(--blue); }
+.pd-comment-reply-btn:hover  { color: #0d5fbf; }
+.pd-comment-delete-btn       { color: #e53e3e; }
+.pd-comment-delete-btn:hover { color: #c53030; }
+
+/* Reply indicator (NEW) */
+.pd-reply-indicator {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #4a5568;
+  background: #f0f7ff; border-radius: 8px;
+  padding: 6px 12px; margin-bottom: 10px;
+}
+.pd-reply-cancel {
+  margin-left: auto; background: none; border: none;
+  cursor: pointer; color: #9ca3af; display: flex; align-items: center;
+}
+.pd-reply-cancel:hover { color: #e53e3e; }
+
+/* Threaded replies (NEW) */
+.pd-replies {
+  margin-top: 10px;
+  border-left: 2px solid #e2e8f0;
+  padding-left: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pd-reply { margin-bottom: 0 !important; }
 
 /* Right column cards */
 .pd-minimap { border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
@@ -235,7 +318,7 @@
   color: white; font-size: 17px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
 }
-.pd-submitter-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+.pd-submitter-name  { font-size: 14px; font-weight: 700; color: var(--dark); }
 .pd-submitter-badge { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 4px; font-weight: 600; margin-top: 2px; }
 
 .pd-tags { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -266,8 +349,7 @@
 }
 .pd-slideshow-counter {
   position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 700;
-  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
 }
 .pd-slideshow-close {
   position: absolute; top: 14px; right: 18px;
@@ -277,7 +359,6 @@
   cursor: pointer; transition: background 0.15s;
 }
 .pd-slideshow-close:hover { background: rgba(255,255,255,0.2); }
-
 .pd-slideshow-img-wrap {
   flex: 1; display: flex; align-items: center; justify-content: center;
   width: 100%; overflow: hidden;
@@ -295,11 +376,9 @@
   width: 50px; height: 50px; display: grid; place-items: center;
   cursor: pointer; transition: background 0.15s;
 }
-.pd-slideshow-arrow:hover { background: rgba(255,255,255,0.22); }
+.pd-slideshow-arrow:hover  { background: rgba(255,255,255,0.22); }
 .pd-slideshow-arrow--left  { left: 20px; }
 .pd-slideshow-arrow--right { right: 20px; }
-
-/* Thumbnail strip */
 .pd-slideshow-thumbs {
   position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 6px;
@@ -314,7 +393,7 @@
   border: 2px solid transparent; padding: 0; background: none;
   cursor: pointer; opacity: 0.5; transition: all 0.15s;
 }
-.pd-slideshow-thumb:hover { opacity: 0.8; }
+.pd-slideshow-thumb:hover  { opacity: 0.8; }
 .pd-slideshow-thumb.active { border-color: white; opacity: 1; }
 .pd-slideshow-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 

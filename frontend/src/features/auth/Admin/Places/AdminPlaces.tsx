@@ -1,36 +1,281 @@
-
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MapPin, Search, Trash2, CheckCircle, Clock, XCircle,
-  X, User, Calendar, Tag, Eye, ChevronLeft, ChevronRight, Images
+  X, User, Calendar, Tag, Eye, ChevronLeft, ChevronRight,
+  Images, ExternalLink, Settings, FileText, Save,
+  AlertTriangle, Mountain, Car, Sun, Info
 } from "lucide-react";
 import { adminApi } from "../adminApi";
+import axiosInstance from "../../../../shared/config/axiosinstance";
 import type { Place } from "../AdminTypes";
 import "./AdminPlaces.css";
 import { getImageUrl } from "../../../../shared/config/imageUrl";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
+type ModalTab = "details" | "conditions" | "tags";
 
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
-
   if (image.startsWith("[")) {
-    try {
-      return (JSON.parse(image) as string[]).map((p) => getImageUrl(p));
-    } catch {
-      return [getImageUrl(image)];
-    }
+    try { return (JSON.parse(image) as string[]).map((p) => getImageUrl(p)); }
+    catch { return [getImageUrl(image)]; }
   }
-
   return [getImageUrl(image)];
 }
 
-// Place Detail Modal 
+// ── PREDEFINED TAGS ──────────────────────────────────────
+const PREDEFINED_TAGS = [
+  "Scenic", "Hiking", "Photography", "Peaceful", "Family Friendly",
+  "Adventure", "Cultural", "Historical", "Wildlife", "Waterfall",
+  "Sunrise", "Sunset", "Budget Friendly", "Off the beaten path",
+  "Camping", "Trekking", "Boating", "Bird Watching"
+];
+
+// ── CONDITIONS TAB ────────────────────────────────────────
+function ConditionsTab({ placeId }: { placeId: number }) {
+  const [conditions, setConditions] = useState({
+    trail_condition: "",
+    road_condition: "",
+    best_time: "",
+    difficulty: "",
+    note: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    axiosInstance.get(`/places/${placeId}/conditions`)
+      .then(res => {
+        if (res.data?.data) setConditions({ ...conditions, ...res.data.data });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [placeId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await axiosInstance.put(`/places/${placeId}/conditions`, conditions);
+      setMsg({ type: "success", text: "Conditions saved successfully!" });
+    } catch {
+      setMsg({ type: "error", text: "Failed to save. Try again." });
+    }
+    setSaving(false);
+  };
+
+  if (loading) return (
+    <div className="apl-cond-loading">
+      <div className="apl-spinner" />
+      <span>Loading conditions...</span>
+    </div>
+  );
+
+  const trailOpts = ["Good", "Moderate", "Poor", "Closed"];
+  const roadOpts  = ["Paved", "Gravel", "Dirt", "4WD Only", "Closed"];
+  const diffOpts  = ["Easy", "Moderate", "Hard", "Expert"];
+
+  return (
+    <div className="apl-cond-root">
+      {msg && (
+        <div className={`apl-cond-msg apl-cond-msg--${msg.type}`}>
+          {msg.type === "success" ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+          {msg.text}
+        </div>
+      )}
+
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Mountain size={13} strokeWidth={2} /> Trail Condition</div>
+        <div className="apl-cond-opts">
+          {trailOpts.map(o => (
+            <button key={o} type="button"
+              className={`apl-cond-opt ${conditions.trail_condition === o ? "active" : ""}`}
+              onClick={() => setConditions(s => ({ ...s, trail_condition: o }))}>
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Car size={13} strokeWidth={2} /> Road Condition</div>
+        <div className="apl-cond-opts">
+          {roadOpts.map(o => (
+            <button key={o} type="button"
+              className={`apl-cond-opt ${conditions.road_condition === o ? "active" : ""}`}
+              onClick={() => setConditions(s => ({ ...s, road_condition: o }))}>
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Mountain size={13} strokeWidth={2} /> Difficulty</div>
+        <div className="apl-cond-opts">
+          {diffOpts.map(o => (
+            <button key={o} type="button"
+              className={`apl-cond-opt ${conditions.difficulty === o ? "active" : ""}`}
+              onClick={() => setConditions(s => ({ ...s, difficulty: o }))}>
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Sun size={13} strokeWidth={2} /> Best Time to Visit</div>
+        <input
+          className="apl-cond-input"
+          value={conditions.best_time}
+          onChange={e => setConditions(s => ({ ...s, best_time: e.target.value }))}
+          placeholder="e.g. October – March, Early morning" />
+      </div>
+
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Info size={13} strokeWidth={2} /> Admin Note</div>
+        <textarea
+          className="apl-cond-textarea"
+          value={conditions.note}
+          onChange={e => setConditions(s => ({ ...s, note: e.target.value }))}
+          placeholder="Any special notes for visitors..."
+          rows={3} />
+      </div>
+
+      <button className="apl-cond-save" onClick={handleSave} disabled={saving}>
+        <Save size={14} strokeWidth={2.5} />
+        {saving ? "Saving..." : "Save Conditions"}
+      </button>
+    </div>
+  );
+}
+
+// ── TAGS TAB ──────────────────────────────────────────────
+function TagsTab({ placeId }: { placeId: number }) {
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    axiosInstance.get(`/places/${placeId}/tags`)
+      .then(res => { if (res.data?.data?.tags) setTags(res.data.data.tags); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [placeId]);
+
+  const handleInputChange = (val: string) => {
+    setTagInput(val);
+    if (val.trim().length > 0) {
+      setSuggestions(PREDEFINED_TAGS.filter(t =>
+        t.toLowerCase().includes(val.toLowerCase()) && !tags.includes(t)
+      ));
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const addTag = (tag: string) => {
+    const t = tag.trim();
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    setTagInput("");
+    setSuggestions([]);
+  };
+
+  const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await axiosInstance.put(`/places/${placeId}/tags`, { tags });
+      setMsg({ type: "success", text: "Tags saved!" });
+    } catch {
+      setMsg({ type: "error", text: "Failed to save tags." });
+    }
+    setSaving(false);
+  };
+
+  if (loading) return <div className="apl-cond-loading"><div className="apl-spinner" /><span>Loading tags...</span></div>;
+
+  return (
+    <div className="apl-cond-root">
+      {msg && (
+        <div className={`apl-cond-msg apl-cond-msg--${msg.type}`}>
+          {msg.type === "success" ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+          {msg.text}
+        </div>
+      )}
+
+      {/* Predefined tags */}
+      <div className="apl-cond-section">
+        <div className="apl-cond-label"><Tag size={13} strokeWidth={2} /> Quick Add Tags</div>
+        <div className="apl-tags-predefined">
+          {PREDEFINED_TAGS.map(t => (
+            <button key={t} type="button"
+              className={`apl-tag-pill ${tags.includes(t) ? "active" : ""}`}
+              onClick={() => tags.includes(t) ? removeTag(t) : addTag(t)}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom tag input */}
+      <div className="apl-cond-section">
+        <div className="apl-cond-label">Custom Tag</div>
+        <div className="apl-tag-input-wrap" style={{ position: "relative" }}>
+          <input
+            className="apl-cond-input"
+            value={tagInput}
+            onChange={e => handleInputChange(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && tagInput.trim()) { e.preventDefault(); addTag(tagInput); } }}
+            placeholder="Type and press Enter to add custom tag" />
+          {suggestions.length > 0 && (
+            <div className="apl-tag-suggestions">
+              {suggestions.map(s => (
+                <div key={s} className="apl-tag-suggestion-item" onClick={() => addTag(s)}>{s}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Selected tags */}
+      {tags.length > 0 && (
+        <div className="apl-cond-section">
+          <div className="apl-cond-label">Selected Tags ({tags.length})</div>
+          <div className="apl-selected-tags">
+            {tags.map(t => (
+              <span key={t} className="apl-selected-tag">
+                {t}
+                <button type="button" onClick={() => removeTag(t)}><X size={11} strokeWidth={3} /></button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button className="apl-cond-save" onClick={handleSave} disabled={saving}>
+        <Save size={14} strokeWidth={2.5} />
+        {saving ? "Saving..." : "Save Tags"}
+      </button>
+    </div>
+  );
+}
+
+// ── PLACE DETAIL MODAL ────────────────────────────────────
 function PlaceDetailModal({ place, onClose, onDelete }: {
   place: Place; onClose: () => void; onDelete: (p: Place) => void;
 }) {
+  const navigate = useNavigate();
   const photos = parseImages(place.image);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [tab, setTab] = useState<ModalTab>("details");
 
   return (
     <div className="apl-overlay" onClick={onClose}>
@@ -54,7 +299,16 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
               </span>
             )}
           </div>
-          <button className="apl-detail-close" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
+          <div className="apl-detail-header-actions">
+            <button
+              className="apl-view-page-btn"
+              onClick={() => { onClose(); navigate(`/place/${place.id}`); }}
+              title="View place page">
+              <ExternalLink size={13} strokeWidth={2.5} />
+              View Page
+            </button>
+            <button className="apl-detail-close" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
+          </div>
         </div>
 
         {/* Gallery */}
@@ -82,7 +336,7 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
           </div>
         )}
 
-        {/* Thumbnail strip */}
+        {/* Thumbnails */}
         {photos.length > 1 && (
           <div className="apl-detail-thumbs">
             {photos.map((img, i) => (
@@ -95,49 +349,82 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
           </div>
         )}
 
-        {/* Body */}
-        <div className="apl-detail-body">
-          <h2 className="apl-detail-name">{place.name}</h2>
-          <div className="apl-detail-addr"><MapPin size={14} strokeWidth={2} />{place.address}</div>
-          {place.description && <p className="apl-detail-desc">{place.description}</p>}
-
-          <div className="apl-detail-meta">
-            <div className="apl-detail-meta-item">
-              <div className="apl-detail-meta-label">Submitted By</div>
-              <div className="apl-detail-meta-val">
-                <User size={13} strokeWidth={2} />
-                {place.submitter?.first_name} {place.submitter?.last_name}
-              </div>
-              {place.submitter?.email && <div className="apl-detail-meta-email">{place.submitter.email}</div>}
-            </div>
-            <div className="apl-detail-meta-item">
-              <div className="apl-detail-meta-label">Date Submitted</div>
-              <div className="apl-detail-meta-val">
-                <Calendar size={13} strokeWidth={2} />
-                {new Date(place.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-              </div>
-            </div>
-            <div className="apl-detail-meta-item">
-              <div className="apl-detail-meta-label">Coordinates</div>
-              <div className="apl-detail-meta-val">
-                <MapPin size={13} strokeWidth={2} />
-                {parseFloat(place.lat).toFixed(5)}, {parseFloat(place.lng).toFixed(5)}
-              </div>
-            </div>
-          </div>
-
-          <div className="apl-detail-footer">
-            <button className="apl-detail-del-btn" onClick={() => { onClose(); onDelete(place); }}>
-              <Trash2 size={15} strokeWidth={2} /> Delete Place
-            </button>
-          </div>
+        {/* Tabs */}
+        <div className="apl-modal-tabs">
+          <button
+            className={`apl-modal-tab ${tab === "details" ? "active" : ""}`}
+            onClick={() => setTab("details")}>
+            <FileText size={13} strokeWidth={2} /> Details
+          </button>
+          <button
+            className={`apl-modal-tab ${tab === "conditions" ? "active" : ""}`}
+            onClick={() => setTab("conditions")}>
+            <Settings size={13} strokeWidth={2} /> Conditions
+          </button>
+          <button
+            className={`apl-modal-tab ${tab === "tags" ? "active" : ""}`}
+            onClick={() => setTab("tags")}>
+            <Tag size={13} strokeWidth={2} /> Tags
+          </button>
         </div>
+
+        {/* Tab Content */}
+        {tab === "details" && (
+          <div className="apl-detail-body">
+            <h2 className="apl-detail-name">{place.name}</h2>
+            <div className="apl-detail-addr"><MapPin size={14} strokeWidth={2} />{place.address}</div>
+            {place.description && <p className="apl-detail-desc">{place.description}</p>}
+
+            <div className="apl-detail-meta">
+              <div className="apl-detail-meta-item">
+                <div className="apl-detail-meta-label">Submitted By</div>
+                <div className="apl-detail-meta-val">
+                  <User size={13} strokeWidth={2} />
+                  {place.submitter?.first_name} {place.submitter?.last_name}
+                </div>
+                {place.submitter?.email && <div className="apl-detail-meta-email">{place.submitter.email}</div>}
+              </div>
+              <div className="apl-detail-meta-item">
+                <div className="apl-detail-meta-label">Date Submitted</div>
+                <div className="apl-detail-meta-val">
+                  <Calendar size={13} strokeWidth={2} />
+                  {new Date(place.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                </div>
+              </div>
+              <div className="apl-detail-meta-item">
+                <div className="apl-detail-meta-label">Coordinates</div>
+                <div className="apl-detail-meta-val">
+                  <MapPin size={13} strokeWidth={2} />
+                  {parseFloat(place.lat).toFixed(5)}, {parseFloat(place.lng).toFixed(5)}
+                </div>
+              </div>
+            </div>
+
+            <div className="apl-detail-footer">
+              <button className="apl-detail-del-btn" onClick={() => { onClose(); onDelete(place); }}>
+                <Trash2 size={15} strokeWidth={2} /> Delete Place
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "conditions" && (
+          <div className="apl-tab-content-wrap">
+            <ConditionsTab placeId={place.id} />
+          </div>
+        )}
+
+        {tab === "tags" && (
+          <div className="apl-tab-content-wrap">
+            <TagsTab placeId={place.id} />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Main Component
+// ── MAIN COMPONENT ────────────────────────────────────────
 export default function AdminPlaces() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [filter, setFilter] = useState<Filter>("all");

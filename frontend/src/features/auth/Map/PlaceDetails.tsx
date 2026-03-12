@@ -1,6 +1,4 @@
-
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
@@ -9,7 +7,7 @@ import {
   ArrowLeft, MapPin, Navigation, Cloud, Wind, Droplets,
   CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight,
   ThumbsUp, Footprints, Star, MessageCircle, Send,
-  User, Tag, Flag, BadgeCheck, Images, X,
+  User, Tag, Flag, BadgeCheck, Images, X, Reply, Trash2,
 } from "lucide-react";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import type { Place } from "./Type";
@@ -23,7 +21,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Parse image field — single string OR JSON array
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
   const base = "http://localhost:5001";
@@ -34,49 +31,63 @@ function parseImages(image: string | null | undefined): string[] {
   return [`${base}${image}`];
 }
 
-// Dummy data
-const WEATHER = {
-  temp: 22, condition: "Partly Cloudy", wind: 12, humidity: 65,
-  forecast: [
-    { day: "Today",    high: 22, low: 12, Icon: Cloud },
-    { day: "Tomorrow", high: 19, low: 10, Icon: Wind },
-    { day: "Sun",      high: 25, low: 13, Icon: Cloud },
-    { day: "Mon",      high: 20, low: 11, Icon: Cloud },
-  ],
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "Just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)  return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+// OpenWeatherMap icon → emoji
+const WI: Record<string, string> = {
+  "01d":"☀️","01n":"🌙","02d":"⛅","02n":"⛅","03d":"☁️","03n":"☁️",
+  "04d":"☁️","04n":"☁️","09d":"🌧️","09n":"🌧️","10d":"🌦️","10n":"🌦️",
+  "11d":"⛈️","11n":"⛈️","13d":"❄️","13n":"❄️","50d":"🌫️","50n":"🌫️",
 };
-const CONDITIONS = [
-  { label: "Trail",     value: "Good",     status: "good", Icon: CheckCircle },
-  { label: "Road",      value: "Paved",    status: "good", Icon: CheckCircle },
-  { label: "Best Time", value: "Oct–Mar",  status: "info", Icon: Clock },
-  { label: "Difficulty",value: "Moderate", status: "warn", Icon: AlertCircle },
-];
-const DUMMY_COMMENTS = [
-  { id: 1, user: "Aarav Shrestha", initials: "A", text: "Amazing place! Highly recommend early morning visit.", time: "2 days ago" },
-  { id: 2, user: "Priya Tamang",   initials: "P", text: "Hidden gem! The sunset view is breathtaking.",        time: "1 week ago" },
-];
-const DUMMY_TAGS = ["Scenic", "Hiking"];
+
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+
+interface Comment {
+  id: number; text: string; created_at: string;
+  user: { id: number; first_name: string; last_name: string; avatar?: string };
+  replies?: Comment[];
+}
+interface RatingStats { avg: number; total: number; dist: Record<number, number>; myRating: number; }
+interface LikeStats   { count: number; likedByMe: boolean; users: any[]; }
+interface VisitStats  { count: number; visitedByMe: boolean; }
+interface Conditions  { trail: string; road: string; best_time: string; difficulty: string; note?: string; }
 
 export default function PlaceDetails() {
-  const { id } = useParams<{ id: string }>();
+  const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [place, setPlace] = useState<Place | null>(null);
+  const [place,   setPlace]   = useState<Place | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [error,   setError]   = useState("");
+  const [photos,  setPhotos]  = useState<string[]>([]);
 
-  // Slideshow
-  const [slideOpen, setSlideOpen] = useState(false);
+  const [slideOpen,   setSlideOpen]   = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
 
-  // Actions
-  const [liked, setLiked] = useState(false);
-  const [visited, setVisited] = useState(false);
-  const [userRating, setUserRating] = useState(0);
+  // Real API state
+  const [likes,       setLikes]       = useState<LikeStats>({ count: 0, likedByMe: false, users: [] });
+  const [visits,      setVisits]      = useState<VisitStats>({ count: 0, visitedByMe: false });
+  const [ratings,     setRatings]     = useState<RatingStats>({ avg: 0, total: 0, dist: {1:0,2:0,3:0,4:0,5:0}, myRating: 0 });
   const [hoverRating, setHoverRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [comments, setComments] = useState(DUMMY_COMMENTS);
+  const [comments,    setComments]    = useState<Comment[]>([]);
+  const [comment,     setComment]     = useState("");
+  const [replyTo,     setReplyTo]     = useState<{ id: number; name: string } | null>(null);
+  const [tags,        setTags]        = useState<string[]>([]);
+  const [conditions,  setConditions]  = useState<Conditions>({ trail: "Good", road: "Paved", best_time: "Oct–Mar", difficulty: "Moderate" });
+  const [showLikers,  setShowLikers]  = useState(false);
+  const [weather,     setWeather]     = useState<any>(null);
 
+  // Fetch place
   useEffect(() => {
     if (!id) return;
     axiosInstance.get(`/places/${id}`)
@@ -96,6 +107,51 @@ export default function PlaceDetails() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Fetch social data (likes, visits, ratings, comments, tags, conditions)
+  const fetchSocial = useCallback(async () => {
+    if (!id) return;
+    const [l, v, r, c, t, cond] = await Promise.allSettled([
+      axiosInstance.get(`/places/${id}/likes`),
+      axiosInstance.get(`/places/${id}/visits`),
+      axiosInstance.get(`/places/${id}/ratings`),
+      axiosInstance.get(`/places/${id}/comments`),
+      axiosInstance.get(`/places/${id}/tags`),
+      axiosInstance.get(`/places/${id}/conditions`),
+    ]);
+    if (l.status    === "fulfilled") setLikes(l.value.data);
+    if (v.status    === "fulfilled") setVisits(v.value.data);
+    if (r.status    === "fulfilled") setRatings(r.value.data);
+    if (c.status    === "fulfilled") setComments(c.value.data);
+    if (t.status    === "fulfilled") setTags(t.value.data);
+    if (cond.status === "fulfilled") setConditions(cond.value.data);
+  }, [id]);
+
+  useEffect(() => { fetchSocial(); }, [fetchSocial]);
+
+  // Real-time weather (OpenWeatherMap — needs VITE_WEATHER_API_KEY)
+  useEffect(() => {
+    if (!place) return;
+    const key = (import.meta as any).env?.VITE_WEATHER_API_KEY;
+    if (!key) return;
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${place.lat}&lon=${place.lng}&units=metric&appid=${key}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.cod !== "200") return;
+        const cur = data.list[0];
+        setWeather({
+          temp:      Math.round(cur.main.temp),
+          condition: cur.weather[0].description.replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          wind:      Math.round(cur.wind.speed * 3.6),
+          humidity:  cur.main.humidity,
+          icon:      cur.weather[0].icon,
+          forecast:  ["Today", "Tomorrow", "Day 3", "Day 4"].map((day, i) => {
+            const item = data.list[Math.min(i * 8, data.list.length - 1)];
+            return { day, high: Math.round(item.main.temp_max), low: Math.round(item.main.temp_min), icon: item.weather[0].icon };
+          }),
+        });
+      }).catch(() => {});
+  }, [place]);
+
   // Keyboard nav in slideshow
   useEffect(() => {
     if (!slideOpen) return;
@@ -110,14 +166,68 @@ export default function PlaceDetails() {
 
   const openSlide = (index = 0) => { setActivePhoto(index); setSlideOpen(true); };
 
-  const handleComment = (e: React.FormEvent) => {
+  // Handlers
+  const handleLike = async () => {
+    try {
+      const res = await axiosInstance.post(`/places/${id}/like`);
+      setLikes(p => ({ ...p, likedByMe: res.data.liked, count: res.data.liked ? p.count + 1 : p.count - 1 }));
+    } catch {}
+  };
+
+  const handleVisit = async () => {
+    try {
+      const res = await axiosInstance.post(`/places/${id}/visit`);
+      setVisits(p => ({ ...p, visitedByMe: res.data.visited, count: res.data.visited ? p.count + 1 : p.count - 1 }));
+    } catch {}
+  };
+
+  const handleRate = async (star: number) => {
+    try {
+      const res = await axiosInstance.post(`/places/${id}/rate`, { rating: star });
+      setRatings(res.data);
+    } catch {}
+  };
+
+  const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    setComments(prev => [
-      { id: Date.now(), user: "You", initials: "Y", text: comment.trim(), time: "Just now" },
-      ...prev,
-    ]);
-    setComment("");
+    try {
+      const res = await axiosInstance.post(`/places/${id}/comments`, {
+        text: comment.trim(),
+        parent_id: replyTo?.id || null,
+      });
+      if (replyTo) {
+        setComments(prev => prev.map(c =>
+          c.id === replyTo.id ? { ...c, replies: [...(c.replies || []), res.data] } : c
+        ));
+      } else {
+        setComments(prev => [res.data, ...prev]);
+      }
+      setComment(""); setReplyTo(null);
+    } catch {}
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      await axiosInstance.delete(`/places/comments/${commentId}`);
+      setComments(prev => prev
+        .filter(c => c.id !== commentId)
+        .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== commentId) }))
+      );
+    } catch {}
+  };
+
+  const condStatus = (val: string) => {
+    if (["Good", "Paved", "Easy", "Moderate"].includes(val)) return "good";
+    if (["Poor", "Hard", "Expert", "Closed"].includes(val))  return "warn";
+    return "info";
+  };
+
+  // Fallback weather when no API key
+  const W = weather || {
+    temp: "--", condition: "Add VITE_WEATHER_API_KEY for live weather",
+    wind: "--", humidity: "--", icon: "02d",
+    forecast: ["Today", "Tomorrow", "Day 3", "Day 4"].map(day => ({ day, high: "--", low: "--", icon: "02d" })),
   };
 
   if (loading) return (
@@ -158,7 +268,6 @@ export default function PlaceDetails() {
               </div>
             )
           }
-          {/* Photo count badge */}
           {photos.length > 0 && (
             <div className="pd-hero-badge">
               <Images size={13} strokeWidth={2.5} />
@@ -184,7 +293,7 @@ export default function PlaceDetails() {
         <div className="pd-body">
           <div className="pd-left">
 
-            {/* Info */}
+            {/* Info card */}
             <div className="pd-card">
               <div className="pd-info-top">
                 <div>
@@ -195,13 +304,46 @@ export default function PlaceDetails() {
                 </div>
                 <div className="pd-verified"><BadgeCheck size={16} strokeWidth={2} /> Verified</div>
               </div>
+
+              {/* Rating summary inline */}
+              <div className="pd-rating-summary">
+                <span className="pd-rating-avg">{ratings.avg.toFixed(1)}</span>
+                <div className="pd-stars-display">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={14} strokeWidth={1.5}
+                      fill={s <= Math.round(ratings.avg) ? "#f59e0b" : "none"}
+                      color={s <= Math.round(ratings.avg) ? "#f59e0b" : "#cbd5e1"} />
+                  ))}
+                </div>
+                <span className="pd-rating-total">({ratings.total} reviews)</span>
+              </div>
+
               <div className="pd-stats-row">
                 {place.category && (
                   <span className="pd-cat-badge"><Tag size={11} strokeWidth={2.5} /> {place.category}</span>
                 )}
-                <span className="pd-stat"><ThumbsUp size={13} strokeWidth={2} /> {liked ? 235 : 234} likes</span>
-                <span className="pd-stat"><Footprints size={13} strokeWidth={2} /> 89 visited</span>
+                {/* Click to show who liked */}
+                <button className="pd-stat pd-stat-btn" onClick={() => setShowLikers(v => !v)}>
+                  <ThumbsUp size={13} strokeWidth={2} /> {likes.count} likes
+                </button>
+                <span className="pd-stat"><Footprints size={13} strokeWidth={2} /> {visits.count} visited</span>
               </div>
+
+              {/* Who liked popup */}
+              {showLikers && likes.users.length > 0 && (
+                <div className="pd-liked-by">
+                  <div className="pd-liked-by-title">Liked by</div>
+                  <div className="pd-liked-by-list">
+                    {likes.users.map(u => (
+                      <div key={u.id} className="pd-liked-by-user">
+                        <div className="pd-comment-avatar pd-avatar-sm">{u.first_name?.[0]}</div>
+                        <span>{u.first_name} {u.last_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {place.description && (
                 <div className="pd-section">
                   <div className="pd-section-label">Description</div>
@@ -213,18 +355,20 @@ export default function PlaceDetails() {
             {/* Weather + Conditions */}
             <div className="pd-weather-conditions-row">
               <div className="pd-card pd-card--weather">
-                <div className="pd-section-label"><Cloud size={13} strokeWidth={2} /> Weather</div>
-                <div className="pd-weather-temp">{WEATHER.temp}°C</div>
-                <div className="pd-weather-cond">{WEATHER.condition}</div>
+                <div className="pd-section-label"><Cloud size={13} strokeWidth={2} /> Live Weather</div>
+                <div className="pd-weather-temp">
+                  <span className="pd-weather-icon">{WI[W.icon] || "🌤️"}</span>{W.temp}°C
+                </div>
+                <div className="pd-weather-cond">{W.condition}</div>
                 <div className="pd-weather-meta">
-                  <span><Wind size={12} strokeWidth={2} /> {WEATHER.wind} km/h</span>
-                  <span><Droplets size={12} strokeWidth={2} /> {WEATHER.humidity}%</span>
+                  <span><Wind size={12} strokeWidth={2} /> {W.wind} km/h</span>
+                  <span><Droplets size={12} strokeWidth={2} /> {W.humidity}%</span>
                 </div>
                 <div className="pd-forecast">
-                  {WEATHER.forecast.map((f) => (
+                  {W.forecast.map((f: any) => (
                     <div key={f.day} className="pd-forecast-day">
                       <div className="pd-forecast-label">{f.day}</div>
-                      <f.Icon size={15} strokeWidth={1.5} className="pd-forecast-icon" />
+                      <div className="pd-forecast-emoji">{WI[f.icon] || "🌤️"}</div>
                       <div className="pd-forecast-temps">
                         <span className="hi">{f.high}°</span>
                         <span className="lo">{f.low}°</span>
@@ -235,10 +379,18 @@ export default function PlaceDetails() {
               </div>
 
               <div className="pd-card pd-card--conditions">
-                <div className="pd-section-label"><CheckCircle size={13} strokeWidth={2} /> Conditions</div>
+                <div className="pd-section-label">
+                  <CheckCircle size={13} strokeWidth={2} /> Conditions
+                  <span className="pd-cond-admin-label">(admin updated)</span>
+                </div>
                 <div className="pd-conditions">
-                  {CONDITIONS.map(({ label, value, status, Icon }) => (
-                    <div key={label} className={`pd-cond pd-cond--${status}`}>
+                  {([
+                    { label: "Trail",      value: conditions.trail,      Icon: CheckCircle },
+                    { label: "Road",       value: conditions.road,       Icon: CheckCircle },
+                    { label: "Best Time",  value: conditions.best_time,  Icon: Clock },
+                    { label: "Difficulty", value: conditions.difficulty, Icon: AlertCircle },
+                  ] as any[]).map(({ label, value, Icon }) => (
+                    <div key={label} className={`pd-cond pd-cond--${condStatus(value)}`}>
                       <Icon size={14} strokeWidth={2.5} />
                       <div>
                         <div className="pd-cond-label">{label}</div>
@@ -247,55 +399,135 @@ export default function PlaceDetails() {
                     </div>
                   ))}
                 </div>
+                {conditions.note && <div className="pd-cond-note">📝 {conditions.note}</div>}
               </div>
             </div>
 
             {/* Actions */}
             <div className="pd-card pd-actions-card">
-              <button className={`pd-action-btn ${liked ? "pd-action-btn--liked" : ""}`}
-                onClick={() => setLiked(v => !v)}>
-                <ThumbsUp size={15} strokeWidth={2.5} /> Like
+              <button className={`pd-action-btn ${likes.likedByMe ? "pd-action-btn--liked" : ""}`}
+                onClick={handleLike}>
+                <ThumbsUp size={15} strokeWidth={2.5} />
+                {likes.likedByMe ? "Liked" : "Like"} ({likes.count})
               </button>
-              <button className={`pd-action-btn ${visited ? "pd-action-btn--visited" : ""}`}
-                onClick={() => setVisited(v => !v)}>
-                <CheckCircle size={15} strokeWidth={2.5} /> {visited ? "Visited!" : "Mark Visited"}
+              <button className={`pd-action-btn ${visits.visitedByMe ? "pd-action-btn--visited" : ""}`}
+                onClick={handleVisit}>
+                <CheckCircle size={15} strokeWidth={2.5} />
+                {visits.visitedByMe ? "Visited ✓" : "Mark Visited"} ({visits.count})
               </button>
               <div className="pd-star-rate">
+                <span className="pd-rate-label">Rate:</span>
                 {[1,2,3,4,5].map(s => (
                   <button key={s} type="button" className="pd-star-btn"
                     onMouseEnter={() => setHoverRating(s)}
                     onMouseLeave={() => setHoverRating(0)}
-                    onClick={() => setUserRating(s)}>
+                    onClick={() => handleRate(s)}>
                     <Star size={20} strokeWidth={1.5}
-                      fill={s <= (hoverRating || userRating) ? "#f59e0b" : "none"}
-                      color={s <= (hoverRating || userRating) ? "#f59e0b" : "#cbd5e1"} />
+                      fill={s <= (hoverRating || ratings.myRating) ? "#f59e0b" : "none"}
+                      color={s <= (hoverRating || ratings.myRating) ? "#f59e0b" : "#cbd5e1"} />
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* Rating breakdown */}
+            {ratings.total > 0 && (
+              <div className="pd-card pd-rating-breakdown">
+                <div className="pd-section-label"><Star size={13} strokeWidth={2} /> Rating Breakdown</div>
+                {[5,4,3,2,1].map(s => (
+                  <div key={s} className="pd-rating-bar-row">
+                    <span className="pd-rating-bar-label">{s}★</span>
+                    <div className="pd-rating-bar-track">
+                      <div className="pd-rating-bar-fill"
+                        style={{ width: `${ratings.total ? (ratings.dist[s] / ratings.total) * 100 : 0}%` }} />
+                    </div>
+                    <span className="pd-rating-bar-count">{ratings.dist[s]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Comments */}
             <div className="pd-card">
-              <div className="pd-section-label"><MessageCircle size={13} strokeWidth={2} /> Comments ({comments.length})</div>
+              <div className="pd-section-label">
+                <MessageCircle size={13} strokeWidth={2} /> Comments ({comments.length})
+              </div>
+
+              {/* Reply indicator */}
+              {replyTo && (
+                <div className="pd-reply-indicator">
+                  <Reply size={13} /> Replying to <strong>{replyTo.name}</strong>
+                  <button onClick={() => setReplyTo(null)} className="pd-reply-cancel">
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+
               <form className="pd-comment-form" onSubmit={handleComment}>
-                <div className="pd-comment-avatar pd-comment-avatar--you">Y</div>
+                <div className="pd-comment-avatar pd-comment-avatar--you">
+                  {currentUser.first_name?.[0] || "Y"}
+                </div>
                 <input className="pd-comment-input" value={comment}
                   onChange={e => setComment(e.target.value)}
-                  placeholder="Add a comment..." />
+                  placeholder={replyTo ? `Reply to ${replyTo.name}...` : "Add a comment..."} />
                 <button className="pd-comment-send" type="submit" disabled={!comment.trim()}>
                   <Send size={14} strokeWidth={2.5} />
                 </button>
               </form>
+
               <div className="pd-comments-list">
                 {comments.map((c) => (
                   <div key={c.id} className="pd-comment">
-                    <div className="pd-comment-avatar">{c.initials}</div>
-                    <div>
+                    <div className="pd-comment-avatar">
+                      {c.user?.avatar
+                        ? <img src={c.user.avatar} alt="" style={{ width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover" }} />
+                        : c.user?.first_name?.[0] || "U"
+                      }
+                    </div>
+                    <div className="pd-comment-body">
                       <div className="pd-comment-header">
-                        <span className="pd-comment-user">{c.user}</span>
-                        <span className="pd-comment-time">{c.time}</span>
+                        <span className="pd-comment-user">{c.user?.first_name} {c.user?.last_name}</span>
+                        <span className="pd-comment-time">{timeAgo(c.created_at)}</span>
                       </div>
                       <div className="pd-comment-text">{c.text}</div>
+                      <div className="pd-comment-actions">
+                        <button className="pd-comment-reply-btn"
+                          onClick={() => setReplyTo({ id: c.id, name: c.user?.first_name })}>
+                          <Reply size={12} /> Reply
+                        </button>
+                        {(currentUser.id === c.user?.id || currentUser.role === "admin") && (
+                          <button className="pd-comment-delete-btn"
+                            onClick={() => handleDeleteComment(c.id)}>
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Threaded replies */}
+                      {(c.replies || []).length > 0 && (
+                        <div className="pd-replies">
+                          {(c.replies || []).map(r => (
+                            <div key={r.id} className="pd-comment pd-reply">
+                              <div className="pd-comment-avatar pd-avatar-sm">
+                                {r.user?.first_name?.[0] || "U"}
+                              </div>
+                              <div className="pd-comment-body">
+                                <div className="pd-comment-header">
+                                  <span className="pd-comment-user">{r.user?.first_name} {r.user?.last_name}</span>
+                                  <span className="pd-comment-time">{timeAgo(r.created_at)}</span>
+                                </div>
+                                <div className="pd-comment-text">{r.text}</div>
+                                {(currentUser.id === r.user?.id || currentUser.role === "admin") && (
+                                  <button className="pd-comment-delete-btn"
+                                    onClick={() => handleDeleteComment(r.id)}>
+                                    <Trash2 size={12} /> Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -339,14 +571,15 @@ export default function PlaceDetails() {
               </div>
             </div>
 
-            <div className="pd-card">
-              <div className="pd-section-label"><Tag size={13} strokeWidth={2} /> Tags</div>
-              <div className="pd-tags">
-                {[...(place.category ? [place.category] : []), ...DUMMY_TAGS].map(t => (
-                  <span key={t} className="pd-tag">{t}</span>
-                ))}
+            {/* Tags from DB */}
+            {tags.length > 0 && (
+              <div className="pd-card">
+                <div className="pd-section-label"><Tag size={13} strokeWidth={2} /> Tags</div>
+                <div className="pd-tags">
+                  {tags.map(t => <span key={t} className="pd-tag">{t}</span>)}
+                </div>
               </div>
-            </div>
+            )}
 
             <button className="pd-report-btn"><Flag size={13} strokeWidth={2.5} /> Report Issue</button>
           </div>
@@ -361,11 +594,9 @@ export default function PlaceDetails() {
             <button className="pd-slideshow-close" onClick={() => setSlideOpen(false)}>
               <X size={18} strokeWidth={2.5} />
             </button>
-
             <div className="pd-slideshow-img-wrap">
               <img src={photos[activePhoto]} alt="" />
             </div>
-
             {photos.length > 1 && (
               <>
                 <button className="pd-slideshow-arrow pd-slideshow-arrow--left"
@@ -376,8 +607,6 @@ export default function PlaceDetails() {
                   onClick={() => setActivePhoto(v => v === photos.length - 1 ? 0 : v + 1)}>
                   <ChevronRight size={22} />
                 </button>
-
-                {/* Thumbnail strip */}
                 <div className="pd-slideshow-thumbs">
                   {photos.map((img, i) => (
                     <button key={i} type="button"
