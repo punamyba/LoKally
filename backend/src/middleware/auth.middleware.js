@@ -39,4 +39,8 @@ export const adminOnly = (req, res, next) => {
   return next();
 };
 
+// Aliases — placeFeatures.route.js le yei naam use garcha
+export const authenticateToken = authMiddleware;
+export const requireAdmin      = adminOnly;
+
 export default authMiddleware;
