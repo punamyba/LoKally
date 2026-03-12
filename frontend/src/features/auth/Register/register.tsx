@@ -1,12 +1,7 @@
-
 import "./register.css";
 import { useForm } from "react-hook-form";
 import {
-  FaUser,
-  FaEnvelope,
-  FaLock,
-  FaPhone,
-  FaBirthdayCake,
+  FaUser, FaEnvelope, FaLock, FaPhone, FaBirthdayCake,
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -14,10 +9,11 @@ import FormInput from "../Components/FormComponents/FormInput";
 import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
 import RadioInput from "../Components/FormComponents/RadioInput";
+import GoogleAuthButton from "../Components/FormComponents/GoogleAuthButton";
 
 import { registerApi } from "../../../shared/config/api";
 import AuthLayout from "../Components/Authlayout/AuthLayout";
-
+import { toast } from "../Components/Toast/Toast";
 
 type RegisterFormData = {
   firstName: string;
@@ -35,19 +31,15 @@ const Register = () => {
   const navigate = useNavigate();
 
   const {
-    register,
-    handleSubmit,
-    control,
-    watch,
+    register, handleSubmit, control, watch,
     formState: { errors },
   } = useForm<RegisterFormData>();
 
   const password = watch("password");
 
-  /* SUBMIT HANDLER*/
   const handleRegister = async (data: RegisterFormData) => {
     if (data.password !== data.confirmPassword) {
-      alert(" Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -59,18 +51,21 @@ const Register = () => {
         phone: data.phone,
         dob: data.dob,
         address: data.address,
-        gender: data.gender, //  DB SAFE
+        gender: data.gender,
         password: data.password,
         confirm_password: data.confirmPassword,
       });
 
-      alert(
-        " Registered successfully!\n📧 Please check your email to verify your account."
+      toast.success(
+        "Registered successfully! 🎉",
+        "Please check your email to verify your account."
       );
-
-      navigate("/"); // back to login
+      navigate("/");
     } catch (err: any) {
-      alert(err.response?.data?.message || "Registration failed");
+      toast.error(
+        "Registration failed",
+        err.response?.data?.message || "Something went wrong. Please try again."
+      );
     }
   };
 
@@ -87,14 +82,12 @@ const Register = () => {
             {...register("firstName", { required: "First name required" })}
             error={errors.firstName?.message}
           />
-
           <FormInput
             icon={<FaUser className="icon" />}
             placeholder="Last Name"
             {...register("lastName", { required: "Last name required" })}
             error={errors.lastName?.message}
           />
-
           <FormInput
             icon={<FaEnvelope className="icon" />}
             type="email"
@@ -102,21 +95,18 @@ const Register = () => {
             {...register("email", { required: "Email required" })}
             error={errors.email?.message}
           />
-
           <FormInput
             icon={<FaPhone className="icon" />}
             placeholder="Phone Number"
             {...register("phone", { required: "Phone required" })}
             error={errors.phone?.message}
           />
-
           <FormInput
             icon={<FaBirthdayCake className="icon" />}
             type="date"
             {...register("dob", { required: "Date of birth required" })}
             error={errors.dob?.message}
           />
-
           <FormInput
             icon={<FaUser className="icon" />}
             placeholder="Address"
@@ -146,7 +136,6 @@ const Register = () => {
             })}
             error={errors.password?.message}
           />
-
           <FormInput
             icon={<FaLock className="icon" />}
             type="password"
@@ -161,11 +150,19 @@ const Register = () => {
           <AuthButton text="Register Now" />
         </form>
 
+        {/* Divider */}
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
+        {/* Google */}
+        <GoogleAuthButton text="Sign up with Google" />
+
         <p className="switch-text">
           Already have an account? <Link to="/">Sign In</Link>
         </p>
       </div>
-      </AuthLayout>
+    </AuthLayout>
   );
 };
 

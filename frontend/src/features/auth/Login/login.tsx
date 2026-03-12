@@ -6,9 +6,11 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import FormInput from "../Components/FormComponents/FormInput";
 import AuthButton from "../Components/FormComponents/AuthButton";
 import LogoTitle from "../Components/FormComponents/LogoTitle";
+import GoogleAuthButton from "../Components/FormComponents/GoogleAuthButton";
 import { useEffect } from "react";
 import { loginApi } from "../../../shared/config/api";
 import AuthLayout from "../Components/Authlayout/AuthLayout";
+import { toast } from "../Components/Toast/Toast";
 
 type LoginFormData = {
   email: string;
@@ -32,9 +34,7 @@ const Login = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("currentUser", JSON.stringify(res.data.user));
 
-      // role check (admin vs user)
       const role = res.data.user?.role;
-
       if (role === "admin") {
         navigate("/admin");
       } else {
@@ -42,11 +42,13 @@ const Login = () => {
       }
     } catch (err: any) {
       const msg = err.response?.data?.message;
-
       if (msg?.includes("verify")) {
-        alert("Please verify your email before logging in");
+        toast.warning(
+          "Email not verified",
+          "Please check your inbox and verify your account before logging in."
+        );
       } else {
-        alert(msg || "Login failed");
+        toast.error("Login failed", msg || "Invalid email or password.");
       }
     }
   };
@@ -54,13 +56,13 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("verify");
-
     if (status === "success") {
-      alert("Email verified successfully. Please login.");
+      toast.success("Email verified! ✅", "Your account is now active. Please sign in.");
+      window.history.replaceState({}, "", "/");
     }
-
     if (status === "invalid") {
-      alert("Invalid or expired verification link.");
+      toast.error("Invalid link", "This verification link is invalid or has expired.");
+      window.history.replaceState({}, "", "/");
     }
   }, [location.search]);
 
@@ -74,9 +76,7 @@ const Login = () => {
             icon={<FaEnvelope className="icon" />}
             type="email"
             placeholder="Your Email"
-            {...register("email", {
-              required: "Email is required",
-            })}
+            {...register("email", { required: "Email is required" })}
             error={errors.email?.message}
           />
 
@@ -84,9 +84,7 @@ const Login = () => {
             icon={<FaLock className="icon" />}
             type="password"
             placeholder="Password"
-            {...register("password", {
-              required: "Password is required",
-            })}
+            {...register("password", { required: "Password is required" })}
             error={errors.password?.message}
           />
 
@@ -99,8 +97,16 @@ const Login = () => {
           <AuthButton text="Sign In" />
         </form>
 
+        {/* Divider */}
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
+        {/* Google login */}
+        <GoogleAuthButton text="Continue with Google" />
+
         <p className="switch-text">
-          Don’t have an account? <Link to="/register">Sign Up</Link>
+          Don't have an account? <Link to="/register">Sign Up</Link>
         </p>
       </div>
     </AuthLayout>

@@ -1,69 +1,86 @@
-.input-box {
+/* ── Wrapper — margin + error spacing ───────────────────── */
+.fi-wrapper {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  padding: 8px 12px;
-  border: 1px solid #2aa03a;
-  border-radius: 10px;
   margin-bottom: 14px;
-  transition: 0.2s ease-in-out;
 }
 
-.input-box input {
+/* ── Input box row ───────────────────────────────────────── */
+.fi-box {
+  width: 100%;
+  display: flex;
+  align-items: center;        /* icon + input + eye all vertically centered */
+  gap: 8px;
+  background: #ffffffcb;
+  border: 1.5px solid #2aa03a;
+  border-radius: 10px;
+  padding: 9px 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.fi-box:focus-within {
+  border-color: #3d82f7;
+  box-shadow: 0 0 0 3px rgba(61, 130, 247, 0.15);
+}
+
+.fi-box--error {
+  border-color: #e53e3e !important;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
+}
+
+/* ── Left icon ───────────────────────────────────────────── */
+.fi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #1b8d28;
+  font-size: 15px;
+  width: 18px;               /* fixed width — icon always same size */
+  line-height: 1;
+}
+
+/* ── Actual input ────────────────────────────────────────── */
+.fi-input {
   flex: 1;
   border: none;
   outline: none;
   background: transparent;
   font-size: 14px;
+  color: #1a1a1a;
+  font-family: inherit;
+  min-width: 0;              /* flex shrink fix */
+  padding: 0;                /* no extra padding — box handles it */
+  line-height: 1.5;
 }
 
-.input-box:focus-within {
-  border-color: #3d82f7;
-  box-shadow: 0 0 6px rgba(0, 110, 255, 0.4);
+.fi-input::placeholder {
+  color: #9ca3af;
 }
-.input-wrapper {
-  width: 100%;
+
+/* ── Eye toggle button ───────────────────────────────────── */
+.fi-eye {
   display: flex;
-  flex-direction: column;
-  position: relative;
-  margin-bottom: 15px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #9ca3af;
+  transition: color 0.15s;
+  line-height: 1;
 }
 
-.input-icon {
-  position: absolute;
-  top: 12px;
-  left: 10px;
-  color: #4caf50;
+.fi-eye:hover {
+  color: #3d82f7;
 }
 
-.input-field {
-  width: 100%;
-  padding: 12px 12px 12px 35px;
-  border: 1px solid #c3e6c4;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.input-group {
-  width: 100%;
-  margin-bottom: 18px;
-  display: flex;
-  flex-direction: column;
-}
-
-.input-field {
-  width: 100%;
-  padding: 12px 40px;
-  border: 1px solid #9acd32;
-  border-radius: 6px;
-  outline: none;
-}
-
-.error-text {
-  color: red;
+/* ── Error text ──────────────────────────────────────────── */
+.fi-error {
+  color: #e53e3e;
   font-size: 12px;
   margin-top: 4px;
-  text-align: left !important; /* FIX */
+  text-align: left;
+  padding-left: 2px;
 }
