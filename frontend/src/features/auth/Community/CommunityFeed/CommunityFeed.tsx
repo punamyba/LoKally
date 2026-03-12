@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Bookmark, RefreshCw, Globe, Flame,
+  Bookmark,
+  RefreshCw,
+  Globe,
+  Flame,
 } from "lucide-react";
 import { communityApi } from "../communityApi";
 import CreatePost from "../CreatePost/CreatePost";
@@ -16,74 +19,119 @@ interface Props {
 type Tab = "feed" | "trending" | "saved";
 
 export default function CommunityFeed({ currentUser }: Props) {
-  const [tab, setTab]         = useState<Tab>("feed");
-  const [posts, setPosts]     = useState<Post[]>([]);
-  const [page, setPage]       = useState(1);
+  const [tab, setTab] = useState<Tab>("feed");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr]         = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
   const loaderRef = useRef<HTMLDivElement>(null);
 
   const initials = `${currentUser.first_name[0]}${currentUser.last_name?.[0] ?? ""}`.toUpperCase();
 
   const load = useCallback(async (pg = 1, reset = false) => {
-    setLoading(true); setErr("");
+    if (loading) return;
+
+    setLoading(true);
+    setErr("");
+
     try {
       const r = await communityApi.getFeed(pg, 10);
+
       if (r.success) {
-        setPosts(prev => reset ? r.data : [...prev, ...r.data]);
-        setHasMore(r.data.length === 10);
+        const newPosts = Array.isArray(r.data) ? r.data : [];
+
+        setPosts((prev) => {
+          if (reset) return newPosts;
+
+          const existingIds = new Set(prev.map((p) => p.id));
+          const merged = [...prev];
+
+          newPosts.forEach((p: Post) => {
+            if (!existingIds.has(p.id)) {
+              merged.push(p);
+            }
+          });
+
+          return merged;
+        });
+
+        setHasMore(newPosts.length === 10);
         setPage(pg);
       }
-    } catch { setErr("Failed to load posts."); }
-    setLoading(false);
-  }, []);
+    } catch {
+      setErr("Failed to load posts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [loading]);
 
-  useEffect(() => { load(1, true); }, [tab]);
-
-  // Infinite scroll
   useEffect(() => {
-    const obs = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !loading) load(page + 1);
-    }, { threshold: 0.1 });
-    if (loaderRef.current) obs.observe(loaderRef.current);
-    return () => obs.disconnect();
-  }, [hasMore, loading, page, load]);
+    setPosts([]);
+    setPage(1);
+    setHasMore(true);
+    load(1, true);
+  }, [tab]);
 
-  const handleCreated = (post: Post) => setPosts(p => [post, ...p]);
-  const handleDelete  = (id: number)  => setPosts(p => p.filter(x => x.id !== id));
-  const handleHide    = (id: number, hidden: boolean) =>
-    setPosts(p => p.map(x => x.id === id ? { ...x, is_hidden: hidden } : x));
+  useEffect(() => {
+    const node = loaderRef.current;
+    if (!node) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          load(page + 1, false);
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    obs.observe(node);
+    return () => obs.disconnect();
+  }, [page, hasMore, loading, load]);
+
+  const handleCreated = (post: Post) => {
+    setPosts((prev) => [post, ...prev]);
+  };
+
+  const handleDelete = (id: number) => {
+    setPosts((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  const handleHide = (id: number, hidden: boolean) => {
+    setPosts((prev) => prev.map((x) => (x.id === id ? { ...x, is_hidden: hidden } : x)));
+  };
 
   const navItems = [
-    { key: "feed"     as Tab, icon: <Globe size={17} />,    label: "Feed" },
-    { key: "trending" as Tab, icon: <Flame size={17} />,    label: "Trending" },
-    { key: "saved"    as Tab, icon: <Bookmark size={17} />, label: "Saved" },
+    { key: "feed" as Tab, icon: <Globe size={17} />, label: "Feed" },
+    { key: "trending" as Tab, icon: <Flame size={17} />, label: "Trending" },
+    { key: "saved" as Tab, icon: <Bookmark size={17} />, label: "Saved" },
   ];
 
   return (
     <>
       <Navbar />
       <div className="cf">
-        <div className="cf-blob1" /><div className="cf-blob2" />
+        <div className="cf-blob1" />
+        <div className="cf-blob2" />
 
         <div className="cf-inner">
-
-          {/* ── Left sidebar ── */}
           <aside className="cf-left">
             <div className="cf-profile-card">
               <div className="cf-profile-av">{initials}</div>
-              <div className="cf-profile-name">{currentUser.first_name} {currentUser.last_name}</div>
+              <div className="cf-profile-name">
+                {currentUser.first_name} {currentUser.last_name}
+              </div>
               <div className="cf-profile-sub">LoKally Explorer</div>
               <div className="cf-profile-divider" />
               <div className="cf-profile-stat">
-                <span>{posts.filter(p => p.user_id === currentUser.id).length}</span>
+                <span>{posts.filter((p) => p.user_id === currentUser.id).length}</span>
                 <label>My Posts</label>
               </div>
             </div>
 
             <nav className="cf-nav">
-              {navItems.map(item => (
+              {navItems.map((item) => (
                 <button
                   key={item.key}
                   className={`cf-nav-item ${tab === item.key ? "cf-nav-item--on" : ""}`}
@@ -106,20 +154,31 @@ export default function CommunityFeed({ currentUser }: Props) {
             </div>
           </aside>
 
-          {/* ── Feed ── */}
           <main className="cf-feed">
             <div className="cf-feed-header">
               <div>
                 <h1 className="cf-feed-title">
-                  {tab === "feed"     ? "Community" :
-                   tab === "trending" ? "Trending"  : "Saved Posts"}
+                  {tab === "feed" ? "Community" : tab === "trending" ? "Trending" : "Saved Posts"}
                 </h1>
                 <p className="cf-feed-sub">
-                  {tab === "feed"     ? "Share your Nepal travel stories" :
-                   tab === "trending" ? "Most loved posts this week" : "Your bookmarked posts"}
+                  {tab === "feed"
+                    ? "Share your Nepal travel stories"
+                    : tab === "trending"
+                    ? "Most loved posts this week"
+                    : "Your bookmarked posts"}
                 </p>
               </div>
-              <button className="cf-refresh" onClick={() => load(1, true)} title="Refresh">
+
+              <button
+                className="cf-refresh"
+                onClick={() => {
+                  setPosts([]);
+                  setPage(1);
+                  setHasMore(true);
+                  load(1, true);
+                }}
+                title="Refresh"
+              >
                 <RefreshCw size={15} strokeWidth={2.5} />
               </button>
             </div>
@@ -138,7 +197,8 @@ export default function CommunityFeed({ currentUser }: Props) {
                   <p className="cf-empty-sub">Be the first to share your Nepal experience!</p>
                 </div>
               )}
-              {posts.map(post => (
+
+              {posts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={post}
@@ -150,20 +210,20 @@ export default function CommunityFeed({ currentUser }: Props) {
               ))}
             </div>
 
-            {/* Infinite scroll sentinel */}
             <div ref={loaderRef} className="cf-sentinel">
               {loading && (
                 <div className="cf-loader">
-                  <div className="cf-dot" /><div className="cf-dot" /><div className="cf-dot" />
+                  <div className="cf-dot" />
+                  <div className="cf-dot" />
+                  <div className="cf-dot" />
                 </div>
               )}
+
               {!hasMore && posts.length > 0 && (
                 <p className="cf-end">You're all caught up! 🎉</p>
               )}
             </div>
           </main>
-
-          
         </div>
       </div>
     </>

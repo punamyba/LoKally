@@ -156,3 +156,19 @@
 .acp-action--green:hover { background: #dcfce7; }
 .acp-action--red   { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
 .acp-action--red:hover   { background: #fecaca; }
+
+
+.acp-item-thumb,
+.acp-detail-img {
+  content-visibility: auto;
+}
+
+.acp-list {
+  max-height: 620px;
+  overflow-y: auto;
+  will-change: scroll-position;
+}
+
+.acp-item-thumb {
+  object-fit: cover;
+}
