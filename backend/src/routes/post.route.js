@@ -5,11 +5,10 @@ import * as PostCtrl  from "../controllers/post.controller.js";
 
 const router = express.Router();
 
-// ── Public (feed visible to all, but user flags require auth) ──
-// auth is optional here — attach user if token present, skip if not
-router.get(  "/",              optionalAuth, PostCtrl.getFeed);
-router.get(  "/:id",           optionalAuth, PostCtrl.getPost);
-router.get(  "/:id/comments",  PostCtrl.getComments);
+// ── Public ─────────────────────────────────────────────────────
+router.get(  "/",             optionalAuth, PostCtrl.getFeed);
+router.get(  "/:id",          optionalAuth, PostCtrl.getPost);
+router.get(  "/:id/comments", PostCtrl.getComments);
 
 // ── Auth required ──────────────────────────────────────────────
 router.post(  "/",                authMiddleware, postUpload.array("images", 10), PostCtrl.createPost);
