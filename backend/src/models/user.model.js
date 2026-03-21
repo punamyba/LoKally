@@ -38,9 +38,15 @@ const User = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: true,
     },
+    // ── Bio ───────────────────────────────────────────
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // ─────────────────────────────────────────────────
     password: {
       type: DataTypes.STRING(255),
-      allowNull: true,          // ← allowNull: true (Google users have no password)
+      allowNull: true,
     },
     role: {
       type: DataTypes.STRING(20),
@@ -55,12 +61,12 @@ const User = sequelize.define(
       allowNull: true,
     },
     // ── Google OAuth ──────────────────────────────────
-    google_id: {                // ← NEW: Google user ID
+    google_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
       unique: true,
     },
-    avatar: {                   // ← NEW: Google profile picture URL
+    avatar: {
       type: DataTypes.TEXT,
       allowNull: true,
     },

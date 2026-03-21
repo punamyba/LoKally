@@ -24,6 +24,7 @@ const __dirname = path.dirname(__filename);
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
 ];
 
 if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
@@ -33,7 +34,6 @@ if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_UR
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without origin like Postman
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -50,9 +50,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
-
+// serve uploads
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
 /* AUTH */
 app.use("/api/auth", authRoutes);

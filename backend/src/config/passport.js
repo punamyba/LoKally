@@ -2,6 +2,10 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { User } from "../models/index.js";
 
+console.log("GOOGLE_CLIENT_ID loaded:", !!process.env.GOOGLE_CLIENT_ID);
+console.log("GOOGLE_CLIENT_SECRET loaded:", !!process.env.GOOGLE_CLIENT_SECRET);
+console.log("GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL);
+
 passport.use(
   new GoogleStrategy(
     {
@@ -67,5 +71,6 @@ passport.deserializeUser(async (id, done) => {
     done(e, null);
   }
 });
+
 
 export default passport;
