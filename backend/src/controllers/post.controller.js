@@ -364,7 +364,7 @@ export const deleteComment = async (req, res) => {
   }
 };
 
-// POST /api/posts/:id/bookmark
+
 export const toggleBookmark = async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
