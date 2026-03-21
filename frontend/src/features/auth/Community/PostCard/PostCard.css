@@ -82,18 +82,25 @@
 
 /* ── Media ──────────────────────────────────────────────────────────────── */
 .pc-media { width: 100%; overflow: hidden; }
-.pc-img--single { width: 100%; max-height: 500px; object-fit: cover; display: block; }
+.pc-img--single {
+  width: 100%; max-height: 480px; object-fit: cover; display: block;
+}
 
+/* 2 images — equal halves */
 .pc-img-grid { width: 100%; display: grid; gap: 2px; }
-.pc-img-grid--2 { grid-template-columns: 1fr 1fr; }
-.pc-img-grid--2 img { width: 100%; height: 300px; object-fit: cover; display: block; }
-.pc-img-grid--3 { grid-template-columns: 1fr 1fr; }
-.pc-img-big { width: 100%; height: 100%; object-fit: cover; display: block; grid-row: span 2; }
+.pc-img-grid--2 { grid-template-columns: 1fr 1fr; height: 300px; }
+.pc-img-grid--2 img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 3 images — big left, 2 stacked right */
+.pc-img-grid--3 { grid-template-columns: 2fr 1fr; height: 360px; }
+.pc-img-big { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pc-img-col { display: flex; flex-direction: column; gap: 2px; }
-.pc-img-col img { width: 100%; height: 148px; object-fit: cover; display: block; }
-.pc-img-grid--4 { grid-template-columns: 1fr 1fr; }
-.pc-img-wrap { position: relative; }
-.pc-img-wrap img { width: 100%; height: 200px; object-fit: cover; display: block; }
+.pc-img-col img { width: 100%; flex: 1; object-fit: cover; display: block; min-height: 0; }
+
+/* 4+ images — 2x2 equal grid */
+.pc-img-grid--4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 380px; gap: 2px; }
+.pc-img-wrap { position: relative; overflow: hidden; }
+.pc-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pc-img-more {
   position: absolute; inset: 0; background: rgba(0,0,0,0.52);
   display: flex; align-items: center; justify-content: center;
@@ -108,13 +115,18 @@
 .pc-stat-likes {
   display: flex; align-items: center; gap: 5px;
   font-size: 13px; color: #64748b; font-weight: 500;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif; padding: 0;
+  transition: color 0.15s;
 }
+.pc-stat-likes:hover { color: #1d4ed8; text-decoration: underline; }
 .pc-stat-emoji { font-size: 15px; }
 .pc-stat-cmts {
   background: none; border: none; cursor: pointer; padding: 0;
   font-size: 13px; color: #64748b; font-weight: 500; font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .pc-stat-cmts:hover { text-decoration: underline; color: #334155; }
+.pc-stat-likes-wrap { position: relative; }
 
 /* ── Actions ────────────────────────────────────────────────────────────── */
 .pc-actions {
@@ -150,6 +162,26 @@
   transition: all 0.15s; line-height: 1;
 }
 .pc-react-btn:hover { transform: scale(1.4) translateY(-4px); }
+
+/* Share wrap */
+.pc-share-wrap { flex: 1; position: relative; }
+.pc-share-menu {
+  position: absolute; bottom: 52px; left: 0; z-index: 60;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.13); min-width: 180px; overflow: hidden;
+  animation: menuPop 0.15s cubic-bezier(0.34,1.56,0.64,1);
+}
+.pc-share-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 11px 16px;
+  background: none; border: none; border-bottom: 1px solid #f8fafc;
+  font-size: 13px; font-weight: 600; color: #374151;
+  cursor: pointer; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: background 0.1s;
+}
+.pc-share-item:last-child { border-bottom: none; }
+.pc-share-item:hover { background: #f8fafc; }
+.pc-share-item--wa:hover { background: #f0fdf4; color: #166534; }
+.pc-share-item--fb:hover { background: #eff6ff; color: #1d4ed8; }
 
 /* ── Comments ───────────────────────────────────────────────────────────── */
 .pc-comments { padding: 12px 16px 16px; background: rgba(248,250,252,0.7); }
@@ -256,63 +288,107 @@
 .pc-report-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 .pc-report-done { text-align: center; font-size: 14px; font-weight: 700; color: #0ea84f; padding: 14px 0; }
 
-/* ── Share menu ─────────────────────────────────────────────────── */
-.pc-share-wrap { flex: 1; position: relative; }
-
-.pc-share-menu {
-  position: absolute; bottom: 52px; left: 0; z-index: 60;
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.13); min-width: 180px; overflow: hidden;
-  animation: menuPop 0.15s cubic-bezier(0.34,1.56,0.64,1);
+/* ── Likers Modal — Facebook style ─────────────────────────── */
+.pc-likers-modal {
+  background: #fff; border-radius: 20px;
+  width: 420px; max-width: 94vw; max-height: 70vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+  animation: modalPop 0.2s cubic-bezier(0.34,1.4,0.64,1); overflow: hidden;
 }
-
-.pc-share-item {
-  display: flex; align-items: center; gap: 9px; width: 100%; padding: 11px 16px;
-  background: none; border: none; border-bottom: 1px solid #f8fafc;
-  font-size: 13px; font-weight: 600; color: #374151;
-  cursor: pointer; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;
-  transition: background 0.1s;
-}
-.pc-share-item:last-child { border-bottom: none; }
-.pc-share-item:hover { background: #f8fafc; }
-.pc-share-item--wa:hover  { background: #f0fdf4; color: #166534; }
-.pc-share-item--fb:hover  { background: #eff6ff; color: #1d4ed8; }
-
-/* ── Like list popup ────────────────────────────────────────────── */
-.pc-stat-likes-wrap { position: relative; }
-
-.pc-stat-likes {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 13px; color: #64748b; font-weight: 500;
-  background: none; border: none; cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif; padding: 0;
-  transition: color 0.15s;
-}
-.pc-stat-likes:hover { color: #1d4ed8; text-decoration: underline; }
-
-.pc-likers-popup {
-  position: absolute; bottom: 28px; left: 0; z-index: 60;
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.13); min-width: 220px; overflow: hidden;
-  animation: menuPop 0.15s cubic-bezier(0.34,1.56,0.64,1);
-}
-
-.pc-likers-title {
-  padding: 10px 14px 6px; font-size: 12px; font-weight: 800;
-  color: #475569; text-transform: uppercase; letter-spacing: 0.05em;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.pc-likers-body { padding: 10px 14px; }
-
-.pc-liker-row {
+.pc-likers-header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; padding: 6px 0;
+  padding: 18px 20px 14px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
 }
-.pc-liker-row span { font-size: 20px; letter-spacing: 2px; }
-.pc-liker-count { font-size: 12px; font-weight: 700; color: #64748b; }
+.pc-likers-title {
+  font-family: 'Red Rose', serif; font-size: 18px; font-weight: 700; color: #0f172a; margin: 0;
+}
+.pc-likers-tabs {
+  display: flex; gap: 4px; padding: 10px 16px; border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+}
+.pc-likers-tabs::-webkit-scrollbar { display: none; }
+.pc-likers-tab {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 99px; border: none;
+  background: #f1f5f9; color: #475569; font-size: 13px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s;
+}
+.pc-likers-tab:hover { background: #e2e8f0; }
+.pc-likers-tab--on { background: linear-gradient(135deg, #167ee0, #0ea84f); color: #fff; }
+.pc-likers-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.pc-likers-loading, .pc-likers-empty {
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px; color: #94a3b8; font-size: 14px; font-weight: 500;
+}
+.pc-likers-row {
+  display: flex; align-items: center; gap: 14px; padding: 10px 20px; transition: background 0.1s;
+}
+.pc-likers-row:hover { background: #f8fafc; }
+.pc-likers-av-wrap { position: relative; flex-shrink: 0; }
+.pc-likers-av {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #167ee0, #0ea84f);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: #fff;
+}
+.pc-likers-react-badge {
+  position: absolute; bottom: -2px; right: -4px;
+  font-size: 15px; background: #fff; border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.pc-likers-name {
+  font-size: 14px; font-weight: 700; color: #0f172a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
 
-.pc-likers-note {
-  font-size: 11px; color: #94a3b8; margin-top: 6px;
-  font-style: italic;
+/* ── Lightbox ───────────────────────────────────────────────── */
+.pc-lightbox {
+  position: fixed; inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,0.95);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s; cursor: pointer;
+}
+.pc-lightbox img {
+  max-width: 88vw; max-height: 88vh; object-fit: contain;
+  border-radius: 10px; box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  cursor: default; user-select: none;
+}
+.pc-lightbox-close {
+  position: absolute; top: 20px; right: 20px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s; z-index: 1;
+}
+.pc-lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+.pc-lightbox-prev,
+.pc-lightbox-next {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 300; line-height: 1;
+  transition: background 0.15s; z-index: 1;
+}
+.pc-lightbox-prev { left: 20px; }
+.pc-lightbox-next { right: 20px; }
+.pc-lightbox-prev:hover,
+.pc-lightbox-next:hover { background: rgba(255,255,255,0.25); }
+
+.pc-lightbox-counter {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+  color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 700;
+  padding: 5px 16px; border-radius: 99px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }

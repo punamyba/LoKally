@@ -3,6 +3,16 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import { LogOut, Menu, X, Bell, Users2, Mail, Compass, User } from "lucide-react";
 
+// Extract display URL from avatar field
+// Cloudinary format: "public_id|||https://res.cloudinary.com/..."
+// Google OAuth: plain https URL
+const getAvatarUrl = (avatar?: string | null): string | null => {
+  if (!avatar) return null;
+  if (avatar.includes("|||")) return avatar.split("|||")[1];
+  if (avatar.startsWith("http")) return avatar;
+  return null;
+};
+
 const Navbar = () => {
   const [open, setOpen]         = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -33,6 +43,8 @@ const Navbar = () => {
   const firstName = (currentUser?.first_name || currentUser?.name || "User")
     .toString().trim().split(" ")[0];
 
+  const picUrl = getAvatarUrl(currentUser?.avatar);
+
   return (
     <header className={`lk-nav ${isHome && !scrolled ? "lk-nav--transparent" : "lk-nav--scrolled"}`}>
       <div className="lk-nav__inner">
@@ -45,7 +57,6 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* RIGHT: nav links + actions */}
         <div className="lk-actions">
           <nav className="lk-links">
             {isLoggedIn && (
@@ -70,19 +81,27 @@ const Navbar = () => {
             </NavLink>
           </nav>
 
-          {/* Notification */}
+          {/* Notification bell */}
           <button className="lk-iconBtn" type="button" aria-label="Notifications">
             <Bell size={20} />
             <span className="lk-dot" />
           </button>
 
-          {/* User chip / auth */}
+          {/* User chip — navigates to /profile */}
           {isLoggedIn ? (
-            <button className="lk-userChip" type="button"
-              onClick={() => navigate("/home")} aria-label="Profile">
-              <span className="lk-userChip__avatar">
-                {firstName.charAt(0).toUpperCase()}
-              </span>
+            <button
+              className="lk-userChip"
+              type="button"
+              onClick={() => navigate("/profile")}
+              aria-label="My Profile"
+            >
+              {picUrl ? (
+                <img src={picUrl} alt={firstName} className="lk-userChip__pic" />
+              ) : (
+                <span className="lk-userChip__avatar">
+                  {firstName.charAt(0).toUpperCase()}
+                </span>
+              )}
               <span className="lk-userChip__name">{firstName}</span>
             </button>
           ) : (
@@ -116,6 +135,7 @@ const Navbar = () => {
             onClick={() => setOpen(false)}>
             <Compass size={18} /><span>Explore</span>
           </NavLink>
+
           {isLoggedIn && (
             <NavLink to="/community"
               className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
@@ -123,11 +143,13 @@ const Navbar = () => {
               <Users2 size={18} /><span>Community</span>
             </NavLink>
           )}
+
           <NavLink to="/contact"
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
             <Mail size={18} /><span>Contact</span>
           </NavLink>
+
           {isLoggedIn && (
             <NavLink to="/home"
               className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
@@ -135,7 +157,23 @@ const Navbar = () => {
               <User size={18} /><span>Home</span>
             </NavLink>
           )}
+
+          {/* My Profile in mobile drawer */}
+          {isLoggedIn && (
+            <NavLink to="/profile"
+              className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
+              onClick={() => setOpen(false)}>
+              {picUrl ? (
+                <img src={picUrl} alt={firstName} className="lk-mItem__pic" />
+              ) : (
+                <span className="lk-mItem__initial">{firstName.charAt(0).toUpperCase()}</span>
+              )}
+              <span>My Profile</span>
+            </NavLink>
+          )}
+
           <div className="lk-mDivider" />
+
           {isLoggedIn ? (
             <button className="lk-mLogout" onClick={handleLogout} type="button">
               <LogOut size={18} /><span>Logout</span>

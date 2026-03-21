@@ -9,14 +9,15 @@ import {
   forgotPasswordVerifyCode,
   resendForgotCode,
   resetPasswordWithSession,
+  verifyEmail,
 } from "../controllers/auth.controller.js";
-import { verifyEmail } from "../controllers/verifyEmail.controller.js";
 
+// Make sure passport strategy is loaded
 import "../config/passport.js";
 
 const router = express.Router();
 
-/* Auth routes */
+/* Normal auth routes */
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/verify-email/:token", verifyEmail);
@@ -25,7 +26,7 @@ router.post("/forgot-password/verify", forgotPasswordVerifyCode);
 router.post("/forgot-password/resend", resendForgotCode);
 router.post("/reset-password", resetPasswordWithSession);
 
-/* Google OAuth */
+/* Google OAuth routes */
 router.get(
   "/google",
   passport.authenticate("google", {

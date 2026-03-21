@@ -4,6 +4,14 @@ export const communityApi = {
   getFeed: (page = 1, limit = 10) =>
     axiosInstance.get(`/posts?page=${page}&limit=${limit}`).then((r) => r.data),
 
+  // Trending — sorted by likes_count
+  getTrending: (page = 1, limit = 10) =>
+    axiosInstance.get(`/posts?page=${page}&limit=${limit}&sort=trending`).then((r) => r.data),
+
+  // Saved/bookmarked posts
+  getSaved: (page = 1, limit = 10) =>
+    axiosInstance.get(`/posts/saved?page=${page}&limit=${limit}`).then((r) => r.data),
+
   getPost: (id: number) =>
     axiosInstance.get(`/posts/${id}`).then((r) => r.data),
 
@@ -17,6 +25,10 @@ export const communityApi = {
 
   toggleLike: (postId: number, reactType = "like") =>
     axiosInstance.post(`/posts/${postId}/like`, { react_type: reactType }).then((r) => r.data),
+
+  // Get likers list
+  getLikers: (postId: number) =>
+    axiosInstance.get(`/posts/${postId}/likes`).then((r) => r.data),
 
   getComments: (postId: number) =>
     axiosInstance.get(`/posts/${postId}/comments`).then((r) => r.data),

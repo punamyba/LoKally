@@ -30,7 +30,7 @@
 .vh {
   width: 100vw;
   margin-left: calc(-50vw + 50%);
-  margin-top: -72px; /* navbar height — hero goes behind it */
+  margin-top: -80px;
   height: 100vh;
   min-height: 600px;
   max-height: 960px;

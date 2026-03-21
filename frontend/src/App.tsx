@@ -9,7 +9,7 @@ import VerifyOTP from "./features/auth/forgot_Password/VerfyOTP";
 import ResetPassword from "./features/auth/forgot_Password/ResetPassword";
 import ExploreMap from "./features/auth/Map/ExploreMap";
 import PlaceDetail from "./features/auth/Map/PlaceDetails";
-import GoogleCallback from "./features/auth/Login/GoogleCallBack"; 
+import GoogleCallback from "./features/auth/Login/GoogleCallBack";
 
 import AuthGuard from "./shared/guards/authGuard";
 import AdminGuard from "./shared/guards/adminGuard";
@@ -29,47 +29,59 @@ import AdminCommunity from "./features/auth/Admin/AdminCommunity/AdminCommunity"
 import CommunityFeed from "./features/auth/Community/CommunityFeed/CommunityFeed";
 
 import { ToastContainer } from "./features/auth/Components/Toast/Toast";
+import UserProfile from "./features/auth/User/UserProfile";
 
 function App() {
   const [email, setEmail]           = useState("");
   const [resetToken, setResetToken] = useState("");
-  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+
+ 
 
   return (
     <BrowserRouter>
       <ToastContainer />
       <Routes>
         {/* Public auth */}
-        <Route path="/"               element={<Login />} />
-        <Route path="/register"       element={<Register />} />
+        <Route path="/"                element={<Login />} />
+        <Route path="/register"        element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword onNext={setEmail} />} />
-        <Route path="/verify-otp"     element={<VerifyOTP email={email} onVerified={(t) => setResetToken(t)} />} />
-        <Route path="/reset-password" element={<ResetPassword email={email} resetSessionToken={resetToken} />} />
+        <Route path="/verify-otp"      element={<VerifyOTP email={email} onVerified={(t) => setResetToken(t)} />} />
+        <Route path="/reset-password"  element={<ResetPassword email={email} resetSessionToken={resetToken} />} />
 
-        {/* Google OAuth callback ← NEW */}
+        {/* Google OAuth callback */}
         <Route path="/google-callback" element={<GoogleCallback />} />
-
+        <Route path="/profile" element={<AuthGuard><UserProfile /></AuthGuard>} />
+        
         {/* Public app */}
-        <Route path="/explore-map"  element={<ExploreMap />} />
-        <Route path="/place/:id"    element={<PlaceDetail />} />
-        <Route path="/contact"      element={<ContactUs />} />
+        <Route path="/explore-map" element={<ExploreMap />} />
+        <Route path="/place/:id"   element={<PlaceDetail />} />
+        <Route path="/contact"     element={<ContactUs />} />
 
         {/* Protected user */}
-        <Route path="/home"      element={<AuthGuard><Home /></AuthGuard>} />
-        <Route path="/community" element={<AuthGuard><CommunityFeed currentUser={currentUser} /></AuthGuard>} />
+        <Route path="/home" element={<AuthGuard><Home /></AuthGuard>} />
+
+        {/* ✅ currentUser read HERE — fresh on every navigation */}
+        <Route
+          path="/community"
+          element={
+            <AuthGuard>
+              <CommunityFeed />
+            </AuthGuard>
+          }
+        />
 
         {/* Admin */}
         <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
-          <Route index          element={<AdminDashboard />} />
-          <Route path="pending" element={<AdminPending />} />
+          <Route index              element={<AdminDashboard />} />
+          <Route path="pending"     element={<AdminPending />} />
           <Route path="pending/:id" element={<AdminPendingDetail />} />
-          <Route path="places"  element={<AdminPlaces />} />
-          <Route path="add-place" element={<AdminAddPlace />} />
-          <Route path="users"   element={<AdminUsers />} />
-          <Route path="contact" element={<AdminContactInbox />} />
-          <Route path="community" element={<AdminCommunity />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="settings" element={<AdminSettings />} />
+          <Route path="places"      element={<AdminPlaces />} />
+          <Route path="add-place"   element={<AdminAddPlace />} />
+          <Route path="users"       element={<AdminUsers />} />
+          <Route path="contact"     element={<AdminContactInbox />} />
+          <Route path="community"   element={<AdminCommunity />} />
+          <Route path="reports"     element={<AdminReports />} />
+          <Route path="settings"    element={<AdminSettings />} />
         </Route>
       </Routes>
     </BrowserRouter>
