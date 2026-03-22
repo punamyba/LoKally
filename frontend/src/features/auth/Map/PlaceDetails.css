@@ -40,22 +40,28 @@
 
 /* ── HERO IMAGE ── */
 .pd-hero {
-  width: 100%; position: relative;
-  border-radius: 18px; overflow: hidden;
-  background: #1a1a2e; cursor: pointer;
+  width: 100%;
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #1a1a2e;
+  cursor: pointer;
   margin-bottom: 20px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.14);
 }
+
 .pd-hero-img {
-  width: 100%; height: 480px;
-  object-fit: cover; object-position: center;
+  width: 100%;
+  height: 620px;
+  object-fit: cover;
+  object-position: center top;
   display: block;
   transition: transform 0.4s ease;
 }
 .pd-hero:hover .pd-hero-img { transform: scale(1.02); }
 
 .pd-hero-empty {
-  height: 300px; display: flex; flex-direction: column;
+  height: 360px; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 12px; color: #475569; font-size: 14px;
 }
@@ -64,27 +70,29 @@
   position: absolute; top: 16px; right: 16px;
   background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
   color: white; font-size: 12px; font-weight: 700;
-  padding: 5px 14px; border-radius: 99px;
+  padding: 6px 16px; border-radius: 99px;
   display: flex; align-items: center; gap: 6px;
 }
 
+/* Thumbnail strip — bigger */
 .pd-hero-strip {
-  position: absolute; bottom: 12px; left: 14px;
-  display: flex; gap: 8px;
+  position: absolute; bottom: 16px; left: 16px;
+  display: flex; gap: 10px;
 }
 .pd-hero-strip-thumb {
-  width: 68px; height: 52px;
-  border-radius: 9px; overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.7);
+  width: 90px; height: 66px;
+  border-radius: 11px; overflow: hidden;
+  border: 2.5px solid rgba(255,255,255,0.8);
   cursor: pointer; position: relative;
   flex-shrink: 0; transition: transform 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-.pd-hero-strip-thumb:hover { transform: scale(1.05); }
+.pd-hero-strip-thumb:hover { transform: scale(1.06); }
 .pd-hero-strip-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pd-hero-strip-more {
   position: absolute; inset: 0;
   background: rgba(0,0,0,0.58);
-  color: white; font-size: 13px; font-weight: 800;
+  color: white; font-size: 14px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -99,7 +107,6 @@
   margin-bottom: 14px;
 }
 
-/* Info card */
 .pd-info-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .pd-name {
   font-family: 'Red Rose', sans-serif;
@@ -116,14 +123,11 @@
   white-space: nowrap;
 }
 
-/* Rating summary row (NEW) */
 .pd-rating-summary {
   display: flex; align-items: center; gap: 8px;
   margin: 6px 0 12px;
 }
-.pd-rating-avg {
-  font-size: 26px; font-weight: 800; color: var(--dark); line-height: 1;
-}
+.pd-rating-avg { font-size: 26px; font-weight: 800; color: var(--dark); line-height: 1; }
 .pd-stars-display { display: flex; gap: 2px; }
 .pd-rating-total  { font-size: 12px; color: #94a3b8; }
 
@@ -134,8 +138,6 @@
   border-radius: 99px; background: #eff6ff; color: var(--blue);
 }
 .pd-stat { font-size: 13px; color: var(--slate); display: flex; align-items: center; gap: 5px; }
-
-/* Likes button (clickable) */
 .pd-stat-btn {
   display: inline-flex; align-items: center; gap: 5px;
   background: none; border: none; cursor: pointer;
@@ -143,7 +145,6 @@
 }
 .pd-stat-btn:hover { color: var(--blue); }
 
-/* Who liked popup (NEW) */
 .pd-liked-by {
   background: #f8faff; border: 1px solid #e2e8f0;
   border-radius: 10px; padding: 10px 14px; margin: 4px 0 12px;
@@ -161,11 +162,9 @@
 }
 .pd-desc { font-size: 13.5px; color: #475569; line-height: 1.7; }
 
-/* Weather + Conditions side by side */
 .pd-weather-conditions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .pd-card--weather, .pd-card--conditions { margin-bottom: 0; }
 
-/* Weather emoji (NEW) */
 .pd-weather-icon { font-size: 28px; margin-right: 6px; }
 .pd-weather-temp {
   display: flex; align-items: center;
@@ -187,9 +186,7 @@
 .pd-forecast-temps .hi { color: var(--dark); }
 .pd-forecast-temps .lo { color: #94a3b8; }
 
-/* Conditions admin label (NEW) */
 .pd-cond-admin-label { font-size: 10px; color: #9ca3af; font-weight: 400; margin-left: 4px; }
-
 .pd-conditions { display: flex; flex-direction: column; gap: 8px; }
 .pd-cond {
   display: flex; align-items: center; gap: 10px;
@@ -202,7 +199,6 @@
 .pd-cond-val   { font-size: 13px; font-weight: 700; margin-top: 1px; }
 .pd-cond-note  { font-size: 12px; color: #64748b; margin-top: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; }
 
-/* Actions */
 .pd-actions-card { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pd-action-btn {
   display: flex; align-items: center; gap: 7px;
@@ -219,7 +215,6 @@
 .pd-rate-label { font-size: 12px; color: var(--slate); margin-right: 4px; }
 .pd-star-btn { background: none; border: none; padding: 2px; cursor: pointer; display: flex; }
 
-/* Rating breakdown (NEW) */
 .pd-rating-breakdown { padding: 16px 20px; }
 .pd-rating-bar-row   { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .pd-rating-bar-label { font-size: 12px; color: var(--slate); width: 20px; text-align: right; flex-shrink: 0; }
@@ -227,7 +222,6 @@
 .pd-rating-bar-fill  { height: 100%; background: #f59e0b; border-radius: 99px; transition: width 0.4s ease; }
 .pd-rating-bar-count { font-size: 12px; color: #9ca3af; width: 16px; flex-shrink: 0; }
 
-/* Comments */
 .pd-comment-form {
   display: flex; align-items: center; gap: 10px;
   margin-bottom: 16px; padding-bottom: 16px;
@@ -240,6 +234,7 @@
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   overflow: hidden;
 }
+.pd-comment-avatar--you { background: linear-gradient(135deg, #7c3aed, var(--blue)); }
 .pd-comment-input {
   flex: 1; padding: 9px 13px; border: 1.5px solid #e2e8f0;
   border-radius: 10px; font-size: 13px; outline: none;
@@ -260,7 +255,6 @@
 .pd-comment-time { font-size: 11px; color: #94a3b8; }
 .pd-comment-text { font-size: 13px; color: #475569; line-height: 1.6; }
 
-/* Comment actions (NEW) */
 .pd-comment-actions { display: flex; gap: 12px; margin-top: 5px; }
 .pd-comment-reply-btn,
 .pd-comment-delete-btn {
@@ -273,7 +267,6 @@
 .pd-comment-delete-btn       { color: #e53e3e; }
 .pd-comment-delete-btn:hover { color: #c53030; }
 
-/* Reply indicator (NEW) */
 .pd-reply-indicator {
   display: flex; align-items: center; gap: 6px;
   font-size: 13px; color: #4a5568;
@@ -286,7 +279,6 @@
 }
 .pd-reply-cancel:hover { color: #e53e3e; }
 
-/* Threaded replies (NEW) */
 .pd-replies {
   margin-top: 10px;
   border-left: 2px solid #e2e8f0;
@@ -295,7 +287,6 @@
 }
 .pd-reply { margin-bottom: 0 !important; }
 
-/* Right column cards */
 .pd-minimap { border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
 .pd-latlng {
   display: flex; gap: 12px; margin-bottom: 12px;
@@ -401,8 +392,14 @@
 @media (max-width: 900px) {
   .pd-body { grid-template-columns: 1fr; }
   .pd-weather-conditions-row { grid-template-columns: 1fr; }
-  .pd-hero-img { height: 300px; }
+  .pd-hero-img { height: 320px; }
+  .pd-hero-strip-thumb { width: 72px; height: 54px; }
   .pd-slideshow-inner { padding: 50px 16px 100px; }
   .pd-slideshow-arrow--left  { left: 8px; }
   .pd-slideshow-arrow--right { right: 8px; }
+}
+
+@media (max-width: 480px) {
+  .pd-hero-img { height: 240px; }
+  .pd-hero-strip { display: none; }
 }

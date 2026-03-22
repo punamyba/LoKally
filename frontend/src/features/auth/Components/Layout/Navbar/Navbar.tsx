@@ -1,32 +1,70 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { LogOut, Menu, X, Bell, Users2, Mail, Compass, User } from "lucide-react";
+import { LogOut, Menu, X, Bell, Users2, Mail, Compass, User, ChevronDown, Settings } from "lucide-react";
 
-// Extract display URL from avatar field
-// Cloudinary format: "public_id|||https://res.cloudinary.com/..."
-// Google OAuth: plain https URL
+const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
+const SERVER = API.replace("/api", "");
+
 const getAvatarUrl = (avatar?: string | null): string | null => {
   if (!avatar) return null;
   if (avatar.includes("|||")) return avatar.split("|||")[1];
   if (avatar.startsWith("http")) return avatar;
+  if (avatar.startsWith("/")) return `${SERVER}${avatar}`;
   return null;
 };
 
 const Navbar = () => {
-  const [open, setOpen]         = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const [open,      setOpen]      = useState(false);
+  const [scrolled,  setScrolled]  = useState(false);
+  const [dropOpen,  setDropOpen]  = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); }
+    catch { return {}; }
+  });
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const isLoggedIn = !!localStorage.getItem("token");
   const isHome     = location.pathname === "/home" || location.pathname === "/";
 
+  // Scroll listener
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close dropdown on route change
+  useEffect(() => { setDropOpen(false); setOpen(false); }, [location.pathname]);
+
+  // Re-fetch user from API when token exists — so avatar always fresh
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${API}/user/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setCurrentUser(d.data);
+          localStorage.setItem("currentUser", JSON.stringify(d.data));
+        }
+      })
+      .catch(() => {});
+  }, [location.pathname]); // re-fetch on every route change
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".lk-user-wrap")) setDropOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleLogout = () => {
@@ -35,15 +73,10 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const currentUser = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); }
-    catch { return {}; }
-  }, [isLoggedIn]);
-
-  const firstName = (currentUser?.first_name || currentUser?.name || "User")
-    .toString().trim().split(" ")[0];
-
-  const picUrl = getAvatarUrl(currentUser?.avatar);
+  const firstName = ((currentUser?.first_name || currentUser?.name || "User") as string).trim().split(" ")[0];
+  const fullName  = `${currentUser?.first_name || ""} ${currentUser?.last_name || ""}`.trim() || "Explorer";
+  const picUrl    = getAvatarUrl(currentUser?.avatar);
+  const initials  = `${currentUser?.first_name?.[0] || ""}${currentUser?.last_name?.[0] || ""}`.toUpperCase() || "U";
 
   return (
     <header className={`lk-nav ${isHome && !scrolled ? "lk-nav--transparent" : "lk-nav--scrolled"}`}>
@@ -60,50 +93,78 @@ const Navbar = () => {
         <div className="lk-actions">
           <nav className="lk-links">
             {isLoggedIn && (
-              <NavLink to="/home"
-                className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
+              <NavLink to="/home" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
                 Home
               </NavLink>
             )}
-            <NavLink to="/explore-map"
-              className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
+            <NavLink to="/explore-map" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
               Map View
             </NavLink>
             {isLoggedIn && (
-              <NavLink to="/community"
-                className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
+              <NavLink to="/community" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
                 Community
               </NavLink>
             )}
-            <NavLink to="/contact"
-              className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
+            <NavLink to="/contact" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
               Contact
             </NavLink>
           </nav>
 
-          {/* Notification bell */}
+          {/* Bell */}
           <button className="lk-iconBtn" type="button" aria-label="Notifications">
             <Bell size={20} />
             <span className="lk-dot" />
           </button>
 
-          {/* User chip — navigates to /profile */}
+          {/* User chip + dropdown */}
           {isLoggedIn ? (
-            <button
-              className="lk-userChip"
-              type="button"
-              onClick={() => navigate("/profile")}
-              aria-label="My Profile"
-            >
-              {picUrl ? (
-                <img src={picUrl} alt={firstName} className="lk-userChip__pic" />
-              ) : (
-                <span className="lk-userChip__avatar">
-                  {firstName.charAt(0).toUpperCase()}
-                </span>
+            <div className="lk-user-wrap">
+              <button
+                className="lk-userChip"
+                type="button"
+                onClick={() => setDropOpen(d => !d)}
+              >
+                {picUrl
+                  ? <img src={picUrl} alt={firstName} className="lk-userChip__pic" />
+                  : <span className="lk-userChip__avatar">{initials}</span>
+                }
+                <span className="lk-userChip__name">{firstName}</span>
+                <ChevronDown size={13} strokeWidth={2.5} className={`lk-chevron ${dropOpen ? "lk-chevron--open" : ""}`} />
+              </button>
+
+              {dropOpen && (
+                <div className="lk-dropdown">
+                  {/* Header */}
+                  <div className="lk-drop-header">
+                    <div className="lk-drop-avatar">
+                      {picUrl
+                        ? <img src={picUrl} alt={fullName} />
+                        : <span>{initials}</span>
+                      }
+                    </div>
+                    <div className="lk-drop-info">
+                      <div className="lk-drop-name">{fullName}</div>
+                      <div className="lk-drop-email">{currentUser?.email || ""}</div>
+                    </div>
+                  </div>
+
+                  <div className="lk-drop-divider" />
+
+                  <button className="lk-drop-item" onClick={() => navigate("/profile")} type="button">
+                    <User size={15} strokeWidth={2} /> My Profile
+                  </button>
+                  <button className="lk-drop-item" onClick={() => navigate("/settings")} type="button">
+                    <Settings size={15} strokeWidth={2} /> Settings
+                  </button>
+
+                  <div className="lk-drop-divider" />
+
+                  <button className="lk-drop-item lk-drop-item--logout" onClick={handleLogout} type="button">
+                    <LogOut size={15} strokeWidth={2} /> Log out
+                  </button>
+                </div>
               )}
-              <span className="lk-userChip__name">{firstName}</span>
-            </button>
+            </div>
           ) : (
             <div className="lk-authBtns">
               <Link to="/" className="lk-btn lk-btn--ghost">Login</Link>
@@ -111,17 +172,8 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* Logout */}
-          {isLoggedIn && (
-            <button className="lk-logout" onClick={handleLogout} type="button">
-              <LogOut size={16} />
-              <span>Logout</span>
-            </button>
-          )}
-
           {/* Mobile toggle */}
-          <button className="lk-menuBtn" onClick={() => setOpen(!open)}
-            aria-label="Toggle menu" type="button">
+          <button className="lk-menuBtn" onClick={() => setOpen(!open)} type="button">
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -135,7 +187,6 @@ const Navbar = () => {
             onClick={() => setOpen(false)}>
             <Compass size={18} /><span>Explore</span>
           </NavLink>
-
           {isLoggedIn && (
             <NavLink to="/community"
               className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
@@ -143,37 +194,23 @@ const Navbar = () => {
               <Users2 size={18} /><span>Community</span>
             </NavLink>
           )}
-
           <NavLink to="/contact"
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
             <Mail size={18} /><span>Contact</span>
           </NavLink>
-
-          {isLoggedIn && (
-            <NavLink to="/home"
-              className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
-              onClick={() => setOpen(false)}>
-              <User size={18} /><span>Home</span>
-            </NavLink>
-          )}
-
-          {/* My Profile in mobile drawer */}
           {isLoggedIn && (
             <NavLink to="/profile"
               className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
               onClick={() => setOpen(false)}>
-              {picUrl ? (
-                <img src={picUrl} alt={firstName} className="lk-mItem__pic" />
-              ) : (
-                <span className="lk-mItem__initial">{firstName.charAt(0).toUpperCase()}</span>
-              )}
+              {picUrl
+                ? <img src={picUrl} alt={firstName} className="lk-mItem__pic" />
+                : <span className="lk-mItem__initial">{initials}</span>
+              }
               <span>My Profile</span>
             </NavLink>
           )}
-
           <div className="lk-mDivider" />
-
           {isLoggedIn ? (
             <button className="lk-mLogout" onClick={handleLogout} type="button">
               <LogOut size={18} /><span>Logout</span>

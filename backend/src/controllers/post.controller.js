@@ -36,22 +36,29 @@ async function attachUserFlags(posts, userId) {
 }
 
 const POST_ATTRS = [
-  "id", "user_id", "caption", "images", "place_id",
-  "likes_count", "comments_count", "reports_count",
-  "is_hidden", "created_at",
+  "id",
+  "user_id",
+  "caption",
+  "images",
+  "place_id",
+  "likes_count",
+  "comments_count",
+  "reports_count",
+  "is_hidden",
+  "created_at",
+  "updated_at",
 ];
 
 const AUTHOR_INCLUDE = {
   model: User,
   as: "author",
-  attributes: ["id", "first_name", "last_name"],
+  attributes: ["id", "first_name", "last_name", "avatar"],
 };
 
-// GET /api/posts
 export const getFeed = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
 
     const posts = await Post.findAll({
@@ -59,7 +66,9 @@ export const getFeed = async (req, res) => {
       attributes: POST_ATTRS,
       include: [AUTHOR_INCLUDE],
       order: [["created_at", "DESC"]],
-      limit, offset, subQuery: false,
+      limit,
+      offset,
+      subQuery: false,
     });
 
     const data = await attachUserFlags(posts, req.user?.id);
@@ -70,11 +79,10 @@ export const getFeed = async (req, res) => {
   }
 };
 
-// GET /api/posts/trending
 export const getTrending = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
 
     const posts = await Post.findAll({
@@ -82,7 +90,9 @@ export const getTrending = async (req, res) => {
       attributes: POST_ATTRS,
       include: [AUTHOR_INCLUDE],
       order: [["likes_count", "DESC"], ["created_at", "DESC"]],
-      limit, offset, subQuery: false,
+      limit,
+      offset,
+      subQuery: false,
     });
 
     const data = await attachUserFlags(posts, req.user?.id);
@@ -93,11 +103,10 @@ export const getTrending = async (req, res) => {
   }
 };
 
-// GET /api/posts/saved
 export const getSaved = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
     const userId = req.user.id;
 
@@ -105,7 +114,8 @@ export const getSaved = async (req, res) => {
       where: { user_id: userId },
       attributes: ["post_id"],
       order: [["created_at", "DESC"]],
-      limit, offset,
+      limit,
+      offset,
     });
 
     const postIds = bookmarks.map((b) => b.post_id);
@@ -120,7 +130,6 @@ export const getSaved = async (req, res) => {
       include: [AUTHOR_INCLUDE],
     });
 
-    // Keep bookmark order
     const postMap = Object.fromEntries(posts.map((p) => [p.id, p]));
     const ordered = postIds.map((id) => postMap[id]).filter(Boolean);
 
@@ -132,36 +141,6 @@ export const getSaved = async (req, res) => {
   }
 };
 
-// GET /api/posts/:id/likes  — who liked
-export const getLikers = async (req, res) => {
-  try {
-    const postId = parseInt(req.params.id);
-
-    const likes = await PostLike.findAll({
-      where: { post_id: postId },
-      include: [{
-        model: User,
-        as: "liker",
-        attributes: ["id", "first_name", "last_name"],
-      }],
-      order: [["created_at", "DESC"]],
-    });
-
-    const data = likes.map((l) => ({
-      user_id:    l.user_id,
-      react_type: l.react_type,
-      first_name: l.liker?.first_name,
-      last_name:  l.liker?.last_name,
-    }));
-
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error("getLikers:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// GET /api/posts/:id
 export const getPost = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id, {
@@ -180,7 +159,89 @@ export const getPost = async (req, res) => {
   }
 };
 
-// POST /api/posts
+export const getLikers = async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+
+    const likes = await PostLike.findAll({
+      where: { post_id: postId },
+      include: [
+        {
+          model: User,
+          as: "liker",
+          attributes: ["id", "first_name", "last_name", "avatar"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    const data = likes.map((l) => ({
+      user_id: l.user_id,
+      react_type: l.react_type,
+      first_name: l.liker?.first_name,
+      last_name: l.liker?.last_name,
+      avatar: l.liker?.avatar || null,
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error("getLikers:", err.message);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getComments = async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+
+    const topLevel = await PostComment.findAll({
+      where: { post_id: postId, parent_id: null, is_hidden: false },
+      order: [["created_at", "ASC"]],
+      include: [
+        {
+          model: User,
+          as: "commenter",
+          attributes: ["id", "first_name", "last_name", "avatar"],
+        },
+      ],
+    });
+
+    const parentIds = topLevel.map((c) => c.id);
+
+    const replies =
+      parentIds.length > 0
+        ? await PostComment.findAll({
+            where: { parent_id: { [Op.in]: parentIds }, is_hidden: false },
+            order: [["created_at", "ASC"]],
+            include: [
+              {
+                model: User,
+                as: "commenter",
+                attributes: ["id", "first_name", "last_name", "avatar"],
+              },
+            ],
+          })
+        : [];
+
+    const replyMap = {};
+    replies.forEach((r) => {
+      if (!replyMap[r.parent_id]) replyMap[r.parent_id] = [];
+      replyMap[r.parent_id].push({ ...r.toJSON(), user: r.commenter });
+    });
+
+    const data = topLevel.map((c) => ({
+      ...c.toJSON(),
+      user: c.commenter,
+      replies: replyMap[c.id] || [],
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error("getComments:", err.message);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 export const createPost = async (req, res) => {
   try {
     const { caption, place_id } = req.body;
@@ -195,8 +256,8 @@ export const createPost = async (req, res) => {
     }
 
     const post = await Post.create({
-      user_id:  req.user.id,
-      caption:  caption?.trim() || null,
+      user_id: req.user.id,
+      caption: caption?.trim() || null,
       images,
       place_id: place_id || null,
     });
@@ -205,7 +266,12 @@ export const createPost = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      data: { ...full.toJSON(), has_liked: false, liked_type: "like", is_bookmarked: false },
+      data: {
+        ...full.toJSON(),
+        has_liked: false,
+        liked_type: "like",
+        is_bookmarked: false,
+      },
     });
   } catch (err) {
     console.error("createPost:", err.message);
@@ -213,7 +279,6 @@ export const createPost = async (req, res) => {
   }
 };
 
-// DELETE /api/posts/:id
 export const deletePost = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
@@ -231,11 +296,10 @@ export const deletePost = async (req, res) => {
   }
 };
 
-// POST /api/posts/:id/like
 export const toggleLike = async (req, res) => {
   try {
-    const postId   = parseInt(req.params.id);
-    const userId   = req.user.id;
+    const postId = parseInt(req.params.id);
+    const userId = req.user.id;
     const reactType = req.body.react_type || "like";
 
     const post = await Post.findByPk(postId);
@@ -243,7 +307,9 @@ export const toggleLike = async (req, res) => {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
 
-    const existing = await PostLike.findOne({ where: { post_id: postId, user_id: userId } });
+    const existing = await PostLike.findOne({
+      where: { post_id: postId, user_id: userId },
+    });
 
     if (existing) {
       if (existing.react_type === reactType) {
@@ -265,47 +331,6 @@ export const toggleLike = async (req, res) => {
   }
 };
 
-// GET /api/posts/:id/comments
-export const getComments = async (req, res) => {
-  try {
-    const postId = parseInt(req.params.id);
-
-    const topLevel = await PostComment.findAll({
-      where: { post_id: postId, parent_id: null, is_hidden: false },
-      order: [["created_at", "ASC"]],
-      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name"] }],
-    });
-
-    const parentIds = topLevel.map((c) => c.id);
-
-    const replies = parentIds.length > 0
-      ? await PostComment.findAll({
-          where: { parent_id: { [Op.in]: parentIds }, is_hidden: false },
-          order: [["created_at", "ASC"]],
-          include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name"] }],
-        })
-      : [];
-
-    const replyMap = {};
-    replies.forEach((r) => {
-      if (!replyMap[r.parent_id]) replyMap[r.parent_id] = [];
-      replyMap[r.parent_id].push({ ...r.toJSON(), user: r.commenter });
-    });
-
-    const data = topLevel.map((c) => ({
-      ...c.toJSON(),
-      user: c.commenter,
-      replies: replyMap[c.id] || [],
-    }));
-
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error("getComments:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// POST /api/posts/:id/comments
 export const addComment = async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
@@ -321,16 +346,22 @@ export const addComment = async (req, res) => {
     }
 
     const comment = await PostComment.create({
-      post_id:   postId,
-      user_id:   req.user.id,
+      post_id: postId,
+      user_id: req.user.id,
       parent_id: parent_id || null,
-      body:      body.trim(),
+      body: body.trim(),
     });
 
     if (!parent_id) await post.increment("comments_count");
 
     const full = await PostComment.findByPk(comment.id, {
-      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name"] }],
+      include: [
+        {
+          model: User,
+          as: "commenter",
+          attributes: ["id", "first_name", "last_name", "avatar"],
+        },
+      ],
     });
 
     return res.status(201).json({
@@ -343,7 +374,6 @@ export const addComment = async (req, res) => {
   }
 };
 
-// DELETE /api/posts/:id/comments/:commentId
 export const deleteComment = async (req, res) => {
   try {
     const comment = await PostComment.findByPk(req.params.commentId);
@@ -364,13 +394,14 @@ export const deleteComment = async (req, res) => {
   }
 };
 
-
 export const toggleBookmark = async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
     const userId = req.user.id;
 
-    const existing = await PostBookmark.findOne({ where: { post_id: postId, user_id: userId } });
+    const existing = await PostBookmark.findOne({
+      where: { post_id: postId, user_id: userId },
+    });
 
     if (existing) {
       await existing.destroy();
@@ -385,7 +416,6 @@ export const toggleBookmark = async (req, res) => {
   }
 };
 
-// POST /api/posts/:id/report
 export const reportPost = async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
@@ -399,10 +429,19 @@ export const reportPost = async (req, res) => {
     const post = await Post.findByPk(postId);
     if (!post) return res.status(404).json({ success: false, message: "Post not found" });
 
-    const exists = await PostReport.findOne({ where: { post_id: postId, user_id: userId } });
-    if (exists) return res.status(409).json({ success: false, message: "Already reported" });
+    const exists = await PostReport.findOne({
+      where: { post_id: postId, user_id: userId },
+    });
+    if (exists) {
+      return res.status(409).json({ success: false, message: "Already reported" });
+    }
 
-    await PostReport.create({ post_id: postId, user_id: userId, reason: reason.trim() });
+    await PostReport.create({
+      post_id: postId,
+      user_id: userId,
+      reason: reason.trim(),
+    });
+
     await post.increment("reports_count");
 
     if (post.reports_count + 1 >= 5) {

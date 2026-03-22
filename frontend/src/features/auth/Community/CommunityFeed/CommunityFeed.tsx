@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bookmark, RefreshCw, Globe, Flame, Sparkles } from "lucide-react";
 import { communityApi } from "../communityApi";
 import CreatePost from "../CreatePost/CreatePost";
@@ -7,13 +8,26 @@ import type { Post } from "../CommunityTypes";
 import Navbar from "../../Components/Layout/Navbar/Navbar";
 import "./CommunityFeed.css";
 
+const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
+const SERVER = API.replace("/api", "");
+
+const getAvatarUrl = (avatar?: string | null): string | null => {
+  if (!avatar) return null;
+  if (avatar.includes("|||")) return avatar.split("|||")[1];
+  if (avatar.startsWith("http")) return avatar;
+  if (avatar.startsWith("/")) return `${SERVER}${avatar}`;
+  return null;
+};
+
 type Tab = "feed" | "trending" | "saved";
 
 export default function CommunityFeed() {
-  const currentUser = useMemo(() => {
+  const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState<any>(() => {
     try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); }
     catch { return {}; }
-  }, []);
+  });
 
   const [tab, setTab]         = useState<Tab>("feed");
   const [posts, setPosts]     = useState<Post[]>([]);
@@ -22,24 +36,39 @@ export default function CommunityFeed() {
   const [loading, setLoading] = useState(false);
   const [err, setErr]         = useState("");
 
-  const loaderRef    = useRef<HTMLDivElement>(null);
-  const isLoading    = useRef(false);
-  const currentTab   = useRef<Tab>("feed");
+  const loaderRef  = useRef<HTMLDivElement>(null);
+  const isLoading  = useRef(false);
+  const currentTab = useRef<Tab>("feed");
 
-  const initials = `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase();
+  // Fetch fresh user from API
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${API}/user/profile`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setCurrentUser(d.data);
+          localStorage.setItem("currentUser", JSON.stringify(d.data));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const initials  = `${currentUser.first_name?.[0] ?? ""}${currentUser.last_name?.[0] ?? ""}`.toUpperCase();
+  const picUrl    = getAvatarUrl(currentUser?.avatar);
+  const myPostsCount = posts.filter(p => p.user_id === currentUser.id).length;
 
   async function fetchPosts(pg: number, tabName: Tab, replace: boolean) {
     if (isLoading.current) return;
     isLoading.current = true;
-    setLoading(true);
-    setErr("");
+    setLoading(true); setErr("");
     try {
       let r;
-      if (tabName === "trending")     r = await communityApi.getTrending(pg, 10);
-      else if (tabName === "saved")   r = await communityApi.getSaved(pg, 10);
-      else                            r = await communityApi.getFeed(pg, 10);
+      if (tabName === "trending")   r = await communityApi.getTrending(pg, 10);
+      else if (tabName === "saved") r = await communityApi.getSaved(pg, 10);
+      else                          r = await communityApi.getFeed(pg, 10);
 
-      // If tab changed while fetching, discard result
       if (currentTab.current !== tabName) return;
 
       if (r.success) {
@@ -55,32 +84,23 @@ export default function CommunityFeed() {
         setHasMore(newPosts.length === 10);
         setPage(pg);
       }
-    } catch {
-      setErr("Failed to load posts.");
-    } finally {
-      isLoading.current = false;
-      setLoading(false);
-    }
+    } catch { setErr("Failed to load posts."); }
+    finally { isLoading.current = false; setLoading(false); }
   }
 
-  // On tab change — reset everything and fetch fresh
   useEffect(() => {
     currentTab.current = tab;
     isLoading.current = false;
-    setPosts([]);
-    setPage(1);
-    setHasMore(true);
+    setPosts([]); setPage(1); setHasMore(true);
     fetchPosts(1, tab, true);
   }, [tab]);
 
-  // Infinite scroll
   useEffect(() => {
     const node = loaderRef.current;
     if (!node) return;
     const obs = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !isLoading.current) {
+      if (entries[0].isIntersecting && hasMore && !isLoading.current)
         fetchPosts(page + 1, currentTab.current, false);
-      }
     }, { threshold: 0.2 });
     obs.observe(node);
     return () => obs.disconnect();
@@ -89,9 +109,7 @@ export default function CommunityFeed() {
   const handleRefresh = () => {
     currentTab.current = tab;
     isLoading.current = false;
-    setPosts([]);
-    setPage(1);
-    setHasMore(true);
+    setPosts([]); setPage(1); setHasMore(true);
     fetchPosts(1, tab, true);
   };
 
@@ -119,14 +137,30 @@ export default function CommunityFeed() {
           <aside className="cf-left">
             <div className="cf-profile">
               <div className="cf-profile-bg" />
-              <div className="cf-profile-av">{initials}</div>
-              <div className="cf-profile-name">{currentUser.first_name} {currentUser.last_name}</div>
+              {/* Avatar — shows pic if available */}
+              <div
+                className="cf-profile-av-wrap"
+                onClick={() => navigate("/profile")}
+                title="My Profile"
+              >
+                {picUrl
+                  ? <img src={picUrl} alt={initials} className="cf-profile-av-img" />
+                  : <div className="cf-profile-av">{initials}</div>
+                }
+              </div>
+              <div
+                className="cf-profile-name"
+                onClick={() => navigate("/profile")}
+                style={{ cursor: "pointer" }}
+              >
+                {currentUser.first_name} {currentUser.last_name}
+              </div>
               <div className="cf-profile-badge">
                 <Sparkles size={11} strokeWidth={2.5} /> LoKally Explorer
               </div>
               <div className="cf-profile-divider" />
               <div className="cf-profile-stat">
-                <div className="cf-stat-num">{posts.filter(p => p.user_id === currentUser.id).length}</div>
+                <div className="cf-stat-num">{myPostsCount}</div>
                 <div className="cf-stat-label">My Posts</div>
               </div>
             </div>
