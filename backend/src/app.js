@@ -3,7 +3,6 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import passport from "passport";
-
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import placeRoutes from "./routes/place.route.js";
@@ -12,12 +11,11 @@ import adminRoutes from "./routes/admin.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import postRoutes from "./routes/post.route.js";
 import postAdminRoutes from "./routes/postadmin.route.js";
-
+import notificationRoutes from "./routes/notification.route.js";  // ← NEW
 import "./models/index.js";
 import "./config/passport.js";
 
 const app = express();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -35,11 +33,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
+      if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
@@ -52,7 +46,6 @@ app.use(passport.initialize());
 
 // serve uploads
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 /* AUTH */
@@ -70,5 +63,8 @@ app.use("/api/contact", contactRoutes);
 /* COMMUNITY */
 app.use("/api/posts", postRoutes);
 app.use("/api/admin/posts", postAdminRoutes);
+
+/* NOTIFICATIONS */
+app.use("/api/notifications", notificationRoutes);  // ← NEW
 
 export default app;

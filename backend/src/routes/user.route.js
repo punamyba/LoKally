@@ -11,17 +11,16 @@ const router = express.Router();
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder:         "lokally/profile-pictures",
+    folder: "lokally/profile-pictures",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    // Auto convert to WebP for smaller size without quality loss
-    format:         "webp",
+    format: "webp",
     transformation: [
       {
-        width:   400,
-        height:  400,
-        crop:    "fill",
-        gravity: "face",  // Auto focus on face
-        quality: "auto",  // Best quality automatically
+        width: 400,
+        height: 400,
+        crop: "fill",
+        gravity: "face",
+        quality: "auto",
       },
     ],
   },
@@ -29,23 +28,33 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max upload
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// Profile
-router.get("/profile",          authMiddleware, userController.getProfile);
-router.put("/profile",          authMiddleware, userController.updateProfile);
+// Own profile
+router.get("/profile", authMiddleware, userController.getProfile);
+router.put("/profile", authMiddleware, userController.updateProfile);
 
 // Profile picture
-router.post  ("/profile-picture", authMiddleware, upload.single("profile_picture"), userController.uploadProfilePicture);
+router.post(
+  "/profile-picture",
+  authMiddleware,
+  upload.single("profile_picture"),
+  userController.uploadProfilePicture
+);
 router.delete("/profile-picture", authMiddleware, userController.deleteProfilePicture);
 
 // Password and account
-router.put   ("/password",  authMiddleware, userController.changePassword);
-router.delete("/account",   authMiddleware, userController.deleteAccount);
+router.put("/password", authMiddleware, userController.changePassword);
+router.delete("/account", authMiddleware, userController.deleteAccount);
 
-// User content
-router.get("/my-posts",  authMiddleware, userController.getMyPosts);
+// Own content
+router.get("/my-posts", authMiddleware, userController.getMyPosts);
 router.get("/my-places", authMiddleware, userController.getMyPlaces);
+
+// Public profile routes
+router.get("/public/:userId", authMiddleware, userController.getPublicProfile);
+router.get("/public/:userId/posts", authMiddleware, userController.getPublicUserPosts);
+router.get("/public/:userId/places", authMiddleware, userController.getPublicUserPlaces);
 
 export default router;

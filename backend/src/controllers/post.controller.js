@@ -5,6 +5,7 @@ import PostComment from "../models/postcomment.model.js";
 import PostBookmark from "../models/postbookmark.model.js";
 import PostReport from "../models/postreport.model.js";
 import User from "../models/user.model.js";
+import { createNotification } from "./notification.controller.js";   // ← NEW
 
 async function attachUserFlags(posts, userId) {
   if (!userId || posts.length === 0) {
@@ -36,17 +37,9 @@ async function attachUserFlags(posts, userId) {
 }
 
 const POST_ATTRS = [
-  "id",
-  "user_id",
-  "caption",
-  "images",
-  "place_id",
-  "likes_count",
-  "comments_count",
-  "reports_count",
-  "is_hidden",
-  "created_at",
-  "updated_at",
+  "id", "user_id", "caption", "images", "place_id",
+  "likes_count", "comments_count", "reports_count",
+  "is_hidden", "created_at", "updated_at",
 ];
 
 const AUTHOR_INCLUDE = {
@@ -57,8 +50,8 @@ const AUTHOR_INCLUDE = {
 
 export const getFeed = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(10, parseInt(req.query.limit) || 10);
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
 
     const posts = await Post.findAll({
@@ -66,9 +59,7 @@ export const getFeed = async (req, res) => {
       attributes: POST_ATTRS,
       include: [AUTHOR_INCLUDE],
       order: [["created_at", "DESC"]],
-      limit,
-      offset,
-      subQuery: false,
+      limit, offset, subQuery: false,
     });
 
     const data = await attachUserFlags(posts, req.user?.id);
@@ -81,8 +72,8 @@ export const getFeed = async (req, res) => {
 
 export const getTrending = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(10, parseInt(req.query.limit) || 10);
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
 
     const posts = await Post.findAll({
@@ -90,9 +81,7 @@ export const getTrending = async (req, res) => {
       attributes: POST_ATTRS,
       include: [AUTHOR_INCLUDE],
       order: [["likes_count", "DESC"], ["created_at", "DESC"]],
-      limit,
-      offset,
-      subQuery: false,
+      limit, offset, subQuery: false,
     });
 
     const data = await attachUserFlags(posts, req.user?.id);
@@ -105,8 +94,8 @@ export const getTrending = async (req, res) => {
 
 export const getSaved = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(10, parseInt(req.query.limit) || 10);
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
     const userId = req.user.id;
 
@@ -114,12 +103,10 @@ export const getSaved = async (req, res) => {
       where: { user_id: userId },
       attributes: ["post_id"],
       order: [["created_at", "DESC"]],
-      limit,
-      offset,
+      limit, offset,
     });
 
     const postIds = bookmarks.map((b) => b.post_id);
-
     if (postIds.length === 0) {
       return res.json({ success: true, data: [], page, limit, hasMore: false });
     }
@@ -143,14 +130,10 @@ export const getSaved = async (req, res) => {
 
 export const getPost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id, {
-      include: [AUTHOR_INCLUDE],
-    });
-
+    const post = await Post.findByPk(req.params.id, { include: [AUTHOR_INCLUDE] });
     if (!post || post.is_hidden) {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
-
     const [data] = await attachUserFlags([post], req.user?.id);
     return res.json({ success: true, data });
   } catch (err) {
@@ -162,25 +145,18 @@ export const getPost = async (req, res) => {
 export const getLikers = async (req, res) => {
   try {
     const postId = parseInt(req.params.id);
-
-    const likes = await PostLike.findAll({
+    const likes  = await PostLike.findAll({
       where: { post_id: postId },
-      include: [
-        {
-          model: User,
-          as: "liker",
-          attributes: ["id", "first_name", "last_name", "avatar"],
-        },
-      ],
+      include: [{ model: User, as: "liker", attributes: ["id", "first_name", "last_name", "avatar"] }],
       order: [["created_at", "DESC"]],
     });
 
     const data = likes.map((l) => ({
-      user_id: l.user_id,
+      user_id:    l.user_id,
       react_type: l.react_type,
       first_name: l.liker?.first_name,
-      last_name: l.liker?.last_name,
-      avatar: l.liker?.avatar || null,
+      last_name:  l.liker?.last_name,
+      avatar:     l.liker?.avatar || null,
     }));
 
     return res.json({ success: true, data });
@@ -192,36 +168,21 @@ export const getLikers = async (req, res) => {
 
 export const getComments = async (req, res) => {
   try {
-    const postId = parseInt(req.params.id);
-
+    const postId   = parseInt(req.params.id);
     const topLevel = await PostComment.findAll({
-      where: { post_id: postId, parent_id: null, is_hidden: false },
-      order: [["created_at", "ASC"]],
-      include: [
-        {
-          model: User,
-          as: "commenter",
-          attributes: ["id", "first_name", "last_name", "avatar"],
-        },
-      ],
+      where:   { post_id: postId, parent_id: null, is_hidden: false },
+      order:   [["created_at", "ASC"]],
+      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
     });
 
     const parentIds = topLevel.map((c) => c.id);
-
-    const replies =
-      parentIds.length > 0
-        ? await PostComment.findAll({
-            where: { parent_id: { [Op.in]: parentIds }, is_hidden: false },
-            order: [["created_at", "ASC"]],
-            include: [
-              {
-                model: User,
-                as: "commenter",
-                attributes: ["id", "first_name", "last_name", "avatar"],
-              },
-            ],
-          })
-        : [];
+    const replies   = parentIds.length > 0
+      ? await PostComment.findAll({
+          where:   { parent_id: { [Op.in]: parentIds }, is_hidden: false },
+          order:   [["created_at", "ASC"]],
+          include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
+        })
+      : [];
 
     const replyMap = {};
     replies.forEach((r) => {
@@ -231,7 +192,7 @@ export const getComments = async (req, res) => {
 
     const data = topLevel.map((c) => ({
       ...c.toJSON(),
-      user: c.commenter,
+      user:    c.commenter,
       replies: replyMap[c.id] || [],
     }));
 
@@ -256,8 +217,8 @@ export const createPost = async (req, res) => {
     }
 
     const post = await Post.create({
-      user_id: req.user.id,
-      caption: caption?.trim() || null,
+      user_id:  req.user.id,
+      caption:  caption?.trim() || null,
       images,
       place_id: place_id || null,
     });
@@ -266,12 +227,7 @@ export const createPost = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      data: {
-        ...full.toJSON(),
-        has_liked: false,
-        liked_type: "like",
-        is_bookmarked: false,
-      },
+      data: { ...full.toJSON(), has_liked: false, liked_type: "like", is_bookmarked: false },
     });
   } catch (err) {
     console.error("createPost:", err.message);
@@ -298,8 +254,8 @@ export const deletePost = async (req, res) => {
 
 export const toggleLike = async (req, res) => {
   try {
-    const postId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const postId    = parseInt(req.params.id);
+    const userId    = req.user.id;
     const reactType = req.body.react_type || "like";
 
     const post = await Post.findByPk(postId);
@@ -307,22 +263,34 @@ export const toggleLike = async (req, res) => {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
 
-    const existing = await PostLike.findOne({
-      where: { post_id: postId, user_id: userId },
-    });
+    const existing = await PostLike.findOne({ where: { post_id: postId, user_id: userId } });
 
     if (existing) {
       if (existing.react_type === reactType) {
+        // Unlike — remove like
         await existing.destroy();
         await post.decrement("likes_count");
         return res.json({ success: true, liked: false, react_type: null });
       } else {
+        // Change react type
         await existing.update({ react_type: reactType });
         return res.json({ success: true, liked: true, react_type: reactType });
       }
     } else {
+      // New like — create + notify
       await PostLike.create({ post_id: postId, user_id: userId, react_type: reactType });
       await post.increment("likes_count");
+
+      // ── Notification ────────────────────────────────────────────────────
+      await createNotification({
+        user_id:  post.user_id,           // post owner gets notified
+        actor_id: userId,                 // person who liked
+        type:     "like",
+        post_id:  postId,
+        message:  `${req.user.first_name} ${req.user.last_name} liked your post`,
+      });
+      // ────────────────────────────────────────────────────────────────────
+
       return res.json({ success: true, liked: true, react_type: reactType });
     }
   } catch (err) {
@@ -333,7 +301,7 @@ export const toggleLike = async (req, res) => {
 
 export const addComment = async (req, res) => {
   try {
-    const postId = parseInt(req.params.id);
+    const postId    = parseInt(req.params.id);
     const { body, parent_id } = req.body;
 
     if (!body?.trim()) {
@@ -346,22 +314,28 @@ export const addComment = async (req, res) => {
     }
 
     const comment = await PostComment.create({
-      post_id: postId,
-      user_id: req.user.id,
+      post_id:   postId,
+      user_id:   req.user.id,
       parent_id: parent_id || null,
-      body: body.trim(),
+      body:      body.trim(),
     });
 
     if (!parent_id) await post.increment("comments_count");
 
+    // ── Notification (only for top-level comments, not replies) ─────────
+    if (!parent_id) {
+      await createNotification({
+        user_id:  post.user_id,
+        actor_id: req.user.id,
+        type:     "comment",
+        post_id:  postId,
+        message:  `${req.user.first_name} ${req.user.last_name} commented on your post`,
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     const full = await PostComment.findByPk(comment.id, {
-      include: [
-        {
-          model: User,
-          as: "commenter",
-          attributes: ["id", "first_name", "last_name", "avatar"],
-        },
-      ],
+      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
     });
 
     return res.status(201).json({
@@ -399,9 +373,7 @@ export const toggleBookmark = async (req, res) => {
     const postId = parseInt(req.params.id);
     const userId = req.user.id;
 
-    const existing = await PostBookmark.findOne({
-      where: { post_id: postId, user_id: userId },
-    });
+    const existing = await PostBookmark.findOne({ where: { post_id: postId, user_id: userId } });
 
     if (existing) {
       await existing.destroy();
@@ -429,19 +401,12 @@ export const reportPost = async (req, res) => {
     const post = await Post.findByPk(postId);
     if (!post) return res.status(404).json({ success: false, message: "Post not found" });
 
-    const exists = await PostReport.findOne({
-      where: { post_id: postId, user_id: userId },
-    });
+    const exists = await PostReport.findOne({ where: { post_id: postId, user_id: userId } });
     if (exists) {
       return res.status(409).json({ success: false, message: "Already reported" });
     }
 
-    await PostReport.create({
-      post_id: postId,
-      user_id: userId,
-      reason: reason.trim(),
-    });
-
+    await PostReport.create({ post_id: postId, user_id: userId, reason: reason.trim() });
     await post.increment("reports_count");
 
     if (post.reports_count + 1 >= 5) {
@@ -452,5 +417,39 @@ export const reportPost = async (req, res) => {
   } catch (err) {
     console.error("reportPost:", err.message);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ── Admin functions ────────────────────────────────────────────────────────
+export const adminHidePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+    await post.update({ is_hidden: true });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const adminUnhidePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+    await post.update({ is_hidden: false });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const adminDeletePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+    await post.destroy();
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
