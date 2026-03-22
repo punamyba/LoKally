@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { LogOut, Menu, X, Bell, Users2, Mail, Compass, User, ChevronDown, Settings } from "lucide-react";
+import { LogOut, Menu, X, Users2, Mail, Compass, User, ChevronDown, Settings } from "lucide-react";
+import NotificationDropdown from "../../../Notifications/NotificationDropdown";
 
 const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
-const SERVER = API.replace("/api", "");
+const SERVER = import.meta.env.VITE_API_BASE_URL || API.replace("/api", "");
 
 const getAvatarUrl = (avatar?: string | null): string | null => {
   if (!avatar) return null;
@@ -15,9 +16,9 @@ const getAvatarUrl = (avatar?: string | null): string | null => {
 };
 
 const Navbar = () => {
-  const [open,      setOpen]      = useState(false);
-  const [scrolled,  setScrolled]  = useState(false);
-  const [dropOpen,  setDropOpen]  = useState(false);
+  const [open,        setOpen]        = useState(false);
+  const [scrolled,    setScrolled]    = useState(false);
+  const [dropOpen,    setDropOpen]    = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); }
     catch { return {}; }
@@ -29,7 +30,6 @@ const Navbar = () => {
   const isLoggedIn = !!localStorage.getItem("token");
   const isHome     = location.pathname === "/home" || location.pathname === "/";
 
-  // Scroll listener
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -37,16 +37,12 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close dropdown on route change
   useEffect(() => { setDropOpen(false); setOpen(false); }, [location.pathname]);
 
-  // Re-fetch user from API when token exists — so avatar always fresh
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`${API}/user/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(`${API}/user/profile`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -55,9 +51,8 @@ const Navbar = () => {
         }
       })
       .catch(() => {});
-  }, [location.pathname]); // re-fetch on every route change
+  }, [location.pathname]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -110,20 +105,13 @@ const Navbar = () => {
             </NavLink>
           </nav>
 
-          {/* Bell */}
-          <button className="lk-iconBtn" type="button" aria-label="Notifications">
-            <Bell size={20} />
-            <span className="lk-dot" />
-          </button>
+          {/* Bell — NotificationDropdown is the bell + dropdown */}
+          {isLoggedIn && <NotificationDropdown />}
 
           {/* User chip + dropdown */}
           {isLoggedIn ? (
             <div className="lk-user-wrap">
-              <button
-                className="lk-userChip"
-                type="button"
-                onClick={() => setDropOpen(d => !d)}
-              >
+              <button className="lk-userChip" type="button" onClick={() => setDropOpen(d => !d)}>
                 {picUrl
                   ? <img src={picUrl} alt={firstName} className="lk-userChip__pic" />
                   : <span className="lk-userChip__avatar">{initials}</span>
@@ -134,7 +122,6 @@ const Navbar = () => {
 
               {dropOpen && (
                 <div className="lk-dropdown">
-                  {/* Header */}
                   <div className="lk-drop-header">
                     <div className="lk-drop-avatar">
                       {picUrl

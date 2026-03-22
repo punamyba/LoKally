@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --blue:  #1a7fe8;
+  --green: #16a34a;
+  --teal:  #0d9488;
+  --bg:    #f1f5fb;
+  --card:  #ffffff;
+  --bdr:   #e4eaf2;
+  --text:  #0d1117;
+  --sub:   #4b5563;
+  --muted: #94a3b8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.np-page {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+  color: var(--text);
+}
+
+.np-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+/* ── Header ── */
+.np-header {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 20px;
+}
+.np-back {
+  width: 38px; height: 38px; border-radius: 11px;
+  border: 1.5px solid var(--bdr); background: var(--card);
+  cursor: pointer; display: grid; place-items: center;
+  color: var(--sub); transition: all .15s; flex-shrink: 0;
+}
+.np-back:hover { border-color: var(--blue); color: var(--blue); }
+
+.np-title-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
+.np-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -.3px;
+}
+.np-unread-chip {
+  font-size: 12px; font-weight: 800;
+  padding: 3px 10px; border-radius: 99px;
+  background: var(--blue); color: #fff;
+}
+.np-mark-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 10px;
+  border: 1.5px solid rgba(26,127,232,0.25);
+  background: #eff6ff; color: var(--blue);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: 'Nunito', sans-serif; transition: all .15s;
+  white-space: nowrap;
+}
+.np-mark-btn:hover { background: var(--blue); color: #fff; }
+
+/* ── Filter tabs ── */
+.np-filters {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.np-filter {
+  padding: 8px 18px; border-radius: 99px;
+  border: 1.5px solid var(--bdr);
+  background: var(--card); color: var(--muted);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: 'Nunito', sans-serif; transition: all .15s;
+}
+.np-filter:hover { border-color: var(--blue); color: var(--blue); }
+.np-filter--on {
+  background: var(--blue); color: #fff;
+  border-color: var(--blue);
+  box-shadow: 0 4px 12px rgba(26,127,232,0.25);
+}
+
+/* ── List ── */
+.np-list {
+  background: var(--card);
+  border: 1px solid var(--bdr);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+
+/* ── Loading ── */
+.np-loading {
+  display: flex; align-items: center; justify-content: center; padding: 60px;
+}
+.np-spinner {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid #e2e8f0; border-top-color: var(--blue);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Empty ── */
+.np-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 64px 24px; text-align: center;
+}
+.np-empty-icon {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: #f8fafc; border: 1.5px solid var(--bdr);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); margin-bottom: 4px;
+}
+.np-empty-h {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px; font-weight: 800; color: var(--text);
+}
+.np-empty-s { font-size: 13.5px; color: var(--muted); max-width: 300px; line-height: 1.6; }
+
+/* ── Item ── */
+.np-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f8fafc;
+  cursor: pointer; transition: background .12s;
+  position: relative;
+}
+.np-item:last-child { border-bottom: none; }
+.np-item:hover { background: #f8fafc; }
+.np-item--unread { background: #f0f7ff; }
+.np-item--unread:hover { background: #e8f2ff; }
+
+.np-avatar-wrap {
+  position: relative; flex-shrink: 0;
+  width: 48px; height: 48px;
+}
+.np-avatar-img {
+  width: 48px; height: 48px; border-radius: 50%;
+  object-fit: cover; display: block;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.np-avatar-init {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--green));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: #fff;
+}
+
+/* Type icon badge */
+.np-type-icon {
+  position: absolute; bottom: -2px; right: -4px;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.np-icon--blue  { background: #eff6ff; color: var(--blue); }
+.np-icon--teal  { background: #f0fdfa; color: var(--teal); }
+.np-icon--green { background: #f0fdf4; color: var(--green); }
+.np-icon--red   { background: #fef2f2; color: #ef4444; }
+
+.np-content { flex: 1; min-width: 0; }
+.np-message {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  line-height: 1.55; margin: 0 0 4px;
+}
+.np-time { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+.np-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--blue); flex-shrink: 0; margin-top: 7px;
+}
+
+/* Animation */
+.np-item { animation: fadeUp .2s ease both; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

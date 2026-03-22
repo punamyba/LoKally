@@ -9,7 +9,7 @@ import {
 import Navbar from "../Components/Layout/Navbar/Navbar";
 import Footer from "../Components/Layout/Footer/Footer";
 import axiosInstance from "../../../shared/config/axiosinstance";
-import "./home.css";
+import "./home.css"; 
 
 const SERVER   = import.meta.env.VITE_API_URL?.replace("/api","") || "http://localhost:5001";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";

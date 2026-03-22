@@ -33,6 +33,7 @@ import PublicProfile from "./features/auth/User/PublicProfile";
 import Settings      from "./features/auth/Settings/Settings";
 
 import { ToastContainer } from "./features/auth/Components/Toast/Toast";
+import NotificationsPage from "./features/auth/Notifications/NotificationsPage";
 
 function App() {
   const [email,      setEmail]      = useState("");
@@ -49,6 +50,7 @@ function App() {
         <Route path="/verify-otp"      element={<VerifyOTP email={email} onVerified={t => setResetToken(t)} />} />
         <Route path="/reset-password"  element={<ResetPassword email={email} resetSessionToken={resetToken} />} />
         <Route path="/google-callback" element={<GoogleCallback />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Public app */}
         <Route path="/explore-map" element={<ExploreMap />} />

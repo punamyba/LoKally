@@ -28,11 +28,10 @@ import { communityApi } from "../communityApi";
 import { REACTS, REPORT_REASONS } from "../CommunityTypes";
 import type { Post, Comment, ReactType } from "../CommunityTypes";
 import "./PostCard.css";
-import { getImageUrl } from "../../../../shared/config/imageUrl";
-
-const SERVER =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace("/api", "");
+import {
+  getImageUrl,
+  getAvatarUrl,
+} from "../../../../shared/config/imageUrl";
 
 const parseImages = (raw: string | null): string[] => {
   if (!raw) return [];
@@ -56,37 +55,6 @@ const ago = (d: string) => {
     month: "short",
     day: "numeric",
   });
-};
-
-const getAvatarUrl = (avatar?: string | null): string | null => {
-  if (!avatar) return null;
-
-  const value = avatar.trim();
-  if (!value) return null;
-
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    return value;
-  }
-
-  if (value.includes("|||")) {
-    const parts = value.split("|||");
-    return parts[1]?.trim() || null;
-  }
-
-  if (value.startsWith("/uploads/")) {
-    return `${SERVER}${value}`;
-  }
-
-  if (
-    value.endsWith(".jpg") ||
-    value.endsWith(".jpeg") ||
-    value.endsWith(".png") ||
-    value.endsWith(".webp")
-  ) {
-    return `${SERVER}/uploads/profiles/${value}`;
-  }
-
-  return null;
 };
 
 type Liker = {
