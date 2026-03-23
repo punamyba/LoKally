@@ -5,7 +5,7 @@ import {
   MapPin,
   PlusCircle,
   Users,
-  BarChart2,
+  Flag,
   Settings,
   LogOut,
   MessageSquare,
@@ -14,15 +14,15 @@ import {
 import "./AdminSidebar.css";
 
 const NAV_ITEMS = [
-  { to: "/admin",             label: "Dashboard",        Icon: LayoutDashboard, end: true },
-  { to: "/admin/pending",     label: "Pending",          Icon: Clock },
-  { to: "/admin/places",      label: "All Places",       Icon: MapPin },
-  { to: "/admin/add-place",   label: "Add Place",        Icon: PlusCircle },
-  { to: "/admin/users",       label: "Users",            Icon: Users },
-  { to: "/admin/contact",     label: "Contact Messages", Icon: MessageSquare },
-  { to: "/admin/community",   label: "Community",        Icon: Users2 },        // ← NEW
-  { to: "/admin/reports",     label: "Reports",          Icon: BarChart2 },
-  { to: "/admin/settings",    label: "Settings",         Icon: Settings },
+  { to: "/admin",             label: "Dashboard",         Icon: LayoutDashboard, end: true },
+  { to: "/admin/pending",     label: "Pending",           Icon: Clock },
+  { to: "/admin/places",      label: "All Places",        Icon: MapPin },
+  { to: "/admin/add-place",   label: "Add Place",         Icon: PlusCircle },
+  { to: "/admin/users",       label: "Users",             Icon: Users },
+  { to: "/admin/contact",     label: "Contact Messages",  Icon: MessageSquare },
+  { to: "/admin/community",   label: "Community",         Icon: Users2 },
+  { to: "/admin/reports",     label: "Reported Content",  Icon: Flag },
+  { to: "/admin/settings",    label: "Settings",          Icon: Settings },
 ];
 
 export default function AdminSidebar() {

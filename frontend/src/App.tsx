@@ -21,7 +21,8 @@ import AdminPendingDetail from "./features/auth/Admin/AdminPendingList/AdminPend
 import AdminPlaces        from "./features/auth/Admin/Places/AdminPlaces";
 import AdminAddPlace      from "./features/auth/Admin/AdminAddPlace/AdminAddPlace";
 import AdminUsers         from "./features/auth/Admin/UsersLists/AdminUsers";
-import { AdminReports, AdminSettings } from "./features/auth/Admin/Placeholder/AdminPlaceholder";
+import AdminReports       from "./features/auth/Admin/Reports/AdminReports";
+import { AdminSettings }  from "./features/auth/Admin/Placeholder/AdminPlaceholder";
 
 import ContactUs         from "./features/auth/ContactUs/ContactUs";
 import AdminContactInbox from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
@@ -50,7 +51,7 @@ function App() {
         <Route path="/verify-otp"      element={<VerifyOTP email={email} onVerified={t => setResetToken(t)} />} />
         <Route path="/reset-password"  element={<ResetPassword email={email} resetSessionToken={resetToken} />} />
         <Route path="/google-callback" element={<GoogleCallback />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications"   element={<NotificationsPage />} />
 
         {/* Public app */}
         <Route path="/explore-map" element={<ExploreMap />} />
