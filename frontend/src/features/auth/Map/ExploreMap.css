@@ -218,85 +218,7 @@
   40% { transform: scale(1.2); opacity: 1; }
 }
 
-/* ──────────────────── MOBILE ──────────────────── */
-@media (max-width: 768px) {
-  .exmap-openSidebar {
-    display: flex; align-items: center; gap: 6px;
-    position: absolute; top: 14px; left: 14px; z-index: 1550;
-    border: none; padding: 9px 16px; border-radius: 20px;
-    background: rgba(255,255,255,0.97); box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    font-weight: 800; font-size: 13px; color: #0f3d2e;
-    font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer;
-  }
-  .exmap-leftOverlay {
-    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
-    max-width: none; height: 52vh; border-radius: 22px 22px 0 0;
-    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
-    z-index: 1600; background: #fff; box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .exmap-leftOverlay.open { transform: translateY(0); }
-  .exmap-drawerHeader {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 16px 12px; background: #fff; flex-shrink: 0; position: relative;
-    border-bottom: 1px solid #f1f5f9;
-  }
-  .exmap-drawerHeader::before {
-    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-    width: 36px; height: 4px; border-radius: 99px; background: #e2e8f0;
-  }
-  .exmap-drawerTitle { font-weight: 900; font-size: 15px; color: #0f3d2e; font-family: 'Red Rose', sans-serif; }
-  .exmap-drawerClose {
-    border: none; background: #f1f5f9; width: 32px; height: 32px;
-    border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: #374151;
-  }
-  .exmap-fab {
-    width: 52px; height: 52px; border-radius: 999px; padding: 0;
-    display: grid; place-items: center; right: 14px; bottom: 14px;
-  }
-  .fab-text { display: none; }
-  .fab-plus { display: flex; }
-  .exmap-details {
-    position: fixed; top: auto; right: 0; left: 0; bottom: 0; width: 100%;
-    max-width: none; border-radius: 22px 22px 0 0; height: auto; max-height: 58vh;
-    z-index: 1700; display: flex; flex-direction: column; overflow: hidden;
-  }
-  .exmap-detailsImageWrap { height: 160px; flex: 0 0 auto; }
-  .exmap-detailsContent { padding: 14px; flex: 1; overflow-y: auto; }
-  .exmap-addPanel {
-    position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: 100%;
-    max-width: none; border-radius: 22px 22px 0 0;
-    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
-    height: 80vh; max-height: none; overflow-y: auto;
-    box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
-  }
-  .exmap-addPanel.open { transform: translateY(0); }
-  .exmap-addPanel.minimized { height: 64px; overflow: hidden; }
-}
-
-/* Category filter banner */
-.exmap-cat-banner {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 9px 16px; margin: 8px 12px 0;
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
-  border: 1.5px solid rgba(22,126,224,0.2); border-radius: 12px;
-  font-size: 13px; color: #1e293b; font-weight: 500;
-  flex-shrink: 0;
-}
-.exmap-cat-banner strong { color: #167ee0; font-weight: 800; }
-.exmap-cat-clear {
-  display: flex; align-items: center; gap: 4px;
-  background: rgba(239,68,68,0.1); color: #dc2626;
-  border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
-  padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
-  font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s;
-}
-.exmap-cat-clear:hover { background: #dc2626; color: white; }
-
-/* ── FLOATING GEOCODE SEARCH OVERLAY ──────────────────────
-   Positioned on map top-center. NOT in sidebar.
-   z-index above map (400+) but below panels (1100+)
-──────────────────────────────────────────────────────────── */
+/* ── FLOATING GEOCODE SEARCH OVERLAY ── */
 .exmap-mapSearchOverlay {
   position: absolute;
   top: 18px;
@@ -304,7 +226,7 @@
   transform: translateX(-50%);
   z-index: 900;
   width: 400px;
-  max-width: calc(100vw - 160px); /* don't overlap sidebar/panels */
+  max-width: calc(100vw - 160px);
   pointer-events: auto;
 }
 
@@ -348,7 +270,6 @@
 }
 .exmap-locClear:hover { background: #fee2e2; color: #dc2626; }
 
-/* Loading spinner */
 .exmap-locSpinner {
   width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0;
   border: 2px solid #e2e8f0; border-top-color: #167ee0;
@@ -356,7 +277,6 @@
 }
 @keyframes locSpin { to { transform: rotate(360deg); } }
 
-/* Results dropdown */
 .exmap-locResults {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   background: rgba(255,255,255,0.98); backdrop-filter: blur(12px);
@@ -385,14 +305,109 @@
   text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Mobile: full width with margins */
+/* Category filter banner */
+.exmap-cat-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 16px; margin: 8px 12px 0;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1.5px solid rgba(22,126,224,0.2); border-radius: 12px;
+  font-size: 13px; color: #1e293b; font-weight: 500;
+  flex-shrink: 0;
+}
+.exmap-cat-banner strong { color: #167ee0; font-weight: 800; }
+.exmap-cat-clear {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(239,68,68,0.1); color: #dc2626;
+  border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
+  padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s;
+}
+.exmap-cat-clear:hover { background: #dc2626; color: white; }
+
+/* ──────────────────── MOBILE ──────────────────── */
 @media (max-width: 768px) {
+
+  /* ── SEARCH OVERLAY: full width, leave 52px right for zoom buttons ── */
   .exmap-mapSearchOverlay {
+    position: absolute;
     top: 12px;
     left: 12px;
-    right: 12px;
+    right: 52px;    /* avoids overlapping the zoom +/- control */
     width: auto;
     max-width: none;
     transform: none;
+    z-index: 1000;
   }
+
+  /* ── EXPLORE BUTTON: sits BELOW the search bar, not on top of it ── */
+  /* Search bar is ~46px tall + 12px top = 58px bottom edge, add 8px gap */
+  .exmap-openSidebar {
+    display: flex; align-items: center; gap: 6px;
+    position: absolute;
+    top: 66px;      /* 12px top + 46px search height + 8px gap */
+    left: 12px;
+    z-index: 1000;
+    border: none; padding: 8px 14px; border-radius: 20px;
+    background: rgba(255,255,255,0.97);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    font-weight: 800; font-size: 13px; color: #0f3d2e;
+    font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer;
+  }
+
+  /* ── LEFT EXPLORE DRAWER: slides up from bottom ── */
+  .exmap-leftOverlay {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
+    max-width: none; height: 52vh; border-radius: 22px 22px 0 0;
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+    z-index: 1600; background: #fff; box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .exmap-leftOverlay.open { transform: translateY(0); }
+
+  .exmap-drawerHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 16px 12px; background: #fff; flex-shrink: 0; position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .exmap-drawerHeader::before {
+    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 4px; border-radius: 99px; background: #e2e8f0;
+  }
+  .exmap-drawerTitle {
+    font-weight: 900; font-size: 15px; color: #0f3d2e;
+    font-family: 'Red Rose', sans-serif;
+  }
+  .exmap-drawerClose {
+    border: none; background: #f1f5f9; width: 32px; height: 32px;
+    border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: #374151;
+  }
+
+  /* ── FAB: circular on mobile ── */
+  .exmap-fab {
+    width: 52px; height: 52px; border-radius: 999px; padding: 0;
+    display: grid; place-items: center; right: 14px; bottom: 14px;
+  }
+  .fab-text { display: none; }
+  .fab-plus { display: flex; }
+
+  /* ── PLACE DETAILS: slides up from bottom ── */
+  .exmap-details {
+    position: fixed; top: auto; right: 0; left: 0; bottom: 0; width: 100%;
+    max-width: none; border-radius: 22px 22px 0 0; height: auto; max-height: 58vh;
+    z-index: 1700; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .exmap-detailsImageWrap { height: 160px; flex: 0 0 auto; }
+  .exmap-detailsContent { padding: 14px; flex: 1; overflow-y: auto; }
+
+  /* ── ADD PLACE PANEL: slides up from bottom, z-index above everything ── */
+  .exmap-addPanel {
+    position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: 100%;
+    max-width: none; border-radius: 22px 22px 0 0;
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+    height: 80vh; max-height: none; overflow-y: auto;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
+    z-index: 1800; /* above search bar and explore button */
+  }
+  .exmap-addPanel.open { transform: translateY(0); }
+  .exmap-addPanel.minimized { height: 64px; overflow: hidden; }
 }
