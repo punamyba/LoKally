@@ -30,13 +30,16 @@ export const getPlaceById = async (req, res) => {
   }
 };
 
-/* PUBLIC: featured (top 6 approved) */
+/* PUBLIC: featured — admin ley is_featured = true mark gareka places */
+// ── UPDATED: aghi latest 6 matra linthyo, aba is_featured: true wala matra ──
 export const getFeaturedPlaces = async (req, res) => {
   try {
     const places = await Place.findAll({
-      where: { status: "approved" },
+      where: {
+        status: "approved",
+        is_featured: true,        // ← only admin-marked featured places
+      },
       order: [["created_at", "DESC"]],
-      limit: 6,
     });
     res.json({ success: true, data: places });
   } catch (err) {
@@ -47,23 +50,22 @@ export const getFeaturedPlaces = async (req, res) => {
 /* PUBLIC: stats */
 export const getPlaceStats = async (req, res) => {
   try {
-    const total = await Place.count();
+    const total    = await Place.count();
     const approved = await Place.count({ where: { status: "approved" } });
-    const users = await User.count();
+    const users    = await User.count();
     res.json({ success: true, data: { total, approved, users } });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* USER: submit new place (pending) — FIXED: supports multiple images */
+/* USER: submit new place (pending) */
 export const createPlace = async (req, res) => {
   try {
     const { name, address, description, category, lat, lng } = req.body;
     if (!name || !address || !lat || !lng)
       return res.status(400).json({ success: false, message: "name, address, lat, lng chainxa" });
 
-    // Handle multiple images (req.files array) OR single image (req.file)
     let imageValue = null;
     if (req.files && req.files.length > 0) {
       const paths = req.files.map(f => `/uploads/places/${f.filename}`);
@@ -76,12 +78,12 @@ export const createPlace = async (req, res) => {
       name,
       address,
       description: description || "",
-      category: category || null,
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
-      image: imageValue,
+      category:    category || null,
+      lat:         parseFloat(lat),
+      lng:         parseFloat(lng),
+      image:       imageValue,
       submitted_by: req.user.id,
-      status: "pending",
+      status:      "pending",
     });
 
     res.status(201).json({ success: true, data: place });
@@ -106,7 +108,7 @@ export const updatePlace = async (req, res) => {
     if (lng) updates.lng = parseFloat(lng);
     if (req.file) updates.image = `/uploads/places/${req.file.filename}`;
 
-    await   place.update(updates);
+    await place.update(updates);
     res.json({ success: true, data: place });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });

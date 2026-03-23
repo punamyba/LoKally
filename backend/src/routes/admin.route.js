@@ -24,4 +24,16 @@ router.post("/places", upload.array("images", 20), AdminController.addPlace);
 router.put("/places/:id", upload.single("image"), AdminController.updatePlace);
 router.delete("/places/:id", AdminController.deletePlace);
 
+// toggle featured/unfeatured
+router.patch("/places/:id/feature", AdminController.toggleFeatured);
+
+// ── get reports for a specific post ──────────────────────────────
+router.get("/posts/:id/reports", AdminController.getPostReports);
+
+// ── all reports page ──────────────────────────────────────────────
+router.get("/reports",              AdminController.getAllReports);
+router.patch("/reports/:id/dismiss", AdminController.dismissReport);
+router.patch("/reports/:id/status",  AdminController.updateReportStatus);
+router.post("/users/:id/warn",      AdminController.warnUser);
+
 export default router;

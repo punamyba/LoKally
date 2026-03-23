@@ -61,6 +61,12 @@ const Place = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    // ── NEW: admin ley featured mark garna ──────────────────────
+    is_featured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
   {
     tableName: "places",
