@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   MessageSquare, RefreshCw, Send, Trash2,
-  ToggleLeft, ToggleRight, ChevronRight,
+  ToggleLeft, ToggleRight, ChevronRight, ChevronLeft,
   Clock, AlertCircle, MessageCircle, CheckCircle,
+  Calendar, X,
 } from "lucide-react";
 import { contactApi } from "../../ContactUs/ContactApi";
 import type { ContactStatus } from "../../ContactUs/ContactApi";
@@ -14,15 +15,21 @@ type ConvDetail = Conv & { message: string; messages: ConvMsg[]; user: { id: num
 type Counts = { new: number; open: number; replied: number; closed: number };
 
 const FILTERS: { key: ContactStatus | "all"; label: string }[] = [
-  { key: "all", label: "All" }, { key: "new", label: "New" },
-  { key: "open", label: "In Progress" }, { key: "replied", label: "Replied" }, { key: "closed", label: "Closed" },
+  { key: "all",     label: "All"         },
+  { key: "new",     label: "New"         },
+  { key: "open",    label: "In Progress" },
+  { key: "replied", label: "Replied"     },
+  { key: "closed",  label: "Closed"      },
 ];
+
 const STATUS: Record<ContactStatus, { label: string; cls: string }> = {
   new:     { label: "New",         cls: "aci-badge--new"     },
   open:    { label: "In Progress", cls: "aci-badge--open"    },
   replied: { label: "Replied",     cls: "aci-badge--replied" },
   closed:  { label: "Closed",      cls: "aci-badge--closed"  },
 };
+
+const PAGE_SIZE = 8; // conversations per page in left panel
 
 function ago(d: string) {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
@@ -35,32 +42,72 @@ function ago(d: string) {
 }
 
 export default function AdminContactInbox() {
-  const [convs, setConvs]   = useState<Conv[]>([]);
-  const [counts, setCounts] = useState<Counts>({ new: 0, open: 0, replied: 0, closed: 0 });
-  const [filter, setFilter] = useState<ContactStatus | "all">("all");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [selId, setSelId]   = useState<number | null>(null);
-  const [detail, setDetail] = useState<ConvDetail | null>(null);
+  const [convs,      setConvs]      = useState<Conv[]>([]);
+  const [counts,     setCounts]     = useState<Counts>({ new: 0, open: 0, replied: 0, closed: 0 });
+  const [filter,     setFilter]     = useState<ContactStatus | "all">("all");
+  const [search,     setSearch]     = useState("");
+  const [loading,    setLoading]    = useState(true);
+  const [selId,      setSelId]      = useState<number | null>(null);
+  const [detail,     setDetail]     = useState<ConvDetail | null>(null);
   const [detailLoad, setDetailLoad] = useState(false);
-  const [replyBody, setReplyBody] = useState("");
-  const [replying, setReplying]   = useState(false);
-  const [err, setErr] = useState("");
-  const [ok,  setOk]  = useState("");
+  const [replyBody,  setReplyBody]  = useState("");
+  const [replying,   setReplying]   = useState(false);
+  const [err,        setErr]        = useState("");
+  const [ok,         setOk]         = useState("");
+
+  // ── date filter state ──
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo,   setDateTo]   = useState("");
+
+  // ── pagination state ──
+  const [page, setPage] = useState(1);
 
   const load = async () => {
     setLoading(true);
     try {
       const r = await contactApi.adminGetAll(filter === "all" ? undefined : filter);
-      if (r.success) { setConvs(r.data); setCounts(r.counts || { new:0, open:0, replied:0, closed:0 }); }
+      if (r.success) {
+        setConvs(r.data);
+        setCounts(r.counts || { new: 0, open: 0, replied: 0, closed: 0 });
+      }
     } catch {}
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [filter]);
 
+  // reset page on filter/search/date change
+  useEffect(() => { setPage(1); }, [filter, search, dateFrom, dateTo]);
+
+  // ── filter: search + date ──
+  const filtered = convs.filter(c => {
+    const q = search.trim().toLowerCase();
+    const matchSearch = !q || (
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.subject.toLowerCase().includes(q) ||
+      c.ref_number.toLowerCase().includes(q)
+    );
+    const createdAt = new Date(c.created_at);
+    const matchFrom = dateFrom ? createdAt >= new Date(dateFrom) : true;
+    const matchTo   = dateTo
+      ? createdAt <= new Date(new Date(dateTo).setHours(23, 59, 59, 999))
+      : true;
+    return matchSearch && matchFrom && matchTo;
+  });
+
+  const hasDateFilter   = dateFrom || dateTo;
+  const clearDateFilter = () => { setDateFrom(""); setDateTo(""); };
+
+  // ── pagination ──
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageStart  = (safePage - 1) * PAGE_SIZE;
+  const paginated  = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
   const openConv = async (id: number) => {
-    setSelId(id); setDetailLoad(true); setDetail(null); setReplyBody(""); setErr(""); setOk("");
+    setSelId(id); setDetailLoad(true); setDetail(null);
+    setReplyBody(""); setErr(""); setOk("");
     try {
       const r = await contactApi.adminGetDetail(id);
       if (r.success) {
@@ -117,13 +164,6 @@ export default function AdminContactInbox() {
     } catch { setErr("Failed."); }
   };
 
-  const filtered = convs.filter(c => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
-      || c.subject.toLowerCase().includes(q) || c.ref_number.toLowerCase().includes(q);
-  });
-
   const total = counts.new + counts.open + counts.replied + counts.closed;
 
   return (
@@ -135,16 +175,18 @@ export default function AdminContactInbox() {
           <h1 className="aci-title"><MessageSquare size={22} strokeWidth={2} /> Contact Inbox</h1>
           <p className="aci-subtitle">Manage support conversations and reply to users.</p>
         </div>
-        <button className="aci-refresh" onClick={load}><RefreshCw size={14} strokeWidth={2.5} /> Refresh</button>
+        <button className="aci-refresh" onClick={load}>
+          <RefreshCw size={14} strokeWidth={2.5} /> Refresh
+        </button>
       </div>
 
       {/* Summary cards */}
       <div className="aci-pipeline">
         {[
-          { key: "new"     as ContactStatus, label: "New",         val: counts.new,     color: "#3b82f6", fill: "#bfdbfe", iconCls: "aci-stat-icon--blue",   badgeCls: "aci-stat-badge--blue",   Icon: Clock         },
-          { key: "open"    as ContactStatus, label: "In Progress", val: counts.open,    color: "#f59e0b", fill: "#fde68a", iconCls: "aci-stat-icon--amber",  badgeCls: "aci-stat-badge--amber",  Icon: AlertCircle   },
-          { key: "replied" as ContactStatus, label: "Replied",     val: counts.replied, color: "#22c55e", fill: "#bbf7d0", iconCls: "aci-stat-icon--green",  badgeCls: "aci-stat-badge--green",  Icon: MessageCircle },
-          { key: "closed"  as ContactStatus, label: "Closed",      val: counts.closed,  color: "#8b5cf6", fill: "#ddd6fe", iconCls: "aci-stat-icon--purple", badgeCls: "aci-stat-badge--purple", Icon: CheckCircle   },
+          { key: "new"     as ContactStatus, label: "New",         val: counts.new,     color: "#3b82f6", iconCls: "aci-stat-icon--blue",   badgeCls: "aci-stat-badge--blue",   Icon: Clock         },
+          { key: "open"    as ContactStatus, label: "In Progress", val: counts.open,    color: "#f59e0b", iconCls: "aci-stat-icon--amber",  badgeCls: "aci-stat-badge--amber",  Icon: AlertCircle   },
+          { key: "replied" as ContactStatus, label: "Replied",     val: counts.replied, color: "#22c55e", iconCls: "aci-stat-icon--green",  badgeCls: "aci-stat-badge--green",  Icon: MessageCircle },
+          { key: "closed"  as ContactStatus, label: "Closed",      val: counts.closed,  color: "#8b5cf6", iconCls: "aci-stat-icon--purple", badgeCls: "aci-stat-badge--purple", Icon: CheckCircle   },
         ].map(s => {
           const pct = total > 0 ? Math.round((s.val / total) * 100) : 0;
           return (
@@ -163,26 +205,28 @@ export default function AdminContactInbox() {
         })}
       </div>
 
-      {/* Messages */}
+      {/* Alerts */}
       {err && <div className="aci-alert aci-alert--err"><AlertCircle size={14} /> {err}</div>}
       {ok  && <div className="aci-alert aci-alert--ok" ><CheckCircle size={14} /> {ok}</div>}
 
       {/* Main layout */}
       <div className="aci-grid">
 
-        {/* Left side conversation list */}
+        {/* ── LEFT: conversation list ── */}
         <div className="aci-left">
+
+          {/* Status filter tabs */}
           <div className="aci-filters">
             {FILTERS.map(f => (
-              <button
-                key={f.key}
+              <button key={f.key}
                 className={`aci-filter ${filter === f.key ? "aci-filter--on" : ""}`}
-                onClick={() => setFilter(f.key as ContactStatus | "all")}
-              >
+                onClick={() => setFilter(f.key as ContactStatus | "all")}>
                 {f.label}
               </button>
             ))}
           </div>
+
+          {/* Search */}
           <div className="aci-search-wrap">
             <input
               className="aci-search"
@@ -191,17 +235,53 @@ export default function AdminContactInbox() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+
+          {/* ── Date filter — search paxi ── */}
+          <div className="aci-date-wrap">
+            <div className="aci-date-row">
+              <Calendar size={12} strokeWidth={2} className="aci-date-icon" />
+              <span className="aci-date-label">From</span>
+              <input
+                type="date"
+                className="aci-date-input"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={e => setDateFrom(e.target.value)}
+              />
+              <span className="aci-date-sep">—</span>
+              <span className="aci-date-label">To</span>
+              <input
+                type="date"
+                className="aci-date-input"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={e => setDateTo(e.target.value)}
+              />
+              {hasDateFilter && (
+                <button className="aci-date-clear" onClick={clearDateFilter}>
+                  <X size={11} strokeWidth={2.5} />
+                </button>
+              )}
+            </div>
+            {hasDateFilter && (
+              <div className="aci-date-badge">
+                {filtered.length} result{filtered.length !== 1 ? "s" : ""} in range
+              </div>
+            )}
+          </div>
+
+          {/* Conversation list */}
           <div className="aci-list">
             {loading ? (
               <div className="aci-spin-wrap"><div className="aci-spinner" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="aci-list-empty">No conversations found.</div>
-            ) : filtered.map(c => (
-              <button
-                key={c.id}
+            ) : paginated.length === 0 ? (
+              <div className="aci-list-empty">
+                {hasDateFilter ? "No conversations in this date range." : "No conversations found."}
+              </div>
+            ) : paginated.map(c => (
+              <button key={c.id}
                 className={`aci-item ${selId === c.id ? "aci-item--on" : ""}`}
-                onClick={() => openConv(c.id)}
-              >
+                onClick={() => openConv(c.id)}>
                 <div className="aci-item-row">
                   <div>
                     <div className="aci-item-name">{c.name}</div>
@@ -217,9 +297,33 @@ export default function AdminContactInbox() {
               </button>
             ))}
           </div>
+
+          {/* ── PAGINATION inside left panel ── */}
+          {!loading && filtered.length > 0 && (
+            <div className="aci-pagination">
+              <span className="aci-page-info">
+                {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filtered.length)} / {filtered.length}
+              </span>
+              <div className="aci-page-controls">
+                <button
+                  className="aci-page-btn"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}>
+                  <ChevronLeft size={14} strokeWidth={2.5} />
+                </button>
+                <span className="aci-page-num">{safePage} / {totalPages}</span>
+                <button
+                  className="aci-page-btn"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}>
+                  <ChevronRight size={14} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right side conversation detail */}
+        {/* ── RIGHT: conversation detail ── */}
         <div className="aci-right">
           {!selId ? (
             <div className="aci-empty-panel">
@@ -231,7 +335,6 @@ export default function AdminContactInbox() {
           ) : detail ? (
             <div className="aci-detail">
 
-              {/* Conversation header */}
               <div className="aci-detail-head">
                 <span className="aci-detail-ref">{detail.ref_number}</span>
                 <h2 className="aci-detail-subject">{detail.subject}</h2>
@@ -244,17 +347,14 @@ export default function AdminContactInbox() {
                 </div>
               </div>
 
-              {/* Conversation controls */}
               <div className="aci-controls">
                 <div className="aci-ctrl-row">
                   <span className="aci-ctrl-label">Status</span>
                   <div className="aci-status-btns">
                     {(["new","open","replied","closed"] as ContactStatus[]).map(s => (
-                      <button
-                        key={s}
+                      <button key={s}
                         className={`aci-sbtn ${detail.status === s ? "aci-sbtn--on" : ""}`}
-                        onClick={() => changeStatus(s)}
-                      >
+                        onClick={() => changeStatus(s)}>
                         {STATUS[s].label}
                       </button>
                     ))}
@@ -270,10 +370,7 @@ export default function AdminContactInbox() {
                 </div>
               </div>
 
-              {/* Message thread */}
               <div className="aci-thread">
-
-                {/* First user message */}
                 <div className="aci-msg aci-msg--user">
                   <div className="aci-av aci-av--user">{detail.name[0]?.toUpperCase()}</div>
                   <div className="aci-bubble aci-bubble--user">
@@ -285,10 +382,8 @@ export default function AdminContactInbox() {
                 </div>
 
                 {detail.messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`aci-msg ${msg.sender_type === "admin" ? "aci-msg--admin" : "aci-msg--user"}`}
-                  >
+                  <div key={msg.id}
+                    className={`aci-msg ${msg.sender_type === "admin" ? "aci-msg--admin" : "aci-msg--user"}`}>
                     <div className={`aci-av ${msg.sender_type === "admin" ? "aci-av--admin" : "aci-av--user"}`}>
                       {msg.sender_type === "admin"
                         ? msg.sender?.first_name[0]?.toUpperCase() || "A"
@@ -305,7 +400,6 @@ export default function AdminContactInbox() {
                 ))}
               </div>
 
-              {/* Reply box */}
               {detail.status !== "closed" ? (
                 <div className="aci-reply-box">
                   <div className="aci-reply-label">
