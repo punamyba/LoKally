@@ -4,7 +4,7 @@ import {
   MapPin, Search, Trash2, CheckCircle, Clock, XCircle,
   X, User, Calendar, Tag, Eye, ChevronLeft, ChevronRight,
   Images, ExternalLink, Settings, FileText, Save,
-  AlertTriangle, Mountain, Car, Sun, Info
+  AlertTriangle, Mountain, Car, Sun, Info, Star,
 } from "lucide-react";
 import { adminApi } from "../adminApi";
 import axiosInstance from "../../../../shared/config/axiosinstance";
@@ -12,8 +12,10 @@ import type { Place } from "../AdminTypes";
 import "./AdminPlaces.css";
 import { getImageUrl } from "../../../../shared/config/imageUrl";
 
-type Filter = "all" | "pending" | "approved" | "rejected";
+type Filter   = "all" | "pending" | "approved" | "rejected";
 type ModalTab = "details" | "conditions" | "tags";
+
+const PAGE_SIZE = 10;
 
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
@@ -24,39 +26,31 @@ function parseImages(image: string | null | undefined): string[] {
   return [getImageUrl(image)];
 }
 
-// ── PREDEFINED TAGS ──────────────────────────────────────
 const PREDEFINED_TAGS = [
   "Scenic", "Hiking", "Photography", "Peaceful", "Family Friendly",
   "Adventure", "Cultural", "Historical", "Wildlife", "Waterfall",
   "Sunrise", "Sunset", "Budget Friendly", "Off the beaten path",
-  "Camping", "Trekking", "Boating", "Bird Watching"
+  "Camping", "Trekking", "Boating", "Bird Watching",
 ];
 
 // ── CONDITIONS TAB ────────────────────────────────────────
 function ConditionsTab({ placeId }: { placeId: number }) {
   const [conditions, setConditions] = useState({
-    trail_condition: "",
-    road_condition: "",
-    best_time: "",
-    difficulty: "",
-    note: "",
+    trail_condition: "", road_condition: "", best_time: "", difficulty: "", note: "",
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving,  setSaving]  = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     axiosInstance.get(`/places/${placeId}/conditions`)
-      .then(res => {
-        if (res.data?.data) setConditions({ ...conditions, ...res.data.data });
-      })
+      .then(res => { if (res.data?.data) setConditions(c => ({ ...c, ...res.data.data })); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [placeId]);
 
   const handleSave = async () => {
-    setSaving(true);
-    setMsg(null);
+    setSaving(true); setMsg(null);
     try {
       await axiosInstance.put(`/places/${placeId}/conditions`, conditions);
       setMsg({ type: "success", text: "Conditions saved successfully!" });
@@ -67,10 +61,7 @@ function ConditionsTab({ placeId }: { placeId: number }) {
   };
 
   if (loading) return (
-    <div className="apl-cond-loading">
-      <div className="apl-spinner" />
-      <span>Loading conditions...</span>
-    </div>
+    <div className="apl-cond-loading"><div className="apl-spinner" /><span>Loading conditions...</span></div>
   );
 
   const trailOpts = ["Good", "Moderate", "Poor", "Closed"];
@@ -85,65 +76,48 @@ function ConditionsTab({ placeId }: { placeId: number }) {
           {msg.text}
         </div>
       )}
-
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Mountain size={13} strokeWidth={2} /> Trail Condition</div>
         <div className="apl-cond-opts">
           {trailOpts.map(o => (
             <button key={o} type="button"
               className={`apl-cond-opt ${conditions.trail_condition === o ? "active" : ""}`}
-              onClick={() => setConditions(s => ({ ...s, trail_condition: o }))}>
-              {o}
-            </button>
+              onClick={() => setConditions(s => ({ ...s, trail_condition: o }))}>{o}</button>
           ))}
         </div>
       </div>
-
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Car size={13} strokeWidth={2} /> Road Condition</div>
         <div className="apl-cond-opts">
           {roadOpts.map(o => (
             <button key={o} type="button"
               className={`apl-cond-opt ${conditions.road_condition === o ? "active" : ""}`}
-              onClick={() => setConditions(s => ({ ...s, road_condition: o }))}>
-              {o}
-            </button>
+              onClick={() => setConditions(s => ({ ...s, road_condition: o }))}>{o}</button>
           ))}
         </div>
       </div>
-
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Mountain size={13} strokeWidth={2} /> Difficulty</div>
         <div className="apl-cond-opts">
           {diffOpts.map(o => (
             <button key={o} type="button"
               className={`apl-cond-opt ${conditions.difficulty === o ? "active" : ""}`}
-              onClick={() => setConditions(s => ({ ...s, difficulty: o }))}>
-              {o}
-            </button>
+              onClick={() => setConditions(s => ({ ...s, difficulty: o }))}>{o}</button>
           ))}
         </div>
       </div>
-
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Sun size={13} strokeWidth={2} /> Best Time to Visit</div>
-        <input
-          className="apl-cond-input"
-          value={conditions.best_time}
+        <input className="apl-cond-input" value={conditions.best_time}
           onChange={e => setConditions(s => ({ ...s, best_time: e.target.value }))}
           placeholder="e.g. October – March, Early morning" />
       </div>
-
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Info size={13} strokeWidth={2} /> Admin Note</div>
-        <textarea
-          className="apl-cond-textarea"
-          value={conditions.note}
+        <textarea className="apl-cond-textarea" value={conditions.note}
           onChange={e => setConditions(s => ({ ...s, note: e.target.value }))}
-          placeholder="Any special notes for visitors..."
-          rows={3} />
+          placeholder="Any special notes for visitors..." rows={3} />
       </div>
-
       <button className="apl-cond-save" onClick={handleSave} disabled={saving}>
         <Save size={14} strokeWidth={2.5} />
         {saving ? "Saving..." : "Save Conditions"}
@@ -154,11 +128,11 @@ function ConditionsTab({ placeId }: { placeId: number }) {
 
 // ── TAGS TAB ──────────────────────────────────────────────
 function TagsTab({ placeId }: { placeId: number }) {
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
+  const [tags,        setTags]        = useState<string[]>([]);
+  const [tagInput,    setTagInput]    = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -170,27 +144,20 @@ function TagsTab({ placeId }: { placeId: number }) {
 
   const handleInputChange = (val: string) => {
     setTagInput(val);
-    if (val.trim().length > 0) {
-      setSuggestions(PREDEFINED_TAGS.filter(t =>
-        t.toLowerCase().includes(val.toLowerCase()) && !tags.includes(t)
-      ));
-    } else {
-      setSuggestions([]);
-    }
+    setSuggestions(val.trim().length > 0
+      ? PREDEFINED_TAGS.filter(t => t.toLowerCase().includes(val.toLowerCase()) && !tags.includes(t))
+      : []);
   };
 
-  const addTag = (tag: string) => {
+  const addTag    = (tag: string) => {
     const t = tag.trim();
     if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
-    setTagInput("");
-    setSuggestions([]);
+    setTagInput(""); setSuggestions([]);
   };
-
   const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
 
   const handleSave = async () => {
-    setSaving(true);
-    setMsg(null);
+    setSaving(true); setMsg(null);
     try {
       await axiosInstance.put(`/places/${placeId}/tags`, { tags });
       setMsg({ type: "success", text: "Tags saved!" });
@@ -210,28 +177,20 @@ function TagsTab({ placeId }: { placeId: number }) {
           {msg.text}
         </div>
       )}
-
-      {/* Predefined tags */}
       <div className="apl-cond-section">
         <div className="apl-cond-label"><Tag size={13} strokeWidth={2} /> Quick Add Tags</div>
         <div className="apl-tags-predefined">
           {PREDEFINED_TAGS.map(t => (
             <button key={t} type="button"
               className={`apl-tag-pill ${tags.includes(t) ? "active" : ""}`}
-              onClick={() => tags.includes(t) ? removeTag(t) : addTag(t)}>
-              {t}
-            </button>
+              onClick={() => tags.includes(t) ? removeTag(t) : addTag(t)}>{t}</button>
           ))}
         </div>
       </div>
-
-      {/* Custom tag input */}
       <div className="apl-cond-section">
         <div className="apl-cond-label">Custom Tag</div>
         <div className="apl-tag-input-wrap" style={{ position: "relative" }}>
-          <input
-            className="apl-cond-input"
-            value={tagInput}
+          <input className="apl-cond-input" value={tagInput}
             onChange={e => handleInputChange(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && tagInput.trim()) { e.preventDefault(); addTag(tagInput); } }}
             placeholder="Type and press Enter to add custom tag" />
@@ -244,8 +203,6 @@ function TagsTab({ placeId }: { placeId: number }) {
           )}
         </div>
       </div>
-
-      {/* Selected tags */}
       {tags.length > 0 && (
         <div className="apl-cond-section">
           <div className="apl-cond-label">Selected Tags ({tags.length})</div>
@@ -259,7 +216,6 @@ function TagsTab({ placeId }: { placeId: number }) {
           </div>
         </div>
       )}
-
       <button className="apl-cond-save" onClick={handleSave} disabled={saving}>
         <Save size={14} strokeWidth={2.5} />
         {saving ? "Saving..." : "Save Tags"}
@@ -272,16 +228,14 @@ function TagsTab({ placeId }: { placeId: number }) {
 function PlaceDetailModal({ place, onClose, onDelete }: {
   place: Place; onClose: () => void; onDelete: (p: Place) => void;
 }) {
-  const navigate = useNavigate();
-  const photos = parseImages(place.image);
+  const navigate    = useNavigate();
+  const photos      = parseImages(place.image);
   const [activePhoto, setActivePhoto] = useState(0);
   const [tab, setTab] = useState<ModalTab>("details");
 
   return (
     <div className="apl-overlay" onClick={onClose}>
       <div className="apl-detail-modal" onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="apl-detail-header">
           <div className="apl-detail-header-info">
             <span className={`apl-badge apl-badge--${place.status}`}>
@@ -290,6 +244,11 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
               {place.status === "rejected" && <XCircle     size={11} strokeWidth={2.5} />}
               {place.status.charAt(0).toUpperCase() + place.status.slice(1)}
             </span>
+            {(place as any).is_featured && (
+              <span className="apl-featured-badge">
+                <Star size={11} strokeWidth={2.5} fill="currentColor" /> Featured
+              </span>
+            )}
             {place.category && (
               <span className="apl-detail-cat"><Tag size={11} strokeWidth={2} /> {place.category}</span>
             )}
@@ -300,18 +259,14 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
             )}
           </div>
           <div className="apl-detail-header-actions">
-            <button
-              className="apl-view-page-btn"
-              onClick={() => { onClose(); navigate(`/place/${place.id}`); }}
-              title="View place page">
-              <ExternalLink size={13} strokeWidth={2.5} />
-              View Page
+            <button className="apl-view-page-btn"
+              onClick={() => { onClose(); navigate(`/place/${place.id}`); }}>
+              <ExternalLink size={13} strokeWidth={2.5} /> View Page
             </button>
             <button className="apl-detail-close" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
           </div>
         </div>
 
-        {/* Gallery */}
         {photos.length > 0 ? (
           <div className="apl-detail-hero">
             <img src={photos[activePhoto]} alt={place.name} />
@@ -331,12 +286,10 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
           </div>
         ) : (
           <div className="apl-detail-no-img">
-            <MapPin size={48} strokeWidth={1} />
-            <span>No photo uploaded</span>
+            <MapPin size={48} strokeWidth={1} /><span>No photo uploaded</span>
           </div>
         )}
 
-        {/* Thumbnails */}
         {photos.length > 1 && (
           <div className="apl-detail-thumbs">
             {photos.map((img, i) => (
@@ -349,32 +302,23 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
           </div>
         )}
 
-        {/* Tabs */}
         <div className="apl-modal-tabs">
-          <button
-            className={`apl-modal-tab ${tab === "details" ? "active" : ""}`}
-            onClick={() => setTab("details")}>
+          <button className={`apl-modal-tab ${tab === "details"    ? "active" : ""}`} onClick={() => setTab("details")}>
             <FileText size={13} strokeWidth={2} /> Details
           </button>
-          <button
-            className={`apl-modal-tab ${tab === "conditions" ? "active" : ""}`}
-            onClick={() => setTab("conditions")}>
+          <button className={`apl-modal-tab ${tab === "conditions" ? "active" : ""}`} onClick={() => setTab("conditions")}>
             <Settings size={13} strokeWidth={2} /> Conditions
           </button>
-          <button
-            className={`apl-modal-tab ${tab === "tags" ? "active" : ""}`}
-            onClick={() => setTab("tags")}>
+          <button className={`apl-modal-tab ${tab === "tags" ? "active" : ""}`} onClick={() => setTab("tags")}>
             <Tag size={13} strokeWidth={2} /> Tags
           </button>
         </div>
 
-        {/* Tab Content */}
         {tab === "details" && (
           <div className="apl-detail-body">
             <h2 className="apl-detail-name">{place.name}</h2>
             <div className="apl-detail-addr"><MapPin size={14} strokeWidth={2} />{place.address}</div>
             {place.description && <p className="apl-detail-desc">{place.description}</p>}
-
             <div className="apl-detail-meta">
               <div className="apl-detail-meta-item">
                 <div className="apl-detail-meta-label">Submitted By</div>
@@ -388,7 +332,7 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
                 <div className="apl-detail-meta-label">Date Submitted</div>
                 <div className="apl-detail-meta-val">
                   <Calendar size={13} strokeWidth={2} />
-                  {new Date(place.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  {new Date(place.created_at).toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}
                 </div>
               </div>
               <div className="apl-detail-meta-item">
@@ -399,7 +343,6 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
                 </div>
               </div>
             </div>
-
             <div className="apl-detail-footer">
               <button className="apl-detail-del-btn" onClick={() => { onClose(); onDelete(place); }}>
                 <Trash2 size={15} strokeWidth={2} /> Delete Place
@@ -407,18 +350,8 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
             </div>
           </div>
         )}
-
-        {tab === "conditions" && (
-          <div className="apl-tab-content-wrap">
-            <ConditionsTab placeId={place.id} />
-          </div>
-        )}
-
-        {tab === "tags" && (
-          <div className="apl-tab-content-wrap">
-            <TagsTab placeId={place.id} />
-          </div>
-        )}
+        {tab === "conditions" && <div className="apl-tab-content-wrap"><ConditionsTab placeId={place.id} /></div>}
+        {tab === "tags"       && <div className="apl-tab-content-wrap"><TagsTab placeId={place.id} /></div>}
       </div>
     </div>
   );
@@ -426,13 +359,17 @@ function PlaceDetailModal({ place, onClose, onDelete }: {
 
 // ── MAIN COMPONENT ────────────────────────────────────────
 export default function AdminPlaces() {
-  const [places, setPlaces] = useState<Place[]>([]);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [places,        setPlaces]        = useState<Place[]>([]);
+  const [filter,        setFilter]        = useState<Filter>("all");
+  const [search,        setSearch]        = useState("");
+  const [loading,       setLoading]       = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<Place | null>(null);
-  const [processing, setProcessing] = useState<number | null>(null);
+  const [processing,    setProcessing]    = useState<number | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [featuringId,   setFeaturingId]   = useState<number | null>(null);
+  const [page,          setPage]          = useState(1);
+  const [dateFrom,      setDateFrom]      = useState("");
+  const [dateTo,        setDateTo]        = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -442,10 +379,27 @@ export default function AdminPlaces() {
     });
   }, [filter]);
 
-  const filtered = places.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.address.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { setPage(1); }, [filter, search, dateFrom, dateTo]);
+
+  const filtered = places.filter(p => {
+    const matchSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.address.toLowerCase().includes(search.toLowerCase());
+    const createdAt = new Date(p.created_at);
+    const matchFrom = dateFrom ? createdAt >= new Date(dateFrom) : true;
+    const matchTo   = dateTo
+      ? createdAt <= new Date(new Date(dateTo).setHours(23, 59, 59, 999))
+      : true;
+    return matchSearch && matchFrom && matchTo;
+  });
+
+  const hasDateFilter  = dateFrom || dateTo;
+  const clearDateFilter = () => { setDateFrom(""); setDateTo(""); };
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageStart  = (safePage - 1) * PAGE_SIZE;
+  const paginated  = filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
@@ -456,11 +410,34 @@ export default function AdminPlaces() {
     setProcessing(null);
   };
 
+  const handleToggleFeatured = async (e: React.MouseEvent, place: Place) => {
+    e.stopPropagation();
+    setFeaturingId(place.id);
+    try {
+      const res = await axiosInstance.patch(`/admin/places/${place.id}/feature`);
+      if (res.data?.success) {
+        setPlaces(prev =>
+          prev.map(p => p.id === place.id ? { ...p, is_featured: res.data.is_featured } : p)
+        );
+      }
+    } catch {}
+    setFeaturingId(null);
+  };
+
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range: number[] = [];
+    for (let i = Math.max(1, safePage - delta); i <= Math.min(totalPages, safePage + delta); i++) {
+      range.push(i);
+    }
+    return range;
+  };
+
   const TABS: { label: string; value: Filter; Icon: any }[] = [
-    { label: "All",      value: "all",      Icon: MapPin },
+    { label: "All",      value: "all",      Icon: MapPin      },
     { label: "Approved", value: "approved", Icon: CheckCircle },
-    { label: "Pending",  value: "pending",  Icon: Clock },
-    { label: "Rejected", value: "rejected", Icon: XCircle },
+    { label: "Pending",  value: "pending",  Icon: Clock       },
+    { label: "Rejected", value: "rejected", Icon: XCircle     },
   ];
 
   return (
@@ -470,7 +447,10 @@ export default function AdminPlaces() {
         <p className="apl-subtitle">Manage all submitted places</p>
       </div>
 
+      {/* ── SINGLE ROW: tabs + search + date filter ── */}
       <div className="apl-controls">
+
+        {/* Status tabs */}
         <div className="apl-tabs">
           {TABS.map(({ label, value, Icon }) => (
             <button key={value}
@@ -480,83 +460,184 @@ export default function AdminPlaces() {
             </button>
           ))}
         </div>
+
+        {/* Search */}
         <div className="apl-search-wrap">
           <Search size={15} className="apl-search-icon" />
           <input className="apl-search" value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or address..." />
         </div>
+
+        {/* Date range — same row */}
+        <div className="apl-date-row">
+          <Calendar size={13} strokeWidth={2} className="apl-date-row-icon" />
+          <span className="apl-date-row-label">From</span>
+          <input
+            type="date"
+            className="apl-date-input"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={e => setDateFrom(e.target.value)}
+          />
+          <span className="apl-date-sep">—</span>
+          <span className="apl-date-row-label">To</span>
+          <input
+            type="date"
+            className="apl-date-input"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={e => setDateTo(e.target.value)}
+          />
+          {hasDateFilter && (
+            <button className="apl-date-clear" onClick={clearDateFilter}>
+              <X size={12} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
       </div>
+
+      {/* Active date filter badge */}
+      {hasDateFilter && (
+        <div className="apl-date-active-badge">
+          <Calendar size={12} strokeWidth={2} />
+          Showing {filtered.length} result{filtered.length !== 1 ? "s" : ""} in selected date range
+        </div>
+      )}
 
       {loading ? (
         <div className="apl-loading"><div className="apl-spinner" /></div>
       ) : (
-        <div className="apl-table-wrap">
-          <table className="apl-table">
-            <thead>
-              <tr>
-                <th>Place</th><th>Category</th><th>Photos</th>
-                <th>Submitted By</th><th>Status</th><th>Date</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="apl-empty">No places found.</td></tr>
-              ) : filtered.map(p => {
-                const photos = parseImages(p.image);
-                const coverImg = photos[0] || null;
-                return (
-                  <tr key={p.id} className="apl-row" onClick={() => setSelectedPlace(p)} title="Click to view details">
-                    <td>
-                      <div className="apl-place-cell">
-                        <div className="apl-place-img">
-                          {coverImg
-                            ? <img src={coverImg} alt={p.name} />
-                            : <MapPin size={20} strokeWidth={1.5} />
-                          }
-                          <div className="apl-place-img-overlay"><Eye size={14} strokeWidth={2} /></div>
+        <>
+          <div className="apl-table-wrap">
+            <table className="apl-table">
+              <thead>
+                <tr>
+                  <th>Place</th>
+                  <th>Category</th>
+                  <th>Photos</th>
+                  <th>Submitted By</th>
+                  <th>Status</th>
+                  <th>Featured</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.length === 0 ? (
+                  <tr><td colSpan={8} className="apl-empty">
+                    {hasDateFilter ? "No places found in this date range." : "No places found."}
+                  </td></tr>
+                ) : paginated.map(p => {
+                  const photos   = parseImages(p.image);
+                  const coverImg = photos[0] || null;
+                  const isFeat   = !!(p as any).is_featured;
+                  return (
+                    <tr key={p.id} className="apl-row" onClick={() => setSelectedPlace(p)}>
+                      <td>
+                        <div className="apl-place-cell">
+                          <div className="apl-place-img">
+                            {coverImg
+                              ? <img src={coverImg} alt={p.name} />
+                              : <MapPin size={20} strokeWidth={1.5} />}
+                            <div className="apl-place-img-overlay"><Eye size={14} strokeWidth={2} /></div>
+                          </div>
+                          <div>
+                            <div className="apl-place-name">{p.name}</div>
+                            <div className="apl-place-addr">{p.address}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="apl-place-name">{p.name}</div>
-                          <div className="apl-place-addr">{p.address}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span className="apl-cat">{p.category || "—"}</span></td>
-                    <td>
-                      {photos.length > 0 ? (
-                        <span className="apl-photo-count-badge">
-                          <Images size={11} strokeWidth={2} /> {photos.length}
+                      </td>
+                      <td><span className="apl-cat">{p.category || "—"}</span></td>
+                      <td>
+                        {photos.length > 0
+                          ? <span className="apl-photo-count-badge"><Images size={11} strokeWidth={2} /> {photos.length}</span>
+                          : <span className="apl-no-photo">—</span>}
+                      </td>
+                      <td className="apl-submitter">{p.submitter?.first_name} {p.submitter?.last_name}</td>
+                      <td>
+                        <span className={`apl-badge apl-badge--${p.status}`}>
+                          {p.status === "approved" && <CheckCircle size={11} strokeWidth={2.5} />}
+                          {p.status === "pending"  && <Clock       size={11} strokeWidth={2.5} />}
+                          {p.status === "rejected" && <XCircle     size={11} strokeWidth={2.5} />}
+                          {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
                         </span>
-                      ) : <span className="apl-no-photo">—</span>}
-                    </td>
-                    <td className="apl-submitter">{p.submitter?.first_name} {p.submitter?.last_name}</td>
-                    <td>
-                      <span className={`apl-badge apl-badge--${p.status}`}>
-                        {p.status === "approved" && <CheckCircle size={11} strokeWidth={2.5} />}
-                        {p.status === "pending"  && <Clock       size={11} strokeWidth={2.5} />}
-                        {p.status === "rejected" && <XCircle     size={11} strokeWidth={2.5} />}
-                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="apl-date">{new Date(p.created_at).toLocaleDateString()}</td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <button className="apl-del-btn" onClick={() => setDeleteConfirm(p)} title="Delete">
-                        <Trash2 size={15} strokeWidth={2} />
+                      </td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <button
+                          className={`apl-feat-btn ${isFeat ? "apl-feat-btn--on" : ""}`}
+                          onClick={e => handleToggleFeatured(e, p)}
+                          disabled={featuringId === p.id}>
+                          <Star size={15} strokeWidth={2} fill={isFeat ? "currentColor" : "none"} />
+                          {featuringId === p.id ? "..." : isFeat ? "Featured" : "Feature"}
+                        </button>
+                      </td>
+                      <td className="apl-date">{new Date(p.created_at).toLocaleDateString()}</td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <button className="apl-del-btn" onClick={() => setDeleteConfirm(p)}>
+                          <Trash2 size={15} strokeWidth={2} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {filtered.length > 0 && (
+            <div className="apl-pagination">
+              <div className="apl-pagination-info">
+                Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filtered.length)} of {filtered.length} places
+              </div>
+              {totalPages > 1 && (
+                <div className="apl-pagination-controls">
+                  <button className="apl-page-btn apl-page-btn--nav"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={safePage === 1}>
+                    <ChevronLeft size={15} strokeWidth={2.5} />
+                  </button>
+                  {getPageNumbers()[0] > 1 && (
+                    <>
+                      <button className="apl-page-btn" onClick={() => setPage(1)}>1</button>
+                      {getPageNumbers()[0] > 2 && <span className="apl-page-dots">…</span>}
+                    </>
+                  )}
+                  {getPageNumbers().map(n => (
+                    <button key={n}
+                      className={`apl-page-btn ${n === safePage ? "apl-page-btn--active" : ""}`}
+                      onClick={() => setPage(n)}>{n}</button>
+                  ))}
+                  {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+                    <>
+                      {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
+                        <span className="apl-page-dots">…</span>
+                      )}
+                      <button className="apl-page-btn" onClick={() => setPage(totalPages)}>
+                        {totalPages}
                       </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </>
+                  )}
+                  <button className="apl-page-btn apl-page-btn--nav"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}>
+                    <ChevronRight size={15} strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {selectedPlace && (
-        <PlaceDetailModal place={selectedPlace}
+        <PlaceDetailModal
+          place={selectedPlace}
           onClose={() => setSelectedPlace(null)}
-          onDelete={p => setDeleteConfirm(p)} />
+          onDelete={p => setDeleteConfirm(p)}
+        />
       )}
 
       {deleteConfirm && (
