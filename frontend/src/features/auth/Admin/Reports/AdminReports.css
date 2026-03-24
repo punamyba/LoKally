@@ -310,3 +310,68 @@
 .ar-sbtn--open:hover      { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 .ar-sbtn--resolved:hover  { background: #dcfce7; color: #166534; border-color: #86efac; }
 .ar-sbtn--dismissed:hover { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+.ar-status-save {
+  margin-top: 8px;
+  padding: 8px 20px; border-radius: 9px;
+  background: var(--blue-600); color: white;
+  border: none; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+  transition: all 0.15s; align-self: flex-start;
+}
+.ar-status-save:hover:not(:disabled) { background: #1d4ed8; }
+.ar-status-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ar-action-btn--unhide {
+  background: #f0fdf4; color: #16a34a;
+  border: 1.5px solid #bbf7d0;
+}
+.ar-action-btn--unhide:hover:not(:disabled) {
+  background: #16a34a; color: white;
+}
+
+/* ── DATE FILTER ROW ── */
+.ar-date-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.ar-date-field {
+  display: flex; align-items: center; gap: 7px;
+  background: white; border: 1.5px solid var(--slate-200);
+  border-radius: 9px; padding: 7px 12px;
+  color: var(--slate-500); font-size: 13px;
+}
+.ar-date-input {
+  border: none; outline: none; font-size: 13px;
+  font-family: var(--font); color: var(--slate-700);
+  background: transparent; cursor: pointer;
+}
+.ar-date-sep { color: var(--slate-400); font-size: 13px; }
+.ar-date-clear {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 9px;
+  border: 1.5px solid #fecaca; background: #fff5f5;
+  color: #ef4444; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: var(--font); transition: all 0.15s;
+}
+.ar-date-clear:hover { background: #ef4444; color: white; }
+.ar-showing {
+  margin-left: auto; font-size: 12px; font-weight: 600;
+  color: var(--slate-400);
+}
+
+/* ── PAGINATION ── */
+.ar-pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; margin-top: 20px;
+}
+.ar-page-btn {
+  min-width: 34px; height: 34px; border-radius: 8px;
+  border: 1.5px solid var(--slate-200); background: white;
+  color: var(--slate-600); font-size: 13px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font); transition: all 0.15s; padding: 0 8px;
+}
+.ar-page-btn:hover:not(:disabled) { border-color: var(--blue-500); color: var(--blue-600); }
+.ar-page-btn--on { background: var(--blue-600); color: white; border-color: var(--blue-600); }
+.ar-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }

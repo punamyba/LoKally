@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Flag, RefreshCw, CheckCircle, AlertTriangle, X,
-  MapPin, MessageSquare, User, Calendar, Eye, EyeOff,
+  MapPin, MessageSquare, User, Calendar, Eye, EyeOff, ChevronLeft,
   Trash2, ShieldAlert, ChevronRight, ExternalLink,
   Mail, Bell,
 } from "lucide-react";
@@ -10,7 +10,7 @@ import axiosInstance from "../../../../shared/config/axiosinstance";
 import { getImageUrl } from "../../../../shared/config/imageUrl";
 import "./AdminReports.css";
 
-type ReportType = "all" | "post" | "place";
+type ReportType = "all" | "post" | "place" | "hidden";
 type Report = {
   id: number;
   reason: string;
@@ -19,7 +19,7 @@ type Report = {
   created_at: string;
   reporter: { id: number; first_name: string; last_name: string; email: string };
   post?: {
-    id: number; caption?: string; images?: string;
+    id: number; caption?: string; images?: string; is_hidden?: boolean;
     author?: { id: number; first_name: string; last_name: string; email: string };
   };
   place?: {
@@ -64,23 +64,34 @@ function parseThumb(images?: string): string | null {
 }
 
 // ── Report Detail Modal ──────────────────────────────────────
-function ReportDetailModal({ report, onClose, onAction }: {
+function ReportDetailModal({ report, onClose, onAction, onStatusChange }: {
   report: Report;
   onClose: () => void;
-  onAction: (action: "dismiss" | "hide" | "delete" | "warn", reportId: number) => Promise<void>;
+  onAction: (action: "dismiss" | "hide" | "unhide" | "delete" | "warn", reportId: number) => Promise<void>;
+  onStatusChange: (reportId: number, status: string) => void;
 }) {
-  const navigate  = useNavigate();
-  const [acting,   setActing]   = useState<string | null>(null);
-  const [done,     setDone]     = useState("");
-  const [warnMsg,  setWarnMsg]  = useState("");
-  const [showWarn, setShowWarn] = useState(false);
-  const [status,   setStatus]   = useState<string>(report.status || "new");
+  const navigate      = useNavigate();
+  const [acting,      setActing]      = useState<string | null>(null);
+  const [done,        setDone]        = useState("");
+  const [warnMsg,     setWarnMsg]     = useState("");
+  const [showWarn,    setShowWarn]    = useState(false);
+  const [status,      setStatus]      = useState<string>(report.status || "new");
+  const [statusSaved, setStatusSaved] = useState(true);
+  const [isHidden,    setIsHidden]    = useState<boolean>(Boolean(report.post?.is_hidden));
 
-  const handleStatusChange = async (s: string) => {
+  const handleStatusChange = (s: string) => {
     setStatus(s);
+    setStatusSaved(false);
+  };
+
+  const saveStatus = async () => {
+    setActing("status");
     try {
-      await axiosInstance.patch(`/admin/reports/${report.id}/status`, { status: s });
-    } catch { /* silently fail — UI already updated */ }
+      await axiosInstance.patch(`/admin/reports/${report.id}/status`, { status });
+      onStatusChange(report.id, status);
+      setStatusSaved(true);
+    } catch {}
+    setActing(null);
   };
 
   const isPost  = !!report.post;
@@ -92,15 +103,27 @@ function ReportDetailModal({ report, onClose, onAction }: {
 
   const rs = getRS(report.reason);
 
-  const handle = async (action: "dismiss" | "hide" | "delete" | "warn") => {
+  const handle = async (action: "dismiss" | "hide" | "unhide" | "delete" | "warn") => {
     setActing(action);
-    await onAction(action, report.id);
-    setDone(
-      action === "dismiss" ? "Report dismissed — content stays visible." :
-      action === "hide"    ? "Content hidden from public." :
-      action === "delete"  ? "Content deleted permanently." :
-      "Warning sent to user."
-    );
+    try {
+      await onAction(action, report.id);
+      if (action === "hide") {
+        setIsHidden(true);
+        setActing(null);
+        return;
+      }
+      if (action === "unhide") {
+        setIsHidden(false);
+        setActing(null);
+        return;
+      }
+      setDone(
+        action === "dismiss" ? "Report dismissed — content stays visible." :
+        action === "delete"  ? "Content deleted permanently." :
+        "Warning sent to user."
+      );
+      setTimeout(() => onClose(), 1500);
+    } catch {}
     setActing(null);
   };
 
@@ -184,10 +207,10 @@ function ReportDetailModal({ report, onClose, onAction }: {
                     </>
                   ) : (
                     <>
-                      <div className="ar-content-title">{report.place?.name}</div>
+                      <div className="ar-content-title">{report.place?.name || "—"}</div>
                       <div className="ar-content-owner">
                         <MapPin size={11} strokeWidth={2} />
-                        {report.place?.address}
+                        {report.place?.address || "No address"}
                       </div>
                     </>
                   )}
@@ -233,6 +256,11 @@ function ReportDetailModal({ report, onClose, onAction }: {
                   </button>
                 ))}
               </div>
+              {!statusSaved && (
+                <button className="ar-status-save" onClick={saveStatus} disabled={acting === "status"}>
+                  {acting === "status" ? "Saving…" : "Save Status"}
+                </button>
+              )}
             </div>
 
             {/* Warn message input */}
@@ -256,11 +284,19 @@ function ReportDetailModal({ report, onClose, onAction }: {
                 <CheckCircle size={14} />
                 {acting === "dismiss" ? "Dismissing…" : "Dismiss Report"}
               </button>
-              <button className="ar-action-btn ar-action-btn--hide"
-                onClick={() => handle("hide")} disabled={!!acting}>
-                <EyeOff size={14} />
-                {acting === "hide" ? "Hiding…" : "Hide Content"}
-              </button>
+              {!isHidden ? (
+                <button className="ar-action-btn ar-action-btn--hide"
+                  onClick={() => handle("hide")} disabled={!!acting}>
+                  <EyeOff size={14} />
+                  {acting === "hide" ? "Hiding…" : "Hide Content"}
+                </button>
+              ) : (
+                <button className="ar-action-btn ar-action-btn--unhide"
+                  onClick={() => handle("unhide")} disabled={!!acting}>
+                  <Eye size={14} />
+                  {acting === "unhide" ? "Unhiding…" : "Unhide Content"}
+                </button>
+              )}
               {!showWarn ? (
                 <button className="ar-action-btn ar-action-btn--warn"
                   onClick={() => setShowWarn(true)} disabled={!!acting}>
@@ -296,11 +332,15 @@ export default function AdminReports() {
   const [searchParams] = useSearchParams();
   const highlightPostId = searchParams.get("postId");
 
-  const [reports,  setReports]  = useState<Report[]>([]);
-  const [filter,   setFilter]   = useState<ReportType>("all");
-  const [loading,  setLoading]  = useState(true);
+  const [reports,   setReports]   = useState<Report[]>([]);
+  const [filter,    setFilter]    = useState<ReportType>("all");
+  const [loading,   setLoading]   = useState(true);
   const [selReport, setSelReport] = useState<Report | null>(null);
-  const [toast,    setToast]    = useState<{ ok: boolean; msg: string } | null>(null);
+  const [toast,     setToast]     = useState<{ ok: boolean; msg: string } | null>(null);
+  const [dateFrom,  setDateFrom]  = useState("");
+  const [dateTo,    setDateTo]    = useState("");
+  const [page,      setPage]      = useState(1);
+  const PAGE_SIZE = 10;
 
   const notify = useCallback((ok: boolean, msg: string) => {
     setToast({ ok, msg });
@@ -311,55 +351,98 @@ export default function AdminReports() {
     setLoading(true);
     try {
       const r = await axiosInstance.get("/admin/reports", { params: { type: filter === "all" ? undefined : filter } });
+      // note: hidden filter is handled both backend and frontend
       if (r.data?.success) setReports(r.data.data || []);
     } catch { notify(false, "Failed to load reports."); }
     setLoading(false);
   }, [filter, notify]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); setPage(1); }, [load]);
 
   // Highlight row if redirected from community popup — user clicks to open
 
-  const handleAction = async (action: "dismiss" | "hide" | "delete" | "warn", reportId: number) => {
+  const handleStatusChange = useCallback((reportId: number, status: string) => {
+    setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: status as any } : r));
+  }, []);
+
+  const handleAction = async (action: "dismiss" | "hide" | "unhide" | "delete" | "warn", reportId: number) => {
     const rep = reports.find(r => r.id === reportId);
     if (!rep) return;
+
+    // helper — notify reporter after action
+    const notifyReporter = async (actionKey: string) => {
+      try {
+        await axiosInstance.post("/admin/notify-reporter", {
+          reporter_id: rep.reporter.id,
+          action: actionKey,
+          post_id:  rep.post_id  || null,
+          place_id: rep.place_id || null,
+        });
+      } catch {}
+    };
+
     try {
       if (action === "dismiss") {
         await axiosInstance.patch(`/admin/reports/${reportId}/dismiss`);
         setReports(prev => prev.filter(r => r.id !== reportId));
-        notify(true, "Report dismissed.");
+        await notifyReporter("dismissed");
+        notify(true, "Report dismissed. Reporter notified.");
+
       } else if (action === "hide") {
         const endpoint = rep.post_id
-          ? `/admin/community/${rep.post_id}/hide`
+          ? `/admin/posts/${rep.post_id}/hide`
           : `/admin/places/${rep.place_id}/hide`;
         await axiosInstance.patch(endpoint);
         setReports(prev => prev.filter(r => r.id !== reportId));
-        notify(true, "Content hidden. Owner notified.");
+        await notifyReporter("hidden");
+        notify(true, "Content hidden. Owner & reporter notified.");
+
       } else if (action === "delete") {
         const endpoint = rep.post_id
-          ? `/admin/community/${rep.post_id}/delete`
-          : `/admin/places/${rep.place_id}`;
+          ? `/posts/${rep.post_id}`          // existing post delete route
+          : `/admin/places/${rep.place_id}`; // existing place delete route
         await axiosInstance.delete(endpoint);
         setReports(prev => prev.filter(r => r.id !== reportId));
-        notify(true, "Content deleted. Owner notified.");
+        await notifyReporter("deleted");
+        notify(true, "Content deleted. Owner & reporter notified.");
+
       } else if (action === "warn") {
-        await axiosInstance.post(`/admin/users/${rep.reporter.id}/warn`, {
-          reason: rep.reason,
-          contentType: rep.post_id ? "post" : "place",
-        });
-        notify(true, "Warning sent to user via email and notification.");
+        // find content owner
+        const owner = rep.post?.author || rep.place?.submitter;
+        if (owner) {
+          await axiosInstance.post(`/admin/users/${owner.id}/warn`, {
+            reason: rep.reason,
+            contentType: rep.post_id ? "post" : "place",
+            post_id:  rep.post_id  || null,
+            place_id: rep.place_id || null,
+          });
+        }
+        // don't notify reporter for warn — warn is between admin & content owner
+        notify(true, "Warning sent to content owner.");
       }
     } catch { notify(false, "Action failed. Please try again."); }
   };
 
-  const filtered = reports.filter(r =>
-    filter === "all"   ? true :
-    filter === "post"  ? !!r.post_id :
-    filter === "place" ? !!r.place_id : true
-  );
+  const dateFiltered = reports.filter(r => {
+    if (dateFrom && new Date(r.created_at) < new Date(dateFrom)) return false;
+    if (dateTo   && new Date(r.created_at) > new Date(dateTo + "T23:59:59")) return false;
+    return true;
+  });
 
-  const postCount  = reports.filter(r => !!r.post_id).length;
-  const placeCount = reports.filter(r => !!r.place_id).length;
+  const filtered = filter === "hidden"
+    ? dateFiltered.filter(r => r.post?.is_hidden === true)
+    : dateFiltered.filter(r =>
+        filter === "all"   ? true :
+        filter === "post"  ? !!r.post_id :
+        filter === "place" ? !!r.place_id : true
+      );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const postCount   = reports.filter(r => !!r.post_id).length;
+  const placeCount  = reports.filter(r => !!r.place_id).length;
+  const hiddenCount = reports.filter(r => r.post?.is_hidden || false).length;
 
   return (
     <div className="ar-root">
@@ -386,9 +469,10 @@ export default function AdminReports() {
       {/* Filter tabs */}
       <div className="ar-filters">
         {([
-          { key: "all",   label: "All Flags",    count: reports.length },
-          { key: "post",  label: "Posts",         count: postCount,  Icon: MessageSquare },
-          { key: "place", label: "Places",        count: placeCount, Icon: MapPin },
+          { key: "all",    label: "All Flags",     count: reports.length },
+          { key: "post",   label: "Posts",          count: postCount,   Icon: MessageSquare },
+          { key: "place",  label: "Places",         count: placeCount,  Icon: MapPin },
+          { key: "hidden", label: "Hidden Content", count: hiddenCount, Icon: EyeOff },
         ] as any[]).map(f => (
           <button key={f.key} type="button"
             className={`ar-filter ${filter === f.key ? "ar-filter--on" : ""}`}
@@ -400,6 +484,27 @@ export default function AdminReports() {
             </span>
           </button>
         ))}
+      </div>
+
+      {/* Date filter */}
+      <div className="ar-date-row">
+        <div className="ar-date-field">
+          <Calendar size={13} strokeWidth={2} />
+          <input type="date" className="ar-date-input" value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
+        </div>
+        <span className="ar-date-sep">—</span>
+        <div className="ar-date-field">
+          <Calendar size={13} strokeWidth={2} />
+          <input type="date" className="ar-date-input" value={dateTo}
+            onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button className="ar-date-clear" onClick={() => { setDateFrom(""); setDateTo(""); setPage(1); }}>
+            <X size={12} strokeWidth={3} /> Clear
+          </button>
+        )}
+        <span className="ar-showing">Showing {filtered.length} of {reports.length}</span>
       </div>
 
       {/* Table */}
@@ -425,7 +530,7 @@ export default function AdminReports() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => {
+              {paginated.map(r => {
                 const isPost  = !!r.post_id;
                 const thumb   = isPost ? parseThumb(r.post?.images) : parseThumb(r.place?.image);
                 const title   = isPost
@@ -497,12 +602,29 @@ export default function AdminReports() {
         </div>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="ar-pagination">
+          <button className="ar-page-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft size={14} strokeWidth={2.5} />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <button key={p} className={`ar-page-btn ${p === page ? "ar-page-btn--on" : ""}`}
+              onClick={() => setPage(p)}>{p}</button>
+          ))}
+          <button className="ar-page-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+            <ChevronRight size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
+
       {/* Detail modal */}
       {selReport && (
         <ReportDetailModal
           report={selReport}
           onClose={() => setSelReport(null)}
           onAction={handleAction}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>
