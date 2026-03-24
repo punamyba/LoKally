@@ -1,4 +1,3 @@
-
 // Features: real places API, category filter, add place panel, geocode search overlay
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,13 +11,12 @@ import MapLocationSearch from "../Map/MapComponents/MapLocationSearch";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import {
   MapPin, Upload, X, Plus, Images, CheckCircle,
-  ChevronLeft, ChevronRight, Navigation, Search,
+  ChevronLeft, ChevronRight, Navigation, Search, Tag,
 } from "lucide-react";
 import "./ExploreMap.css";
 
 type Mode   = "explore" | "add";
 type LatLng = { lat: number; lng: number };
-
 
 const SERVER = "http://localhost:5001";
 const toFullUrl = (p: string) => p?.startsWith("http") ? p : `${SERVER}${p}`;
@@ -48,14 +46,20 @@ const CATEGORIES = [
   "Nature","Heritage","Temple","Lake","Viewpoint",
   "Hidden Gem","Adventure","Cultural","Food","Other",
 ];
+
+const PREDEFINED_TAGS = [
+  "Scenic", "Hiking", "Photography", "Peaceful", "Family Friendly",
+  "Adventure", "Cultural", "Historical", "Wildlife", "Waterfall",
+  "Sunrise", "Sunset", "Budget Friendly", "Off the beaten path",
+  "Camping", "Trekking", "Boating", "Bird Watching",
+];
+
 const MAX_IMAGES = 20;
 
-/* ── component ───────────────────────────────────────────────── */
 export default function ExploreMap() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // map instance ref for flyTo
   const mapRef = useRef<L.Map | null>(null);
 
   /* places */
@@ -95,24 +99,44 @@ export default function ExploreMap() {
   };
 
   /* UI state */
-  const [mode, setMode]                       = useState<Mode>("explore");
-  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [mobileAddOpen, setMobileAddOpen]     = useState(false);
+  const [mode, setMode]                           = useState<Mode>("explore");
+  const [mobilePanelOpen, setMobilePanelOpen]     = useState(false);
+  const [mobileAddOpen, setMobileAddOpen]         = useState(false);
   const [addPanelMinimized, setAddPanelMinimized] = useState(false);
-  const [query, setQuery]                     = useState("");
-  const [selectedPlace, setSelectedPlace]     = useState<Place | null>(null);
-  const [zoomTarget, setZoomTarget]           = useState<Place | null>(null);
-  const [tempPin, setTempPin]                 = useState<LatLng | null>(null);
-  const [nearbyPlace, setNearbyPlace]         = useState<Place | null>(null);
+  const [query, setQuery]                         = useState("");
+  const [selectedPlace, setSelectedPlace]         = useState<Place | null>(null);
+  const [zoomTarget, setZoomTarget]               = useState<Place | null>(null);
+  const [tempPin, setTempPin]                     = useState<LatLng | null>(null);
+  const [nearbyPlace, setNearbyPlace]             = useState<Place | null>(null);
 
   /* add place form */
-  const [form, setForm]         = useState({ name: "", address: "", description: "", category: "" });
+  const [form, setForm]           = useState({ name: "", address: "", description: "", category: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg]   = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles]         = useState<File[]>([]);
   const [activeSlide, setActiveSlide]       = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* tags */
+  const [selectedTags,   setSelectedTags]   = useState<string[]>([]);
+  const [tagInput,       setTagInput]       = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+
+  const handleTagInput = (val: string) => {
+    setTagInput(val);
+    setTagSuggestions(val.trim()
+      ? PREDEFINED_TAGS.filter(t => t.toLowerCase().includes(val.toLowerCase()) && !selectedTags.includes(t))
+      : []
+    );
+  };
+  const addTag       = (tag: string) => {
+    const t = tag.trim();
+    if (t && !selectedTags.includes(t)) setSelectedTags(prev => [...prev, t]);
+    setTagInput(""); setTagSuggestions([]);
+  };
+  const removeTag    = (tag: string) => setSelectedTags(prev => prev.filter(t => t !== tag));
+  const togglePreTag = (tag: string) => selectedTags.includes(tag) ? removeTag(tag) : addTag(tag);
 
   /* filtered places */
   const filteredPlaces = useMemo(() => {
@@ -191,9 +215,15 @@ export default function ExploreMap() {
     try {
       const res = await axiosInstance.post("/places", fd, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data?.success) {
-        setSubmitMsg({ type: "success", text: "Place submitted! Admin review paछi map ma dekhauxa." });
+        // save tags if any
+        if (selectedTags.length > 0 && res.data?.data?.id) {
+          try { await axiosInstance.put(`/places/${res.data.data.id}/tags`, { tags: selectedTags }); }
+          catch {}
+        }
+        setSubmitMsg({ type: "success", text: "Place submitted! Admin review paछि map ma dekhauxa." });
         setForm({ name: "", address: "", description: "", category: "" });
         setUploadedImages([]); setImageFiles([]); setActiveSlide(0); setTempPin(null);
+        setSelectedTags([]); setTagInput("");
         setTimeout(() => closeAddMode(), 3000);
       } else setSubmitMsg({ type: "error", text: res.data?.message || "Failed to submit." });
     } catch (err: any) {
@@ -201,7 +231,6 @@ export default function ExploreMap() {
     } finally { setSubmitting(false); }
   };
 
-  /* ── render ─────────────────────────────────────────────────── */
   return (
     <div className="exmap-page">
       <Navbar />
@@ -228,7 +257,7 @@ export default function ExploreMap() {
             }}
           />
 
-          {/* ── FLOATING GEOCODE SEARCH (on map, top-center) ── */}
+          {/* FLOATING GEOCODE SEARCH */}
           <div className="exmap-mapSearchOverlay">
             <MapLocationSearch onPick={handleLocationPick} />
           </div>
@@ -246,7 +275,7 @@ export default function ExploreMap() {
             <span className="fab-plus"><Plus size={22} strokeWidth={3} /></span>
           </button>
 
-          {/* ── EXPLORE SIDEBAR ── */}
+          {/* EXPLORE SIDEBAR */}
           {mode === "explore" && (
             <div className={`exmap-leftOverlay ${mobilePanelOpen ? "open" : ""}`}>
               <div className="exmap-drawerHeader">
@@ -256,7 +285,6 @@ export default function ExploreMap() {
                 </button>
               </div>
 
-              {/* category banner */}
               {categoryFilter && (
                 <div className="exmap-cat-banner">
                   <span>Filtering: <strong>{categoryFilter}</strong></span>
@@ -284,7 +312,7 @@ export default function ExploreMap() {
             </div>
           )}
 
-          {/* ── PLACE DETAILS CARD ── */}
+          {/* PLACE DETAILS CARD */}
           {mode === "explore" && selectedPlace && (
             <div className="exmap-details">
               {selectedPlace.image && (
@@ -315,7 +343,7 @@ export default function ExploreMap() {
             </div>
           )}
 
-          {/* ── ADD PLACE PANEL ── */}
+          {/* ADD PLACE PANEL */}
           {mode === "add" && (
             <div className={`exmap-addPanel ${mobileAddOpen ? "open" : ""} ${addPanelMinimized ? "minimized" : ""}`}>
               <div className="exmap-addHeader">
@@ -373,6 +401,55 @@ export default function ExploreMap() {
                     <textarea className="exmap-textarea" value={form.description} rows={3}
                       onChange={e => setForm(s => ({ ...s, description: e.target.value }))}
                       placeholder="What makes this place special?" />
+                  </div>
+
+                  {/* ── TAGS ── */}
+                  <div className="exmap-field">
+                    <label className="exmap-fieldLabel">
+                      <Tag size={12} strokeWidth={2} />
+                      Tags
+                      <span className="exmap-tagHint">Click to select or type your own</span>
+                    </label>
+                    <div className="exmap-tagsPredefined">
+                      {PREDEFINED_TAGS.map(t => (
+                        <button key={t} type="button"
+                          className={`exmap-tagPill ${selectedTags.includes(t) ? "active" : ""}`}
+                          onClick={() => togglePreTag(t)}>{t}</button>
+                      ))}
+                    </div>
+                    <div className="exmap-tagInputRow">
+                      <div className="exmap-tagInputWrap">
+                        <input className="exmap-input" value={tagInput}
+                          onChange={e => handleTagInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter" && tagInput.trim()) { e.preventDefault(); addTag(tagInput); } }}
+                          placeholder="Type a custom tag and press Enter..." />
+                        {tagSuggestions.length > 0 && (
+                          <div className="exmap-tagSuggestions">
+                            {tagSuggestions.map(s => (
+                              <div key={s} className="exmap-tagSuggestionItem"
+                                onMouseDown={() => addTag(s)}>{s}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" className="exmap-tagAddBtn"
+                        onClick={() => tagInput.trim() && addTag(tagInput)}
+                        disabled={!tagInput.trim()}>
+                        <Plus size={15} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                    {selectedTags.length > 0 && (
+                      <div className="exmap-selectedTags">
+                        {selectedTags.map(t => (
+                          <span key={t} className="exmap-selectedTag">
+                            {t}
+                            <button type="button" onClick={() => removeTag(t)}>
+                              <X size={10} strokeWidth={3} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Photos */}

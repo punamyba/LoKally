@@ -146,7 +146,7 @@
   font-size: 16px; font-weight: 800; color: #fff;
 }
 
-/* Type icon badge */
+/* ── Type icon badge ── */
 .np-type-icon {
   position: absolute; bottom: -2px; right: -4px;
   width: 22px; height: 22px; border-radius: 50%;
@@ -154,10 +154,12 @@
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
-.np-icon--blue  { background: #eff6ff; color: var(--blue); }
-.np-icon--teal  { background: #f0fdfa; color: var(--teal); }
-.np-icon--green { background: #f0fdf4; color: var(--green); }
-.np-icon--red   { background: #fef2f2; color: #ef4444; }
+.np-icon--blue   { background: #eff6ff; color: var(--blue); }
+.np-icon--teal   { background: #f0fdfa; color: var(--teal); }
+.np-icon--green  { background: #f0fdf4; color: var(--green); }
+.np-icon--red    { background: #fef2f2; color: #ef4444; }
+.np-icon--amber  { background: #fef3c7; color: #b45309; }
+.np-icon--purple { background: #f3e8ff; color: #7c3aed; }
 
 .np-content { flex: 1; min-width: 0; }
 .np-message {
@@ -177,3 +179,61 @@
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Notification detail popup ── */
+.np-popup-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(9,19,35,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.np-popup {
+  background: white; border-radius: 20px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(9,19,35,0.2);
+  animation: popUp 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  overflow: hidden;
+}
+@keyframes popUp {
+  from { transform: scale(0.92) translateY(16px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.np-popup-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 20px; border-bottom: 1px solid #f1f5f9;
+}
+.np-popup-title {
+  flex: 1; font-family: 'Outfit', sans-serif;
+  font-size: 16px; font-weight: 800; color: #0d1117;
+}
+.np-popup-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: none; background: #f1f5f9; color: #64748b;
+  cursor: pointer; display: grid; place-items: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.np-popup-close:hover { background: #e2e8f0; color: #0d1117; }
+
+.np-popup-body { padding: 20px; }
+.np-popup-msg {
+  font-size: 14.5px; color: #374151; line-height: 1.7;
+  margin: 0 0 10px;
+}
+.np-popup-time { font-size: 12px; color: #94a3b8; font-weight: 600; }
+
+.np-popup-footer {
+  padding: 0 20px 18px;
+}
+.np-popup-view {
+  width: 100%; padding: 11px;
+  background: linear-gradient(135deg, #1a7fe8, #0d9488);
+  color: white; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.np-popup-view:hover { opacity: 0.9; }

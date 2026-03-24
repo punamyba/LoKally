@@ -43,12 +43,20 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString();
 }
 
-// OpenWeatherMap icon → emoji
 const WI: Record<string, string> = {
   "01d":"☀️","01n":"🌙","02d":"⛅","02n":"⛅","03d":"☁️","03n":"☁️",
   "04d":"☁️","04n":"☁️","09d":"🌧️","09n":"🌧️","10d":"🌦️","10n":"🌦️",
   "11d":"⛈️","11n":"⛈️","13d":"❄️","13n":"❄️","50d":"🌫️","50n":"🌫️",
 };
+
+const REPORT_REASONS = [
+  "Incorrect information",
+  "Inappropriate content",
+  "Spam or fake place",
+  "Duplicate listing",
+  "Safety concern",
+  "Other",
+];
 
 const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
@@ -74,7 +82,6 @@ export default function PlaceDetails() {
   const [slideOpen,   setSlideOpen]   = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
 
-  // Real API state
   const [likes,       setLikes]       = useState<LikeStats>({ count: 0, likedByMe: false, users: [] });
   const [visits,      setVisits]      = useState<VisitStats>({ count: 0, visitedByMe: false });
   const [ratings,     setRatings]     = useState<RatingStats>({ avg: 0, total: 0, dist: {1:0,2:0,3:0,4:0,5:0}, myRating: 0 });
@@ -87,7 +94,32 @@ export default function PlaceDetails() {
   const [showLikers,  setShowLikers]  = useState(false);
   const [weather,     setWeather]     = useState<any>(null);
 
-  // Fetch place
+  // Report modal state
+  const [reportOpen,   setReportOpen]   = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportNote,   setReportNote]   = useState("");
+  const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+
+  const submitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportReason) return;
+    setReportStatus("sending");
+    try {
+      await axiosInstance.post(`/places/${id}/report`, {
+        reason: reportReason,
+        note: reportNote.trim() || undefined,
+      });
+      setReportStatus("done");
+    } catch {
+      setReportStatus("error");
+    }
+  };
+
+  const closeReport = () => {
+    setReportOpen(false);
+    setReportReason(""); setReportNote(""); setReportStatus("idle");
+  };
+
   useEffect(() => {
     if (!id) return;
     axiosInstance.get(`/places/${id}`)
@@ -107,7 +139,6 @@ export default function PlaceDetails() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Fetch social data (likes, visits, ratings, comments, tags, conditions)
   const fetchSocial = useCallback(async () => {
     if (!id) return;
     const [l, v, r, c, t, cond] = await Promise.allSettled([
@@ -128,7 +159,6 @@ export default function PlaceDetails() {
 
   useEffect(() => { fetchSocial(); }, [fetchSocial]);
 
-  // Real-time weather (OpenWeatherMap — needs VITE_WEATHER_API_KEY)
   useEffect(() => {
     if (!place) return;
     const key = (import.meta as any).env?.VITE_WEATHER_API_KEY;
@@ -152,7 +182,6 @@ export default function PlaceDetails() {
       }).catch(() => {});
   }, [place]);
 
-  // Keyboard nav in slideshow
   useEffect(() => {
     if (!slideOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -166,7 +195,6 @@ export default function PlaceDetails() {
 
   const openSlide = (index = 0) => { setActivePhoto(index); setSlideOpen(true); };
 
-  // Handlers
   const handleLike = async () => {
     try {
       const res = await axiosInstance.post(`/places/${id}/like`);
@@ -223,12 +251,13 @@ export default function PlaceDetails() {
     return "info";
   };
 
-  // Fallback weather when no API key
   const W = weather || {
     temp: "--", condition: "Add VITE_WEATHER_API_KEY for live weather",
     wind: "--", humidity: "--", icon: "02d",
     forecast: ["Today", "Tomorrow", "Day 3", "Day 4"].map(day => ({ day, high: "--", low: "--", icon: "02d" })),
   };
+
+  const maxDist = Math.max(...Object.values(ratings.dist), 1);
 
   if (loading) return (
     <div className="pd-page"><Navbar />
@@ -257,7 +286,7 @@ export default function PlaceDetails() {
           <ArrowLeft size={16} strokeWidth={2.5} /> Back
         </button>
 
-        {/* ── HERO IMAGE + photo count ── */}
+        {/* HERO */}
         <div className="pd-hero" onClick={() => photos.length > 0 && openSlide(0)}>
           {photos.length > 0
             ? <img src={photos[0]} alt={place.name} className="pd-hero-img" />
@@ -289,7 +318,7 @@ export default function PlaceDetails() {
           )}
         </div>
 
-        {/* ── BODY ── */}
+        {/* BODY */}
         <div className="pd-body">
           <div className="pd-left">
 
@@ -305,7 +334,6 @@ export default function PlaceDetails() {
                 <div className="pd-verified"><BadgeCheck size={16} strokeWidth={2} /> Verified</div>
               </div>
 
-              {/* Rating summary inline */}
               <div className="pd-rating-summary">
                 <span className="pd-rating-avg">{ratings.avg.toFixed(1)}</span>
                 <div className="pd-stars-display">
@@ -322,14 +350,12 @@ export default function PlaceDetails() {
                 {place.category && (
                   <span className="pd-cat-badge"><Tag size={11} strokeWidth={2.5} /> {place.category}</span>
                 )}
-                {/* Click to show who liked */}
                 <button className="pd-stat pd-stat-btn" onClick={() => setShowLikers(v => !v)}>
                   <ThumbsUp size={13} strokeWidth={2} /> {likes.count} likes
                 </button>
                 <span className="pd-stat"><Footprints size={13} strokeWidth={2} /> {visits.count} visited</span>
               </div>
 
-              {/* Who liked popup */}
               {showLikers && likes.users.length > 0 && (
                 <div className="pd-liked-by">
                   <div className="pd-liked-by-title">Liked by</div>
@@ -430,20 +456,37 @@ export default function PlaceDetails() {
               </div>
             </div>
 
-            {/* Rating breakdown */}
+            {/* ── RATING BREAKDOWN — Google Maps style ── */}
             {ratings.total > 0 && (
               <div className="pd-card pd-rating-breakdown">
-                <div className="pd-section-label"><Star size={13} strokeWidth={2} /> Rating Breakdown</div>
-                {[5,4,3,2,1].map(s => (
-                  <div key={s} className="pd-rating-bar-row">
-                    <span className="pd-rating-bar-label">{s}★</span>
-                    <div className="pd-rating-bar-track">
-                      <div className="pd-rating-bar-fill"
-                        style={{ width: `${ratings.total ? (ratings.dist[s] / ratings.total) * 100 : 0}%` }} />
+                <div className="pd-section-label"><Star size={13} strokeWidth={2} /> Review Summary</div>
+                <div className="pd-rb-inner">
+                  {/* Left: big number */}
+                  <div className="pd-rb-left">
+                    <div className="pd-rb-big">{ratings.avg.toFixed(1)}</div>
+                    <div className="pd-rb-stars">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} size={16} strokeWidth={1.5}
+                          fill={s <= Math.round(ratings.avg) ? "#f59e0b" : "none"}
+                          color={s <= Math.round(ratings.avg) ? "#f59e0b" : "#cbd5e1"} />
+                      ))}
                     </div>
-                    <span className="pd-rating-bar-count">{ratings.dist[s]}</span>
+                    <div className="pd-rb-total">{ratings.total} review{ratings.total !== 1 ? "s" : ""}</div>
                   </div>
-                ))}
+                  {/* Right: bars */}
+                  <div className="pd-rb-bars">
+                    {[5,4,3,2,1].map(s => (
+                      <div key={s} className="pd-rb-row">
+                        <span className="pd-rb-label">{s}</span>
+                        <div className="pd-rb-track">
+                          <div className="pd-rb-fill"
+                            style={{ width: `${(ratings.dist[s] / maxDist) * 100}%` }} />
+                        </div>
+                        <span className="pd-rb-count">{ratings.dist[s]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -453,7 +496,6 @@ export default function PlaceDetails() {
                 <MessageCircle size={13} strokeWidth={2} /> Comments ({comments.length})
               </div>
 
-              {/* Reply indicator */}
               {replyTo && (
                 <div className="pd-reply-indicator">
                   <Reply size={13} /> Replying to <strong>{replyTo.name}</strong>
@@ -502,8 +544,6 @@ export default function PlaceDetails() {
                           </button>
                         )}
                       </div>
-
-                      {/* Threaded replies */}
                       {(c.replies || []).length > 0 && (
                         <div className="pd-replies">
                           {(c.replies || []).map(r => (
@@ -571,7 +611,6 @@ export default function PlaceDetails() {
               </div>
             </div>
 
-            {/* Tags from DB */}
             {tags.length > 0 && (
               <div className="pd-card">
                 <div className="pd-section-label"><Tag size={13} strokeWidth={2} /> Tags</div>
@@ -581,12 +620,15 @@ export default function PlaceDetails() {
               </div>
             )}
 
-            <button className="pd-report-btn"><Flag size={13} strokeWidth={2.5} /> Report Issue</button>
+            {/* Report button */}
+            <button className="pd-report-btn" onClick={() => setReportOpen(true)}>
+              <Flag size={13} strokeWidth={2.5} /> Report Issue
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── FULLSCREEN SLIDESHOW ── */}
+      {/* FULLSCREEN SLIDESHOW */}
       {slideOpen && (
         <div className="pd-slideshow-overlay" onClick={() => setSlideOpen(false)}>
           <div className="pd-slideshow-inner" onClick={e => e.stopPropagation()}>
@@ -617,6 +659,61 @@ export default function PlaceDetails() {
                   ))}
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── REPORT MODAL ── */}
+      {reportOpen && (
+        <div className="pd-report-overlay" onClick={closeReport}>
+          <div className="pd-report-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-report-head">
+              <div className="pd-report-icon"><Flag size={16} strokeWidth={2.5} /></div>
+              <div>
+                <div className="pd-report-title">Report an Issue</div>
+                <div className="pd-report-sub">Help us keep LoKally accurate</div>
+              </div>
+              <button className="pd-report-close" onClick={closeReport}><X size={16} /></button>
+            </div>
+
+            {reportStatus === "done" ? (
+              <div className="pd-report-done">
+                <CheckCircle size={40} strokeWidth={1.5} className="pd-report-done-icon" />
+                <div className="pd-report-done-title">Report submitted!</div>
+                <div className="pd-report-done-sub">Thank you for helping keep LoKally accurate. Our team will review it shortly.</div>
+                <button className="pd-report-done-btn" onClick={closeReport}>Close</button>
+              </div>
+            ) : (
+              <form className="pd-report-form" onSubmit={submitReport}>
+                <div className="pd-report-field">
+                  <label className="pd-report-label">What's the issue?</label>
+                  <div className="pd-report-reasons">
+                    {REPORT_REASONS.map(r => (
+                      <button key={r} type="button"
+                        className={`pd-report-reason ${reportReason === r ? "active" : ""}`}
+                        onClick={() => setReportReason(r)}>
+                        {reportReason === r && <CheckCircle size={13} strokeWidth={2.5} />}
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pd-report-field">
+                  <label className="pd-report-label">Additional details <span className="pd-report-optional">(optional)</span></label>
+                  <textarea className="pd-report-textarea" rows={3}
+                    value={reportNote}
+                    onChange={e => setReportNote(e.target.value)}
+                    placeholder="Describe the issue in more detail..." />
+                </div>
+                {reportStatus === "error" && (
+                  <div className="pd-report-err">Failed to submit. Please try again.</div>
+                )}
+                <button className="pd-report-submit" type="submit"
+                  disabled={!reportReason || reportStatus === "sending"}>
+                  {reportStatus === "sending" ? "Submitting…" : <><Send size={14} /> Submit Report</>}
+                </button>
+              </form>
             )}
           </div>
         </div>
