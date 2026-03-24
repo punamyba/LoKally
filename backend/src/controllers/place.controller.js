@@ -1,4 +1,5 @@
 import { Place, User } from "../models/index.js";
+import PostReport from "../models/postreport.model.js";
 
 /* PUBLIC: approved places only */
 export const getPlaces = async (req, res) => {
@@ -126,5 +127,37 @@ export const deletePlace = async (req, res) => {
     res.json({ success: true, message: "Place delete vayo" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const reportPlace = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, note } = req.body;
+    const userId = req.user.id;
+
+    if (!reason?.trim()) {
+      return res.status(400).json({ success: false, message: "Reason required" });
+    }
+
+    const place = await Place.findByPk(id);
+    if (!place) return res.status(404).json({ success: false, message: "Place not found" });
+
+    const existing = await PostReport.findOne({ where: { place_id: id, user_id: userId } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: "Already reported" });
+    }
+
+    await PostReport.create({
+      place_id: id,
+      user_id: userId,
+      reason: reason.trim(),
+      note: note?.trim() || null,
+    });
+
+    return res.json({ success: true, message: "Report submitted." });
+  } catch (err) {
+    console.error("reportPlace error:", err.message);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };

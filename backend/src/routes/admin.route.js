@@ -2,6 +2,7 @@ import express from "express";
 import authMiddleware, { adminOnly } from "../middleware/auth.middleware.js";
 import upload from "../middleware/placeupload.middleware.js";
 import * as AdminController from "../controllers/admin.controller.js";
+import * as PostController from "../controllers/post.controller.js";
 
 const router = express.Router();
 
@@ -35,5 +36,9 @@ router.get("/reports",              AdminController.getAllReports);
 router.patch("/reports/:id/dismiss", AdminController.dismissReport);
 router.patch("/reports/:id/status",  AdminController.updateReportStatus);
 router.post("/users/:id/warn",      AdminController.warnUser);
+router.post("/notify-reporter",      AdminController.notifyReporter);
+router.patch("/posts/:id/hide",       PostController.adminHidePost);
+router.patch("/posts/:id/unhide",     PostController.adminUnhidePost);
+router.delete("/posts/:id",           PostController.adminDeletePost);
 
 export default router;

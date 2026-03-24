@@ -6,11 +6,14 @@ const PostReport = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
 
-    post_id: { type: DataTypes.INTEGER, allowNull: false },
-    user_id: { type: DataTypes.INTEGER, allowNull: false },
+    post_id:  { type: DataTypes.INTEGER, allowNull: true },   // null for place reports
+    place_id: { type: DataTypes.INTEGER, allowNull: true },   // null for post reports
+    user_id:  { type: DataTypes.INTEGER, allowNull: false },
 
     reason:    { type: DataTypes.STRING(255), allowNull: false },
-    dismissed: { type: DataTypes.BOOLEAN, defaultValue: false },
+    note:      { type: DataTypes.TEXT,        allowNull: true  },
+    status:    { type: DataTypes.STRING(20),  defaultValue: "new" },
+    dismissed: { type: DataTypes.BOOLEAN,     defaultValue: false },
   },
   {
     tableName: "post_reports",
@@ -18,18 +21,17 @@ const PostReport = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
-    indexes: [
-      { unique: true, fields: ["post_id", "user_id"] }, // one report per user per post
-    ],
   }
 );
 
 (async () => {
-  const { default: Post } = await import("./post.model.js");
-  const { default: User } = await import("./user.model.js");
+  const { default: Post }  = await import("./post.model.js");
+  const { default: User }  = await import("./user.model.js");
+  const { default: Place } = await import("./place.model.js");
 
-  PostReport.belongsTo(Post, { foreignKey: "post_id", as: "post" });
-  PostReport.belongsTo(User, { foreignKey: "user_id", as: "reporter" });
+  PostReport.belongsTo(Post,  { foreignKey: "post_id",  as: "post"     });
+  PostReport.belongsTo(User,  { foreignKey: "user_id",  as: "reporter" });
+  PostReport.belongsTo(Place, { foreignKey: "place_id", as: "place"    });
 })();
 
 export default PostReport;

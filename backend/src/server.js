@@ -5,6 +5,8 @@ import sequelize from "./config/db.js";
 import "./models/index.js";
 import User from "./models/user.model.js";
 import Notification from "./models/notification.model.js";
+import PostReport from "./models/postreport.model.js";
+import Place from "./models/place.model.js";
 
 const PORT = process.env.PORT || 5001;
 
@@ -21,6 +23,12 @@ const startServer = async () => {
 
     await Notification.sync({ alter: true });
     console.log("Notification model updated");
+
+    await PostReport.sync({ alter: true });
+    console.log("PostReport model updated");
+
+    await Place.sync({ alter: true });
+    console.log("Place model updated");
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

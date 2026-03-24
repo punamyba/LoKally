@@ -5,7 +5,7 @@ import PostComment from "../models/postcomment.model.js";
 import PostBookmark from "../models/postbookmark.model.js";
 import PostReport from "../models/postreport.model.js";
 import User from "../models/user.model.js";
-import { createNotification } from "./notification.controller.js";   // ← NEW
+import { createNotification } from "./notification.controller.js";
 
 async function attachUserFlags(posts, userId) {
   if (!userId || posts.length === 0) {
@@ -47,6 +47,15 @@ const AUTHOR_INCLUDE = {
   as: "author",
   attributes: ["id", "first_name", "last_name", "avatar"],
 };
+
+// ── Helper: cascade delete a post ─────────────────────────────
+async function cascadeDeletePost(postId) {
+  await PostLike.destroy({ where: { post_id: postId } });
+  await PostComment.destroy({ where: { post_id: postId } });
+  await PostBookmark.destroy({ where: { post_id: postId } });
+  await PostReport.destroy({ where: { post_id: postId } });
+  await Post.destroy({ where: { id: postId } });
+}
 
 export const getFeed = async (req, res) => {
   try {
@@ -244,7 +253,7 @@ export const deletePost = async (req, res) => {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
-    await post.destroy();
+    await cascadeDeletePost(post.id);
     return res.json({ success: true, message: "Deleted" });
   } catch (err) {
     console.error("deletePost:", err.message);
@@ -267,29 +276,24 @@ export const toggleLike = async (req, res) => {
 
     if (existing) {
       if (existing.react_type === reactType) {
-        // Unlike — remove like
         await existing.destroy();
         await post.decrement("likes_count");
         return res.json({ success: true, liked: false, react_type: null });
       } else {
-        // Change react type
         await existing.update({ react_type: reactType });
         return res.json({ success: true, liked: true, react_type: reactType });
       }
     } else {
-      // New like — create + notify
       await PostLike.create({ post_id: postId, user_id: userId, react_type: reactType });
       await post.increment("likes_count");
 
-      // ── Notification ────────────────────────────────────────────────────
       await createNotification({
-        user_id:  post.user_id,           // post owner gets notified
-        actor_id: userId,                 // person who liked
+        user_id:  post.user_id,
+        actor_id: userId,
         type:     "like",
         post_id:  postId,
         message:  `${req.user.first_name} ${req.user.last_name} liked your post`,
       });
-      // ────────────────────────────────────────────────────────────────────
 
       return res.json({ success: true, liked: true, react_type: reactType });
     }
@@ -322,7 +326,6 @@ export const addComment = async (req, res) => {
 
     if (!parent_id) await post.increment("comments_count");
 
-    // ── Notification (only for top-level comments, not replies) ─────────
     if (!parent_id) {
       await createNotification({
         user_id:  post.user_id,
@@ -332,7 +335,6 @@ export const addComment = async (req, res) => {
         message:  `${req.user.first_name} ${req.user.last_name} commented on your post`,
       });
     }
-    // ────────────────────────────────────────────────────────────────────
 
     const full = await PostComment.findByPk(comment.id, {
       include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
@@ -420,7 +422,7 @@ export const reportPost = async (req, res) => {
   }
 };
 
-// ── Admin functions ────────────────────────────────────────────────────────
+// ── Admin functions ────────────────────────────────────────────
 export const adminHidePost = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
@@ -447,7 +449,7 @@ export const adminDeletePost = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.destroy();
+    await cascadeDeletePost(post.id);
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

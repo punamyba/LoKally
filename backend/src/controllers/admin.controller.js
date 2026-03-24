@@ -1,6 +1,8 @@
 // Stores as JSON string if multiple, single path if one image
 
-import { Place, User, PostReport } from "../models/index.js";
+import { Place, User, PostReport, Post } from "../models/index.js";
+import { Op } from "sequelize";
+import Notification from "../models/notification.model.js";
 
 const placeWithUser = {
   include: [
@@ -48,9 +50,35 @@ export const getPlaces = async (req, res) => {
 /* APPROVE */
 export const approvePlace = async (req, res) => {
   try {
-    const place = await Place.findByPk(req.params.id);
+    const place = await Place.findByPk(req.params.id, {
+      include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] }],
+    });
     if (!place) return res.status(404).json({ success: false, message: "Place feuna" });
     await place.update({ status: "approved", approved_by: req.user.id, approved_at: new Date(), rejected_reason: null });
+
+    // Email + notification to submitter
+    if (place.submitter) {
+      try {
+        const { sendPlaceApprovedEmail } = await import("../utils/email.js");
+        await sendPlaceApprovedEmail({
+          to: place.submitter.email,
+          firstName: place.submitter.first_name,
+          placeName: place.name,
+        });
+      } catch (e) { console.warn("Approve email failed:", e.message); }
+
+      try {
+        const models = await import("../models/index.js");
+        const N = models.Notification || models.default?.Notification;
+        if (N) await N.create({
+          user_id: place.submitter.id,
+          type: "place_approved",
+          message: `Your place "${place.name}" has been approved and is now live!`,
+          is_read: false,
+        });
+      } catch (e) { console.warn("Approve notification failed:", e.message); }
+    }
+
     res.json({ success: true, data: place });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
@@ -62,9 +90,36 @@ export const rejectPlace = async (req, res) => {
   try {
     const { reason } = req.body;
     if (!reason) return res.status(400).json({ success: false, message: "Reason chainxa" });
-    const place = await Place.findByPk(req.params.id);
+    const place = await Place.findByPk(req.params.id, {
+      include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] }],
+    });
     if (!place) return res.status(404).json({ success: false, message: "Place feuna" });
     await place.update({ status: "rejected", approved_by: req.user.id, rejected_reason: reason });
+
+    // Email + notification to submitter
+    if (place.submitter) {
+      try {
+        const { sendPlaceRejectedEmail } = await import("../utils/email.js");
+        await sendPlaceRejectedEmail({
+          to: place.submitter.email,
+          firstName: place.submitter.first_name,
+          placeName: place.name,
+          reason,
+        });
+      } catch (e) { console.warn("Reject email failed:", e.message); }
+
+      try {
+        const models = await import("../models/index.js");
+        const N = models.Notification || models.default?.Notification;
+        if (N) await N.create({
+          user_id: place.submitter.id,
+          type: "place_rejected",
+          message: `Your place "${place.name}" was not approved. Reason: ${reason}`,
+          is_read: false,
+        });
+      } catch (e) { console.warn("Reject notification failed:", e.message); }
+    }
+
     res.json({ success: true, data: place });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
@@ -202,22 +257,41 @@ export const getAllReports = async (req, res) => {
     const { type } = req.query;
     let reports = [];
 
-    if (!type || type === "post") {
+    // ── Post reports ──────────────────────────────────────────
+    if (!type || type === "post" || type === "hidden") {
       const postReports = await PostReport.findAll({
+        where: { post_id: { [Op.ne]: null } },
         include: [
           { model: User, as: "reporter", attributes: ["id", "first_name", "last_name", "email"] },
           {
             association: "post",
-            attributes: ["id", "caption", "images"],
+            attributes: ["id", "caption", "images", "is_hidden"],
             include: [{ model: User, as: "author", attributes: ["id", "first_name", "last_name", "email"] }],
           },
         ],
         order: [["created_at", "DESC"]],
       });
-      reports = [...reports, ...postReports.map(r => ({ ...r.toJSON(), post_id: r.post_id }))];
+      let mapped = postReports.map(r => ({ ...r.toJSON(), post_id: r.post_id }));
+      if (type === "hidden") mapped = mapped.filter(r => r.post?.is_hidden === true);
+      reports = [...reports, ...mapped];
     }
 
-    // Place reports can be added here when PlaceReport model exists
+    // ── Place reports ─────────────────────────────────────────
+    if (!type || type === "place") {
+      const placeReports = await PostReport.findAll({
+        where: { place_id: { [Op.ne]: null } },
+        include: [
+          { model: User, as: "reporter", attributes: ["id", "first_name", "last_name", "email"] },
+          {
+            association: "place",
+            attributes: ["id", "name", "address", "image"],
+            include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] }],
+          },
+        ],
+        order: [["created_at", "DESC"]],
+      });
+      reports = [...reports, ...placeReports.map(r => ({ ...r.toJSON(), place_id: r.place_id }))];
+    }
 
     res.json({ success: true, data: reports });
   } catch (err) {
@@ -243,48 +317,84 @@ export const dismissReport = async (req, res) => {
 export const warnUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason, contentType } = req.body;
+    const { reason, contentType, post_id, place_id } = req.body;
     const user = await User.findByPk(id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // In-app notification — dynamic import so missing model doesn't crash
+    // In-app notification to content owner (warned user)
     try {
-      const models = await import("../models/index.js");
-      const NotifModel = models.Notification || models.default?.Notification;
-      if (NotifModel) {
-        await NotifModel.create({
-          user_id: user.id,
-          type: "warning",
-          message: `Your ${contentType || "content"} has been flagged: ${reason || "Policy violation"}. Please review our community guidelines.`,
-          is_read: false,
-        });
-      }
+      await Notification.create({
+        user_id: user.id,
+        type: "warning",
+        post_id: post_id || null,
+        place_id: place_id || null,
+        message: `⚠️ Warning: Your ${contentType || "content"} has been flagged by our moderation team. Reason: ${reason || "Policy violation"}. Please review our community guidelines to avoid further action.`,
+        is_read: false,
+      });
     } catch (notifErr) {
       console.warn("Notification create failed:", notifErr.message);
     }
 
-    // Email — dynamic import so missing util doesn't crash server
+    // Email to warned user
     try {
-      const { sendEmail } = await import("../utils/email.js");
-      await sendEmail({
+      const { sendWarningEmail } = await import("../utils/email.js");
+      await sendWarningEmail({
         to: user.email,
-        subject: "Content Warning — LoKally Nepal",
-        html: `
-          <p>Hi ${user.first_name},</p>
-          <p>Your ${contentType || "content"} on LoKally Nepal has been flagged by our moderation team.</p>
-          <p><strong>Reason:</strong> ${reason || "Policy violation"}</p>
-          <p>Please review our community guidelines to ensure your content follows our policies.</p>
-          <p>Repeated violations may result in account suspension.</p>
-          <br/><p>— LoKally Nepal Team</p>
-        `,
+        firstName: user.first_name,
+        contentType: contentType || "content",
+        reason: reason || "Policy violation",
       });
     } catch (emailErr) {
-      console.warn("Email send failed (utils/email.js may not exist):", emailErr.message);
+      console.warn("Warning email failed:", emailErr.message);
     }
 
     res.json({ success: true, message: "Warning sent to user" });
   } catch (err) {
     console.error("warnUser error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ── NOTIFY REPORTER (dismiss/resolve/hide/delete) ─────────────── */
+export const notifyReporter = async (req, res) => {
+  try {
+    const { reporter_id, action, post_id, place_id } = req.body;
+    const reporter = await User.findByPk(reporter_id);
+    if (!reporter) return res.status(404).json({ success: false, message: "Reporter not found" });
+
+    const messages = {
+      dismissed: "Your report has been reviewed. The reported content was found to not violate our guidelines.",
+      hidden:    "Your report has been reviewed. The reported content has been hidden from public view.",
+      deleted:   "Your report has been reviewed. The reported content has been permanently removed.",
+      resolved:  "Your report has been reviewed and resolved. Thank you for helping keep LoKally Nepal safe!",
+    };
+    const msg = messages[action] || "Your report has been reviewed by our team. Thank you for helping keep LoKally Nepal safe!";
+
+    try {
+      await Notification.create({
+        user_id: reporter.id,
+        type: "reported",
+        post_id: post_id || null,
+        place_id: place_id || null,
+        message: msg,
+        is_read: false,
+      });
+    } catch (e) { console.warn("Reporter notification failed:", e.message); }
+
+    // Email to reporter
+    try {
+      const { sendReportStatusEmail } = await import("../utils/email.js");
+      const statusMap = { resolved: "resolved", dismissed: "dismissed", hidden: "resolved", deleted: "resolved" };
+      await sendReportStatusEmail({
+        to: reporter.email,
+        firstName: reporter.first_name,
+        status: statusMap[action] || "resolved",
+      });
+    } catch (e) { console.warn("Reporter email failed:", e.message); }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("notifyReporter error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -305,6 +415,55 @@ export const updateReportStatus = async (req, res) => {
     res.json({ success: true, data: report });
   } catch (err) {
     console.error("updateReportStatus error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ── HIDE / UNHIDE POST ────────────────────────────────────────── */
+export const hidePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+    await post.update({ is_hidden: true });
+
+    // Notify post owner
+    try {
+      await Notification.create({
+        user_id: post.user_id,
+        type: "warning",
+        post_id: post.id,
+        message: "Your post has been hidden by our moderation team for violating community guidelines.",
+        is_read: false,
+      });
+    } catch (e) { console.warn("Hide notification failed:", e.message); }
+
+    try {
+      const owner = await User.findByPk(post.user_id);
+      if (owner) {
+        const { sendContentHiddenEmail } = await import("../utils/email.js");
+        await sendContentHiddenEmail({
+          to: owner.email,
+          firstName: owner.first_name,
+          contentType: "post",
+        });
+      }
+    } catch (e) { console.warn("Hide email failed:", e.message); }
+
+    res.json({ success: true, message: "Post hidden" });
+  } catch (err) {
+    console.error("hidePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const unhidePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+    await post.update({ is_hidden: false });
+    res.json({ success: true, message: "Post unhidden" });
+  } catch (err) {
+    console.error("unhidePost error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

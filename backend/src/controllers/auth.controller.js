@@ -7,7 +7,7 @@ import sendMail from "../services/mailer.js";
 import {
   getVerifyEmailHTML,
   getPasswordResetHTML,
-} from "../../Utils/authEmailtemp.js";
+} from "../utils/authEmailtemp.js";
 
 /* Generate 6-digit OTP */
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();

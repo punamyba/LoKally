@@ -7,6 +7,7 @@ import {
   createPlace,
   updatePlace,
   deletePlace,
+  reportPlace,
 } from "../controllers/place.controller.js";
 
 import authMiddleware from "../middleware/auth.middleware.js";
@@ -24,5 +25,6 @@ router.get("/:id", getPlaceById);
 router.post("/", authMiddleware, upload.array("images", 20), createPlace);
 router.put("/:id", authMiddleware, upload.single("image"), updatePlace);
 router.delete("/:id", authMiddleware, deletePlace);
+router.post("/:id/report", authMiddleware, reportPlace);
 
 export default router;
