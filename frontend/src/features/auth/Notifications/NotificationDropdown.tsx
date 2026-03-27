@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, ExternalLink, ThumbsUp, MessageCircle, MapPin, X, Mail } from "lucide-react";
+import {
+  Bell, Check, ExternalLink, ThumbsUp, MessageCircle,
+  MapPin, X, Mail, ShieldAlert, Flag,
+} from "lucide-react";
 import "./NotificationDropdown.css";
 
 const API    = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -29,6 +32,8 @@ const typeConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   place_approved: { icon: <MapPin size={13} strokeWidth={2.5} />,        color: "#16a34a" },
   place_rejected: { icon: <X size={13} strokeWidth={2.5} />,             color: "#ef4444" },
   contact_reply:  { icon: <Mail size={13} strokeWidth={2.5} />,          color: "#8b5cf6" },
+  warning:        { icon: <ShieldAlert size={13} strokeWidth={2.5} />,   color: "#b45309" },
+  reported:       { icon: <Flag size={13} strokeWidth={2.5} />,          color: "#ef4444" },
 };
 
 type Notif = {
@@ -38,25 +43,33 @@ type Notif = {
   actor?: { id: number; first_name: string; last_name: string; avatar?: string };
 };
 
+const POPUP_TYPES = ["warning", "reported", "place_rejected"];
+
 const buildMessage = (n: Notif): React.ReactNode => {
   const actorName = n.actor?.first_name && n.actor?.last_name
     ? `${n.actor.first_name} ${n.actor.last_name}`
     : "Someone";
-
   if (n.type === "like")           return <><strong>{actorName}</strong> liked your post</>;
   if (n.type === "comment")        return <><strong>{actorName}</strong> commented on your post</>;
   if (n.type === "place_approved") return <>{n.message}</>;
   if (n.type === "place_rejected") return <>{n.message}</>;
   if (n.type === "contact_reply")  return <>Admin replied to your message</>;
+  if (n.type === "warning")        return <>{n.message}</>;
+  if (n.type === "reported")       return <>{n.message}</>;
   return <><strong>{actorName}</strong> {n.message}</>;
 };
 
 const getRedirectPath = (n: Notif): string | null => {
-  if (n.post_id)  return `/community`;
-  if (n.place_id) return `/place/${n.place_id}`;
+  if (n.type === "like" || n.type === "comment")
+    return n.post_id ? `/community/post/${n.post_id}` : null;
+  if (n.type === "place_approved")
+    return n.place_id ? `/place/${n.place_id}` : `/explore-map`;
   if (n.type === "contact_reply") return "/contact";
+  if (n.post_id)  return `/community/post/${n.post_id}`;
+  if (n.place_id) return `/place/${n.place_id}`;
   return null;
 };
+
 
 export default function NotificationDropdown() {
   const navigate  = useNavigate();
@@ -118,72 +131,80 @@ export default function NotificationDropdown() {
       setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
       setUnread(u => Math.max(0, u - 1));
     }
+
     setOpen(false);
+
+    // action notifications → go to notifications page with state flag
+    if (POPUP_TYPES.includes(n.type)) {
+      navigate("/notifications", { state: { fromNotif: true } });
+      return;
+    }
+
     const path = getRedirectPath(n);
     if (path) navigate(path);
   };
 
   return (
     <div className="nd-wrap" ref={wrapRef}>
-      <button className="nd-bell" onClick={handleOpen} type="button">
-        <Bell size={20} strokeWidth={2} />
-        {unread > 0 && <span className="nd-badge">{unread > 99 ? "99+" : unread}</span>}
-      </button>
+        <button className="nd-bell" onClick={handleOpen} type="button">
+          <Bell size={20} strokeWidth={2} />
+          {unread > 0 && <span className="nd-badge">{unread > 99 ? "99+" : unread}</span>}
+        </button>
 
-      {open && (
-        <div className="nd-dropdown">
-          <div className="nd-header">
-            <span className="nd-title">Notifications</span>
-            {unread > 0 && (
-              <button className="nd-mark-all" onClick={markAllRead} type="button">
-                <Check size={13} /> Mark all read
+        {open && (
+          <div className="nd-dropdown">
+            <div className="nd-header">
+              <span className="nd-title">Notifications</span>
+              {unread > 0 && (
+                <button className="nd-mark-all" onClick={markAllRead} type="button">
+                  <Check size={13} /> Mark all read
+                </button>
+              )}
+              <button className="nd-view-all" onClick={() => { setOpen(false); navigate("/notifications"); }} type="button">
+                <ExternalLink size={13} /> View all
               </button>
-            )}
-            <button className="nd-view-all" onClick={() => { setOpen(false); navigate("/notifications"); }} type="button">
-              <ExternalLink size={13} /> View all
-            </button>
-          </div>
+            </div>
 
-          <div className="nd-list">
-            {loading ? (
-              <div className="nd-loading">
-                <div className="nd-dot" /><div className="nd-dot" /><div className="nd-dot" />
-              </div>
-            ) : notifs.length === 0 ? (
-              <div className="nd-empty">
-                <span>🔔</span>
-                <p>No notifications yet</p>
-              </div>
-            ) : (
-              notifs.slice(0, 8).map(n => {
-                const pic      = getAvatarUrl(n.actor?.avatar);
-                const initials = `${n.actor?.first_name?.[0] || ""}${n.actor?.last_name?.[0] || ""}`.toUpperCase();
-                const tc       = typeConfig[n.type] || { icon: <Bell size={13} />, color: "#1a7fe8" };
-                return (
-                  <div
-                    key={n.id}
-                    className={`nd-item ${!n.is_read ? "nd-item--unread" : ""}`}
-                    onClick={() => handleClick(n)}
-                  >
-                    <div className="nd-actor">
-                      {pic
-                        ? <img src={pic} alt={initials} className="nd-actor-img" />
-                        : <div className="nd-actor-init">{initials || "?"}</div>
-                      }
-                      <span className="nd-type-badge" style={{ color: tc.color }}>{tc.icon}</span>
+            <div className="nd-list">
+              {loading ? (
+                <div className="nd-loading">
+                  <div className="nd-dot" /><div className="nd-dot" /><div className="nd-dot" />
+                </div>
+              ) : notifs.length === 0 ? (
+                <div className="nd-empty">
+                  <span>🔔</span>
+                  <p>No notifications yet</p>
+                </div>
+              ) : (
+                notifs.slice(0, 8).map(n => {
+                  const pic      = getAvatarUrl(n.actor?.avatar);
+                  const initials = `${n.actor?.first_name?.[0] || ""}${n.actor?.last_name?.[0] || ""}`.toUpperCase();
+                  const tc       = typeConfig[n.type] || { icon: <Bell size={13} />, color: "#1a7fe8" };
+                  return (
+                    <div
+                      key={n.id}
+                      className={`nd-item ${!n.is_read ? "nd-item--unread" : ""}`}
+                      onClick={() => handleClick(n)}
+                    >
+                      <div className="nd-actor">
+                        {pic
+                          ? <img src={pic} alt={initials} className="nd-actor-img" />
+                          : <div className="nd-actor-init">{initials || "?"}</div>
+                        }
+                        <span className="nd-type-badge" style={{ color: tc.color }}>{tc.icon}</span>
+                      </div>
+                      <div className="nd-body">
+                        <p className="nd-msg">{buildMessage(n)}</p>
+                        <span className="nd-time">{timeAgo(n.created_at)}</span>
+                      </div>
+                      {!n.is_read && <div className="nd-unread-dot" />}
                     </div>
-                    <div className="nd-body">
-                      <p className="nd-msg">{buildMessage(n)}</p>
-                      <span className="nd-time">{timeAgo(n.created_at)}</span>
-                    </div>
-                    {!n.is_read && <div className="nd-unread-dot" />}
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

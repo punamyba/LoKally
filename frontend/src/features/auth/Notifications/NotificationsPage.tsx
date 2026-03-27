@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Check, ArrowLeft, ThumbsUp, MessageCircle,
   MapPin, X, Mail, ShieldAlert, Flag,
@@ -67,17 +67,17 @@ const buildMessage = (n: Notif): React.ReactNode => {
 
 const getRedirectPath = (n: Notif): string | null => {
   if (n.type === "like" || n.type === "comment")
-    return n.post_id ? `/community` : null;
+    return n.post_id ? `/community/post/${n.post_id}` : null;
   if (n.type === "place_approved")
     return n.place_id ? `/place/${n.place_id}` : `/explore-map`;
   if (n.type === "contact_reply")
     return `/contact`;
   if (n.type === "warning" || n.type === "reported" || n.type === "place_rejected") {
-    if (n.post_id)  return `/community`;
+    if (n.post_id)  return `/community/post/${n.post_id}`;
     if (n.place_id) return `/place/${n.place_id}`;
     return null;
   }
-  if (n.post_id)  return `/community`;
+  if (n.post_id)  return `/community/post/${n.post_id}`;
   if (n.place_id) return `/place/${n.place_id}`;
   return null;
 };
@@ -86,11 +86,15 @@ const getRedirectPath = (n: Notif): string | null => {
 const POPUP_TYPES = ["warning", "reported", "place_rejected"];
 
 export default function NotificationsPage() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const [notifs,  setNotifs]  = useState<Notif[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter,  setFilter]  = useState<"all" | "unread">("all");
   const [popup,   setPopup]   = useState<Notif | null>(null);
+
+  // only auto-popup if navigated from dropdown (state.fromNotif = true)
+  const fromNotif = (location.state as any)?.fromNotif === true;
 
   const token   = localStorage.getItem("token") || "";
   const headers = { Authorization: `Bearer ${token}` };
@@ -98,7 +102,18 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetch(`${API}/notifications`, { headers })
       .then(r => r.json())
-      .then(d => { if (d.success) setNotifs(d.data); })
+      .then(d => {
+        if (d.success) {
+          setNotifs(d.data);
+          // auto-open popup ONLY if came from notification dropdown click
+          if (fromNotif) {
+            const first = (d.data as Notif[]).find(
+              n => !n.is_read && POPUP_TYPES.includes(n.type)
+            );
+            if (first) setPopup(first);
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

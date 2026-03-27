@@ -147,3 +147,63 @@
   width: 8px; height: 8px; border-radius: 50%;
   background: #1a7fe8; flex-shrink: 0; margin-top: 6px;
 }
+
+/* ── Popup overlay ── */
+.nd-popup-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(9,19,35,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: ndFadeIn 0.15s ease;
+}
+@keyframes ndFadeIn { from{opacity:0} to{opacity:1} }
+
+.nd-popup {
+  background: white; border-radius: 20px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 20px 60px rgba(9,19,35,0.2);
+  animation: ndPopUp 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  overflow: hidden; font-family: 'Nunito', sans-serif;
+}
+@keyframes ndPopUp {
+  from { transform: scale(0.92) translateY(12px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.nd-popup-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px; border-bottom: 1px solid #f1f5f9;
+}
+.nd-popup-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: #f8fafc; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+.nd-popup-title {
+  flex: 1; font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 800; color: #0d1117;
+}
+.nd-popup-close {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: none; background: #f1f5f9; color: #64748b;
+  cursor: pointer; display: grid; place-items: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.nd-popup-close:hover { background: #e2e8f0; color: #0d1117; }
+
+.nd-popup-body { padding: 16px 18px; }
+.nd-popup-msg {
+  font-size: 14px; color: #374151; line-height: 1.65;
+  margin: 0 0 8px; font-weight: 500;
+}
+.nd-popup-time { font-size: 11px; color: #94a3b8; font-weight: 700; }
+
+.nd-popup-footer { padding: 0 18px 16px; }
+.nd-popup-view {
+  width: 100%; padding: 10px;
+  background: linear-gradient(135deg, #1a7fe8, #0d9488);
+  color: white; border: none; border-radius: 12px;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.nd-popup-view:hover { opacity: 0.9; }
