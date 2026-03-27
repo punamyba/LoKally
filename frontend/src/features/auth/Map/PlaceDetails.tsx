@@ -7,7 +7,7 @@ import {
   ArrowLeft, MapPin, Navigation, Cloud, Wind, Droplets,
   CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight,
   ThumbsUp, Footprints, Star, MessageCircle, Send,
-  User, Tag, Flag, BadgeCheck, Images, X, Reply, Trash2,
+  User, Tag, Flag, BadgeCheck, Images, X, Reply, Trash2, Upload, Calendar, FileText,
 } from "lucide-react";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import type { Place } from "./Type";
@@ -100,6 +100,61 @@ export default function PlaceDetails() {
   const [reportNote,   setReportNote]   = useState("");
   const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
+  // Visit submission modal
+  const [visitOpen,    setVisitOpen]    = useState(false);
+  const [visitDate,    setVisitDate]    = useState("");
+  const [visitExp,     setVisitExp]     = useState("");
+  const [visitPhoto,   setVisitPhoto]   = useState<File | null>(null);
+  const [visitPreview, setVisitPreview] = useState<string | null>(null);
+  const [visitStatus,  setVisitStatus]  = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const closeVisitModal = () => {
+    setVisitOpen(false);
+    setVisitDate(""); setVisitExp(""); setVisitPhoto(null);
+    setVisitPreview(null); setVisitStatus("idle");
+  };
+
+  const handleVisitPhoto = (file: File) => {
+    setVisitPhoto(file);
+    const reader = new FileReader();
+    reader.onload = e => setVisitPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const submitVisitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitDate) return;
+    setVisitStatus("sending");
+    try {
+      const fd = new FormData();
+      fd.append("visit_date", visitDate);
+      fd.append("experience", visitExp);
+      if (visitPhoto) fd.append("photo", visitPhoto);
+      await axiosInstance.post(`/places/${id}/visit-submit`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setVisitStatus("done");
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setVisitStatus("done"); // already submitted — treat as done
+      } else {
+        setVisitStatus("error");
+      }
+    }
+  };
+
+  const handleRemoveVisit = async () => {
+    setRemoving(true);
+    try {
+      await axiosInstance.delete(`/places/${id}/visit`);
+      setVisits(p => ({ ...p, visitedByMe: false, count: Math.max(0, p.count - 1) }));
+      setShowRemoveConfirm(false);
+    } catch {}
+    setRemoving(false);
+  };
+
   const submitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportReason) return;
@@ -150,11 +205,27 @@ export default function PlaceDetails() {
       axiosInstance.get(`/places/${id}/conditions`),
     ]);
     if (l.status    === "fulfilled") setLikes(l.value.data);
-    if (v.status    === "fulfilled") setVisits(v.value.data);
     if (r.status    === "fulfilled") setRatings(r.value.data);
     if (c.status    === "fulfilled") setComments(c.value.data);
     if (t.status    === "fulfilled") setTags(t.value.data);
     if (cond.status === "fulfilled") setConditions(cond.value.data);
+
+    // Check approved visit status separately
+    if (v.status === "fulfilled") {
+      const vdata = v.value.data;
+      try {
+        const vs = await axiosInstance.get(`/places/${id}/visit-status`);
+        console.log("visit-status response:", vs.data);
+        if (vs.data?.success) {
+          setVisits({ ...vdata, visitedByMe: vs.data.visitedByMe });
+        } else {
+          setVisits(vdata);
+        }
+      } catch (err: any) {
+        console.log("visit-status error:", err?.response?.status, err?.message);
+        setVisits(vdata);
+      }
+    }
   }, [id]);
 
   useEffect(() => { fetchSocial(); }, [fetchSocial]);
@@ -436,11 +507,22 @@ export default function PlaceDetails() {
                 <ThumbsUp size={15} strokeWidth={2.5} />
                 {likes.likedByMe ? "Liked" : "Like"} ({likes.count})
               </button>
-              <button className={`pd-action-btn ${visits.visitedByMe ? "pd-action-btn--visited" : ""}`}
-                onClick={handleVisit}>
-                <CheckCircle size={15} strokeWidth={2.5} />
-                {visits.visitedByMe ? "Visited ✓" : "Mark Visited"} ({visits.count})
-              </button>
+              {visits.visitedByMe ? (
+                <div className="pd-visited-row">
+                  <div className="pd-action-btn pd-action-btn--visited pd-action-btn--no-hover">
+                    <CheckCircle size={15} strokeWidth={2.5} />
+                    Visited ✓ ({visits.count})
+                  </div>
+                  <button className="pd-remove-visit-btn" onClick={() => setShowRemoveConfirm(true)} title="Remove visit">
+                    <Trash2 size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <button className="pd-action-btn" onClick={() => setVisitOpen(true)}>
+                  <CheckCircle size={15} strokeWidth={2.5} />
+                  Mark Visited ({visits.count})
+                </button>
+              )}
               <div className="pd-star-rate">
                 <span className="pd-rate-label">Rate:</span>
                 {[1,2,3,4,5].map(s => (
@@ -659,6 +741,125 @@ export default function PlaceDetails() {
                   ))}
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── REMOVE VISIT CONFIRM ── */}
+      {showRemoveConfirm && (
+        <div className="pd-report-overlay" onClick={() => setShowRemoveConfirm(false)}>
+          <div className="pd-report-modal pd-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-report-head">
+              <div className="pd-report-icon" style={{ background: "#fff5f5", color: "#ef4444" }}>
+                <Trash2 size={16} strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="pd-report-title">Remove Visit?</div>
+                <div className="pd-report-sub">This will remove your visited status</div>
+              </div>
+              <button className="pd-report-close" onClick={() => setShowRemoveConfirm(false)}><X size={16} /></button>
+            </div>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <p style={{ fontSize: "14px", color: "#475569", lineHeight: 1.6 }}>
+                Are you sure you want to remove your visit to <strong>{place?.name}</strong>?
+
+              </p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button className="pd-report-submit" style={{ background: "#ef4444", flex: 1 }}
+                  onClick={handleRemoveVisit} disabled={removing}>
+                  {removing ? "Removing…" : <><Trash2 size={14} /> Yes, Remove</>}
+                </button>
+                <button className="pd-report-submit" style={{ background: "#64748b", flex: 1 }}
+                  onClick={() => setShowRemoveConfirm(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── VISIT SUBMISSION MODAL ── */}
+      {visitOpen && (
+        <div className="pd-report-overlay" onClick={closeVisitModal}>
+          <div className="pd-report-modal pd-visit-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-report-head">
+              <div className="pd-report-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
+                <CheckCircle size={16} strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="pd-report-title">Mark as Visited</div>
+                <div className="pd-report-sub">Submit proof — admin will verify your visit</div>
+              </div>
+              <button className="pd-report-close" onClick={closeVisitModal}><X size={16} /></button>
+            </div>
+
+            {visitStatus === "done" ? (
+              <div className="pd-report-done">
+                <CheckCircle size={40} strokeWidth={1.5} className="pd-report-done-icon" />
+                <div className="pd-report-done-title">Visit submitted!</div>
+                <div className="pd-report-done-sub">Our team will review your visit. Your "Visited" badge will appear once approved!</div>
+                <button className="pd-report-done-btn" style={{ background: "#16a34a" }} onClick={closeVisitModal}>Done</button>
+              </div>
+            ) : (
+              <form className="pd-report-form" onSubmit={submitVisitForm}>
+                <div className="pd-report-field">
+                  <label className="pd-report-label">
+                    <Calendar size={13} strokeWidth={2} style={{ display:"inline", marginRight:4 }} />
+                    Visit Date <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input type="date" className="pd-visit-input"
+                    value={visitDate} max={new Date().toISOString().split("T")[0]}
+                    onChange={e => setVisitDate(e.target.value)} required />
+                </div>
+
+                <div className="pd-report-field">
+                  <label className="pd-report-label">
+                    <FileText size={13} strokeWidth={2} style={{ display:"inline", marginRight:4 }} />
+                    Your experience <span className="pd-report-optional">(optional)</span>
+                  </label>
+                  <textarea className="pd-report-textarea" rows={3}
+                    value={visitExp} onChange={e => setVisitExp(e.target.value)}
+                    placeholder="What was it like? Any tips for others?" />
+                </div>
+
+                <div className="pd-report-field">
+                  <label className="pd-report-label">
+                    <Upload size={13} strokeWidth={2} style={{ display:"inline", marginRight:4 }} />
+                    Photo proof <span className="pd-report-optional">(optional but recommended)</span>
+                  </label>
+                  {visitPreview ? (
+                    <div className="pd-visit-preview">
+                      <img src={visitPreview} alt="preview" />
+                      <button type="button" className="pd-visit-remove" onClick={() => { setVisitPhoto(null); setVisitPreview(null); }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="pd-visit-upload">
+                      <Upload size={20} strokeWidth={1.5} />
+                      <span>Click to upload a photo from your visit</span>
+                      <input type="file" accept="image/*" style={{ display: "none" }}
+                        onChange={e => e.target.files?.[0] && handleVisitPhoto(e.target.files[0])} />
+                    </label>
+                  )}
+                </div>
+
+                {visitStatus === "error" && (
+                  <div className="pd-report-err">Failed to submit. Please try again.</div>
+                )}
+
+                <button className="pd-report-submit" type="submit"
+                  disabled={!visitDate || visitStatus === "sending"}
+                  style={{ background: "#16a34a" }}>
+                  {visitStatus === "sending" ? "Submitting…" : <><CheckCircle size={14} /> Submit Visit</>}
+                </button>
+
+                <div style={{ textAlign:"center", fontSize:"12px", color:"#94a3b8", marginTop:"4px" }}>
+                  Your "Visited" badge will appear after admin approval
+                </div>
+              </form>
             )}
           </div>
         </div>
