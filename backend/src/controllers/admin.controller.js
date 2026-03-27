@@ -3,13 +3,11 @@
 import { Place, User, PostReport, Post } from "../models/index.js";
 import { Op } from "sequelize";
 import Notification from "../models/notification.model.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const placeWithUser = {
-  include: [
-    { model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] },
-    { model: User, as: "approver",  attributes: ["id", "first_name", "last_name"] },
-  ],
-};
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* STATS + pending preview */
 export const getStats = async (req, res) => {
@@ -23,7 +21,10 @@ export const getStats = async (req, res) => {
     ]);
     const pendingPreview = await Place.findAll({
       where: { status: "pending" },
-      ...placeWithUser,
+      include: [
+        { model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] },
+        { model: User, as: "approver",  attributes: ["id", "first_name", "last_name"] },
+      ],
       order: [["created_at", "DESC"]],
       limit: 5,
     });
@@ -40,7 +41,14 @@ export const getPlaces = async (req, res) => {
     const { status } = req.query;
     const where = {};
     if (status && ["pending", "approved", "rejected"].includes(status)) where.status = status;
-    const places = await Place.findAll({ where, ...placeWithUser, order: [["created_at", "DESC"]] });
+    const places = await Place.findAll({
+      where,
+      include: [
+        { model: User, as: "submitter", attributes: ["id", "first_name", "last_name", "email"] },
+        { model: User, as: "approver",  attributes: ["id", "first_name", "last_name"] },
+      ],
+      order: [["created_at", "DESC"]],
+    });
     res.json({ success: true, data: places });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
@@ -56,7 +64,6 @@ export const approvePlace = async (req, res) => {
     if (!place) return res.status(404).json({ success: false, message: "Place feuna" });
     await place.update({ status: "approved", approved_by: req.user.id, approved_at: new Date(), rejected_reason: null });
 
-    // Email + notification to submitter
     if (place.submitter) {
       try {
         const { sendPlaceApprovedEmail } = await import("../utils/email.js");
@@ -96,7 +103,6 @@ export const rejectPlace = async (req, res) => {
     if (!place) return res.status(404).json({ success: false, message: "Place feuna" });
     await place.update({ status: "rejected", approved_by: req.user.id, rejected_reason: reason });
 
-    // Email + notification to submitter
     if (place.submitter) {
       try {
         const { sendPlaceRejectedEmail } = await import("../utils/email.js");
@@ -176,7 +182,7 @@ export const addPlace = async (req, res) => {
   }
 };
 
-/* ADMIN UPDATE PLACE */
+/* ADMIN UPDATE PLACE — full fields + image add */
 export const updatePlace = async (req, res) => {
   try {
     const place = await Place.findByPk(req.params.id);
@@ -184,18 +190,54 @@ export const updatePlace = async (req, res) => {
 
     const { name, address, description, category, lat, lng, status } = req.body;
     const updates = {};
-    if (name)                    updates.name        = name;
-    if (address)                 updates.address     = address;
+    if (name)                      updates.name        = name;
+    if (address)                   updates.address     = address;
     if (description !== undefined) updates.description = description;
     if (category !== undefined)    updates.category    = category;
-    if (lat)                     updates.lat         = parseFloat(lat);
-    if (lng)                     updates.lng         = parseFloat(lng);
-    if (status)                  updates.status      = status;
-    if (req.file)                updates.image       = `/uploads/places/${req.file.filename}`;
+    if (lat)                       updates.lat         = parseFloat(lat);
+    if (lng)                       updates.lng         = parseFloat(lng);
+    if (status)                    updates.status      = status;
+
+    // New images upload bhayo bhane existing maa add gara
+    if (req.files && req.files.length > 0) {
+      const newPaths = req.files.map(f => `/uploads/places/${f.filename}`);
+      let existing = [];
+      try { existing = place.image ? JSON.parse(place.image) : []; } catch { existing = place.image ? [place.image] : []; }
+      updates.image = JSON.stringify([...existing, ...newPaths]);
+    }
 
     await place.update(updates);
     res.json({ success: true, data: place });
   } catch (err) {
+    console.error("admin updatePlace error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* DELETE SPECIFIC IMAGE FROM PLACE */
+export const deletePlaceImage = async (req, res) => {
+  try {
+    const place = await Place.findByPk(req.params.id);
+    if (!place) return res.status(404).json({ success: false, message: "Place feuna" });
+
+    const { imageUrl } = req.body;
+    if (!imageUrl) return res.status(400).json({ success: false, message: "imageUrl chainxa" });
+
+    let images = [];
+    try { images = place.image ? JSON.parse(place.image) : []; } catch { images = place.image ? [place.image] : []; }
+
+    const filtered = images.filter(img => img !== imageUrl);
+    await place.update({ image: filtered.length > 0 ? JSON.stringify(filtered) : null });
+
+    // Physical file delete
+    try {
+      const filePath = path.join(__dirname, "../../", imageUrl);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch (e) { console.warn("File delete failed:", e.message); }
+
+    res.json({ success: true, message: "Image delete vayo", remaining: filtered.length });
+  } catch (err) {
+    console.error("deletePlaceImage error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -228,19 +270,13 @@ export const toggleFeatured = async (req, res) => {
   }
 };
 
-/* ── GET REPORTS FOR A POST ─────────────────────────────────────── */
+/* GET REPORTS FOR A POST */
 export const getPostReports = async (req, res) => {
   try {
     const { id } = req.params;
     const reports = await PostReport.findAll({
       where: { post_id: id },
-      include: [
-        {
-          model: User,
-          as: "reporter",
-          attributes: ["id", "first_name", "last_name", "email"],
-        },
-      ],
+      include: [{ model: User, as: "reporter", attributes: ["id", "first_name", "last_name", "email"] }],
       order: [["created_at", "DESC"]],
     });
     res.json({ success: true, data: reports });
@@ -250,14 +286,12 @@ export const getPostReports = async (req, res) => {
   }
 };
 
-
-/* ── GET ALL REPORTS (posts + places) ──────────────────────────── */
+/* GET ALL REPORTS (posts + places) */
 export const getAllReports = async (req, res) => {
   try {
     const { type } = req.query;
     let reports = [];
 
-    // ── Post reports ──────────────────────────────────────────
     if (!type || type === "post" || type === "hidden") {
       const postReports = await PostReport.findAll({
         where: { post_id: { [Op.ne]: null } },
@@ -276,7 +310,6 @@ export const getAllReports = async (req, res) => {
       reports = [...reports, ...mapped];
     }
 
-    // ── Place reports ─────────────────────────────────────────
     if (!type || type === "place") {
       const placeReports = await PostReport.findAll({
         where: { place_id: { [Op.ne]: null } },
@@ -300,7 +333,7 @@ export const getAllReports = async (req, res) => {
   }
 };
 
-/* ── DISMISS A REPORT ──────────────────────────────────────────── */
+/* DISMISS A REPORT */
 export const dismissReport = async (req, res) => {
   try {
     const report = await PostReport.findByPk(req.params.id);
@@ -313,7 +346,7 @@ export const dismissReport = async (req, res) => {
   }
 };
 
-/* ── WARN USER ─────────────────────────────────────────────────── */
+/* WARN USER */
 export const warnUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -321,7 +354,6 @@ export const warnUser = async (req, res) => {
     const user = await User.findByPk(id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // In-app notification to content owner (warned user)
     try {
       await Notification.create({
         user_id: user.id,
@@ -331,11 +363,8 @@ export const warnUser = async (req, res) => {
         message: `⚠️ Warning: Your ${contentType || "content"} has been flagged by our moderation team. Reason: ${reason || "Policy violation"}. Please review our community guidelines to avoid further action.`,
         is_read: false,
       });
-    } catch (notifErr) {
-      console.warn("Notification create failed:", notifErr.message);
-    }
+    } catch (notifErr) { console.warn("Notification create failed:", notifErr.message); }
 
-    // Email to warned user
     try {
       const { sendWarningEmail } = await import("../utils/email.js");
       await sendWarningEmail({
@@ -344,9 +373,7 @@ export const warnUser = async (req, res) => {
         contentType: contentType || "content",
         reason: reason || "Policy violation",
       });
-    } catch (emailErr) {
-      console.warn("Warning email failed:", emailErr.message);
-    }
+    } catch (emailErr) { console.warn("Warning email failed:", emailErr.message); }
 
     res.json({ success: true, message: "Warning sent to user" });
   } catch (err) {
@@ -355,7 +382,7 @@ export const warnUser = async (req, res) => {
   }
 };
 
-/* ── NOTIFY REPORTER (dismiss/resolve/hide/delete) ─────────────── */
+/* NOTIFY REPORTER */
 export const notifyReporter = async (req, res) => {
   try {
     const { reporter_id, action, post_id, place_id } = req.body;
@@ -381,7 +408,6 @@ export const notifyReporter = async (req, res) => {
       });
     } catch (e) { console.warn("Reporter notification failed:", e.message); }
 
-    // Email to reporter
     try {
       const { sendReportStatusEmail } = await import("../utils/email.js");
       const statusMap = { resolved: "resolved", dismissed: "dismissed", hidden: "resolved", deleted: "resolved" };
@@ -399,7 +425,7 @@ export const notifyReporter = async (req, res) => {
   }
 };
 
-/* ── UPDATE REPORT STATUS ──────────────────────────────────────── */
+/* UPDATE REPORT STATUS */
 export const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -419,14 +445,13 @@ export const updateReportStatus = async (req, res) => {
   }
 };
 
-/* ── HIDE / UNHIDE POST ────────────────────────────────────────── */
+/* HIDE POST */
 export const hidePost = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: "Post not found" });
     await post.update({ is_hidden: true });
 
-    // Notify post owner
     try {
       await Notification.create({
         user_id: post.user_id,
@@ -441,11 +466,7 @@ export const hidePost = async (req, res) => {
       const owner = await User.findByPk(post.user_id);
       if (owner) {
         const { sendContentHiddenEmail } = await import("../utils/email.js");
-        await sendContentHiddenEmail({
-          to: owner.email,
-          firstName: owner.first_name,
-          contentType: "post",
-        });
+        await sendContentHiddenEmail({ to: owner.email, firstName: owner.first_name, contentType: "post" });
       }
     } catch (e) { console.warn("Hide email failed:", e.message); }
 

@@ -6,11 +6,6 @@ import * as PostController from "../controllers/post.controller.js";
 
 const router = express.Router();
 
-/*
-  All /api/admin routes are protected:
-  - First: user must be logged in (authMiddleware)
-  - Second: user must be admin (adminOnly)
-*/
 router.use(authMiddleware, adminOnly);
 
 router.get("/stats", AdminController.getStats);
@@ -22,23 +17,23 @@ router.get("/users", AdminController.getUsers);
 // Supports up to 20 images
 router.post("/places", upload.array("images", 20), AdminController.addPlace);
 
-router.put("/places/:id", upload.single("image"), AdminController.updatePlace);
-router.delete("/places/:id", AdminController.deletePlace);
+// Update place — multiple images support
+router.put("/places/:id", upload.array("images", 20), AdminController.updatePlace);
 
-// toggle featured/unfeatured
+// Delete specific image from place
+router.delete("/places/:id/image", AdminController.deletePlaceImage);
+
+router.delete("/places/:id", AdminController.deletePlace);
 router.patch("/places/:id/feature", AdminController.toggleFeatured);
 
-// ── get reports for a specific post ──────────────────────────────
 router.get("/posts/:id/reports", AdminController.getPostReports);
-
-// ── all reports page ──────────────────────────────────────────────
-router.get("/reports",              AdminController.getAllReports);
+router.get("/reports", AdminController.getAllReports);
 router.patch("/reports/:id/dismiss", AdminController.dismissReport);
-router.patch("/reports/:id/status",  AdminController.updateReportStatus);
-router.post("/users/:id/warn",      AdminController.warnUser);
-router.post("/notify-reporter",      AdminController.notifyReporter);
-router.patch("/posts/:id/hide",       PostController.adminHidePost);
-router.patch("/posts/:id/unhide",     PostController.adminUnhidePost);
-router.delete("/posts/:id",           PostController.adminDeletePost);
+router.patch("/reports/:id/status", AdminController.updateReportStatus);
+router.post("/users/:id/warn", AdminController.warnUser);
+router.post("/notify-reporter", AdminController.notifyReporter);
+router.patch("/posts/:id/hide", PostController.adminHidePost);
+router.patch("/posts/:id/unhide", PostController.adminUnhidePost);
+router.delete("/posts/:id", PostController.adminDeletePost);
 
 export default router;
