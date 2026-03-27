@@ -26,8 +26,10 @@ import { AdminSettings }  from "./features/auth/Admin/Placeholder/AdminPlacehold
 
 import ContactUs         from "./features/auth/ContactUs/ContactUs";
 import AdminContactInbox from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
-import AdminCommunity    from "./features/auth/Admin/AdminCommunity/AdminCommunity";
+import AdminCommunity      from "./features/auth/Admin/AdminCommunity/AdminCommunity";
 import CommunityFeed     from "./features/auth/Community/CommunityFeed/CommunityFeed";
+import PostDetail        from "./features/auth/Community/PostDetail/PostDetail";
+import AISearch          from "./features/auth/AI/AiSearch";
 
 import UserProfile   from "./features/auth/User/UserProfile";
 import PublicProfile from "./features/auth/User/PublicProfile";
@@ -57,10 +59,12 @@ function App() {
         <Route path="/explore-map" element={<ExploreMap />} />
         <Route path="/place/:id"   element={<PlaceDetail />} />
         <Route path="/contact"     element={<ContactUs />} />
+        <Route path="/ai-search"   element={<AISearch />} />
 
         {/* Protected user routes */}
         <Route path="/home"             element={<AuthGuard><Home /></AuthGuard>} />
-        <Route path="/community"        element={<AuthGuard><CommunityFeed /></AuthGuard>} />
+        <Route path="/community"           element={<AuthGuard><CommunityFeed /></AuthGuard>} />
+        <Route path="/community/post/:id"  element={<AuthGuard><PostDetail /></AuthGuard>} />
         <Route path="/profile"          element={<AuthGuard><UserProfile /></AuthGuard>} />
         <Route path="/profile/:userId"  element={<AuthGuard><PublicProfile /></AuthGuard>} />
         <Route path="/settings"         element={<AuthGuard><Settings /></AuthGuard>} />
@@ -74,7 +78,7 @@ function App() {
           <Route path="add-place"   element={<AdminAddPlace />} />
           <Route path="users"       element={<AdminUsers />} />
           <Route path="contact"     element={<AdminContactInbox />} />
-          <Route path="community"   element={<AdminCommunity />} />
+          <Route path="community"     element={<AdminCommunity />} />
           <Route path="reports"     element={<AdminReports />} />
           <Route path="settings"    element={<AdminSettings />} />
         </Route>

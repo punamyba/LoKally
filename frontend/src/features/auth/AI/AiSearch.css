@@ -1,0 +1,309 @@
+/* AISearch.css — LoKally AI Search v3 */
+
+.ais-root {
+    min-height: 100vh;
+    background: #f8fafc;
+    font-family: var(--font);
+  }
+  
+  /* ── HERO ── */
+  .ais-hero {
+    background: linear-gradient(135deg, #0d1f3c 0%, #0a3d2e 55%, #0d3320 100%);
+    padding: 56px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    text-align: center;
+  }
+  
+  .ais-hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.85);
+    padding: 6px 16px; border-radius: 99px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  }
+  
+  .ais-hero-title {
+    font-size: clamp(26px, 5vw, 50px);
+    font-weight: 800; color: white;
+    letter-spacing: -1px; line-height: 1.1; margin: 0;
+  }
+  
+  .ais-hero-sub {
+    font-size: 15px; color: rgba(255,255,255,0.6);
+    max-width: 540px; line-height: 1.65; margin: 0;
+  }
+  
+  /* ── SEARCH ROW ── */
+  .ais-search-row {
+    display: flex; gap: 10px; align-items: center;
+    width: 100%; max-width: 660px;
+  }
+  
+  .ais-search-bar {
+    flex: 1; display: flex; align-items: center;
+    background: white; border-radius: 14px;
+    padding: 0 14px; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  
+  .ais-search-icon { color: #94a3b8; flex-shrink: 0; }
+  
+  .ais-search-input {
+    flex: 1; border: none; outline: none;
+    font-size: 15px; font-family: var(--font);
+    color: #0f172a; padding: 15px 0;
+    background: transparent;
+  }
+  .ais-search-input::placeholder { color: #94a3b8; }
+  
+  .ais-clear-btn {
+    background: none; border: none; cursor: pointer;
+    color: #94a3b8; display: flex; align-items: center;
+    padding: 4px; border-radius: 50%;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .ais-clear-btn:hover { background: #f1f5f9; color: #475569; }
+  
+  .ais-search-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 15px 22px; border-radius: 14px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white; border: none; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: var(--font);
+    white-space: nowrap; transition: all 0.18s;
+    box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+    flex-shrink: 0;
+  }
+  .ais-search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.45); }
+  
+  /* ── QUICK PILLS ── */
+  .ais-quick-section {
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: center;
+  }
+  
+  .ais-quick-label {
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.45); letter-spacing: 0.5px;
+  }
+  
+  .ais-quick-pills {
+    display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;
+  }
+  
+  .ais-quick-pill {
+    padding: 6px 14px; border-radius: 99px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: var(--font);
+    transition: all 0.15s; border: none;
+  }
+  
+  .ais-quick-pill--tag {
+    background: rgba(99,102,241,0.18);
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(99,102,241,0.3);
+  }
+  .ais-quick-pill--tag:hover { background: rgba(99,102,241,0.38); color: white; }
+  
+  .ais-quick-pill--place {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .ais-quick-pill--place:hover { background: rgba(255,255,255,0.2); color: white; }
+  
+  /* ── NEAR ME HERO ── */
+  .ais-nearme-hero {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    margin-top: 4px;
+  }
+  
+  .ais-nearme-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 99px;
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.25);
+    color: white; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: var(--font);
+    transition: all 0.18s;
+  }
+  .ais-nearme-btn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
+  
+  .ais-nearme-active {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 99px;
+    background: rgba(16,185,129,0.2);
+    border: 1px solid rgba(16,185,129,0.4);
+    color: #6ee7b7; font-size: 13px; font-weight: 600;
+  }
+  
+  .ais-loc-error {
+    color: #fca5a5; font-size: 12px; margin: 0;
+  }
+  
+  /* ── BODY ── */
+  .ais-body {
+    max-width: 1200px; margin: 0 auto;
+    padding: 48px 24px;
+    display: flex; flex-direction: column; gap: 52px;
+  }
+  
+  /* ── SECTION ── */
+  .ais-section { display: flex; flex-direction: column; gap: 20px; }
+  
+  .ais-section-header {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  
+  .ais-section-icon {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #0d1f3c, #0a3d2e);
+    display: flex; align-items: center; justify-content: center; color: white;
+  }
+  
+  .ais-section-header-text { display: flex; flex-direction: column; gap: 3px; }
+  
+  .ais-section-title-row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  
+  .ais-section-title {
+    font-size: 19px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;
+  }
+  
+  .ais-section-count {
+    font-size: 12px; font-weight: 600;
+    background: #eff6ff; color: #1d4ed8;
+    padding: 2px 9px; border-radius: 99px;
+  }
+  
+  .ais-section-sub { font-size: 13px; color: #64748b; }
+  
+  .ais-section-state {
+    display: flex; align-items: center; gap: 10px;
+    padding: 40px; color: #94a3b8; font-size: 14px;
+    justify-content: center;
+  }
+  .ais-section-empty { color: #cbd5e1; }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ais-spin { animation: spin 0.8s linear infinite; }
+  
+  /* ── CARDS GRID ── */
+  .ais-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 18px;
+  }
+  
+  /* ── PLACE CARD ── */
+  .ais-card {
+    background: white; border-radius: 16px; overflow: hidden;
+    cursor: pointer; box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9; transition: all 0.2s;
+    display: flex; flex-direction: column;
+  }
+  .ais-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    border-color: #e2e8f0;
+  }
+  
+  .ais-card-img {
+    position: relative; height: 155px; overflow: hidden;
+    background: linear-gradient(135deg, #e0f2fe, #dcfce7);
+    flex-shrink: 0;
+  }
+  .ais-card-img img { width: 100%; height: 100%; object-fit: cover; }
+  
+  .ais-card-no-img {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: #cbd5e1;
+  }
+  
+  .ais-card-badges {
+    position: absolute; top: 9px; left: 9px;
+    display: flex; gap: 5px; flex-wrap: wrap;
+  }
+  
+  .ais-badge-cat {
+    background: rgba(15,23,42,0.72); color: white;
+    padding: 3px 9px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  
+  .ais-badge-ai {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; padding: 3px 9px; border-radius: 99px;
+    font-size: 11px; font-weight: 700;
+  }
+  
+  .ais-badge-dist {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(16,185,129,0.88); color: white;
+    padding: 3px 9px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  
+  .ais-card-body {
+    padding: 13px 15px 15px;
+    display: flex; flex-direction: column; gap: 5px; flex: 1;
+  }
+  
+  .ais-card-name {
+    font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3;
+  }
+  
+  .ais-card-addr {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; color: #64748b;
+  }
+  
+  .ais-card-tags {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;
+  }
+  
+  .ais-card-tag {
+    padding: 2px 8px; border-radius: 99px;
+    background: #f1f5f9; color: #475569;
+    font-size: 11px; font-weight: 500;
+  }
+  
+  .ais-card-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #10b981; font-size: 12px; font-weight: 600;
+    background: none; border: none; cursor: pointer;
+    font-family: var(--font); padding: 0; margin-top: 4px;
+    transition: gap 0.15s;
+  }
+  .ais-card-btn:hover { gap: 6px; }
+  
+  /* ── NEAR ME PROMPT (body) ── */
+  .ais-nearme-prompt {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 12px; padding: 48px 24px; text-align: center;
+    color: #64748b; background: white;
+    border-radius: 20px; border: 2px dashed #e2e8f0;
+  }
+  .ais-nearme-prompt h3 {
+    font-size: 18px; font-weight: 700; color: #0f172a; margin: 0;
+  }
+  .ais-nearme-prompt p { margin: 0; font-size: 14px; color: #64748b; }
+  
+  .ais-location-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; border-radius: 12px;
+    background: linear-gradient(135deg, #0d1f3c, #0a3d2e);
+    color: white; border: none; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: var(--font); transition: all 0.18s;
+    margin-top: 4px;
+  }
+  .ais-location-btn:hover { opacity: 0.9; transform: translateY(-1px); }

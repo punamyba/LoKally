@@ -11,9 +11,11 @@ import adminRoutes from "./routes/admin.route.js";
 import contactRoutes from "./routes/contact.route.js";
 import postRoutes from "./routes/post.route.js";
 import postAdminRoutes from "./routes/postadmin.route.js";
-import notificationRoutes from "./routes/notification.route.js";  // ← NEW
+import notificationRoutes from "./routes/notification.route.js";
 import "./models/index.js";
 import "./config/passport.js";
+import placeVisitRoutes from "./routes/placevisit.route.js";
+import recommendationRoutes from "./routes/recommendation.route.js";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -44,8 +46,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
-// serve uploads
+// serve uploads — both locations
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
+
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 /* AUTH */
@@ -54,6 +58,8 @@ app.use("/api/auth", authRoutes);
 /* PLACES */
 app.use("/api/places", placeRoutes);
 app.use("/api/places", placeFeaturesRoutes);
+app.use("/api/places", placeVisitRoutes);
+app.use("/api", placeVisitRoutes);
 
 /* OTHER */
 app.use("/api/user", userRoutes);
@@ -65,6 +71,9 @@ app.use("/api/posts", postRoutes);
 app.use("/api/admin/posts", postAdminRoutes);
 
 /* NOTIFICATIONS */
-app.use("/api/notifications", notificationRoutes);  // ← NEW
+app.use("/api/notifications", notificationRoutes);
+
+/* Recommendation through AI */
+app.use("/api/recommendations", recommendationRoutes);
 
 export default app;
