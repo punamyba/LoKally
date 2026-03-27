@@ -25,3 +25,6 @@ yarn-debug.log*
 .idea/
 backend/uploads/
 backend/lokally-81104-firebase-adminsdk-fbsvc-8181d1d3a9.json
+recommend_api.py
+__pycache__/
+uploads/
