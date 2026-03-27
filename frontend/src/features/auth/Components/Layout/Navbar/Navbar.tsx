@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { LogOut, Menu, X, Users2, Mail, Compass, User, ChevronDown, Settings } from "lucide-react";
+import { LogOut, Menu, X, Users2, Mail, Compass, User, ChevronDown, Settings, Sparkles } from "lucide-react";
 import NotificationDropdown from "../../../Notifications/NotificationDropdown";
 
 const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
@@ -103,9 +103,14 @@ const Navbar = () => {
             <NavLink to="/contact" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
               Contact
             </NavLink>
+            {/* AI Search link */}
+            <NavLink to="/ai-search" className={({ isActive }) => isActive ? "lk-link lk-link--active lk-link--ai" : "lk-link lk-link--ai"}>
+              <Sparkles size={13} strokeWidth={2.5} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
+              AI Search
+            </NavLink>
           </nav>
 
-          {/* Bell — NotificationDropdown is the bell + dropdown */}
+          {/* Bell */}
           {isLoggedIn && <NotificationDropdown />}
 
           {/* User chip + dropdown */}
@@ -185,6 +190,12 @@ const Navbar = () => {
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
             <Mail size={18} /><span>Contact</span>
+          </NavLink>
+          {/* AI Search mobile */}
+          <NavLink to="/ai-search"
+            className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
+            onClick={() => setOpen(false)}>
+            <Sparkles size={18} /><span>AI Search</span>
           </NavLink>
           {isLoggedIn && (
             <NavLink to="/profile"

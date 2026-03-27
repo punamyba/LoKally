@@ -167,6 +167,39 @@
 .lk-mLogout:hover { background: rgba(255,68,68,0.1); }
 .lk-mAuth { display: grid; gap: 8px; }
 
+/* AI Search link — special gradient style */
+.lk-link--ai {
+  display: inline-flex !important;
+  align-items: center;
+  background: linear-gradient(135deg, #1a7fe8, #16a34a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800 !important;
+}
+ 
+.lk-link--ai.lk-link--active,
+.lk-link--ai:hover {
+  opacity: 0.85;
+}
+ 
+/* Scrolled navbar ma AI link visible hana */
+.lk-nav--scrolled .lk-link--ai {
+  background: linear-gradient(135deg, #1a7fe8, #16a34a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+ 
+/* Transparent navbar ma pani visible */
+.lk-nav--transparent .lk-link--ai {
+  background: linear-gradient(135deg, #a5f3fc, #86efac);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+ 
+
 /* Desktop */
 @media (min-width: 900px) {
   .lk-links    { display: flex; }
