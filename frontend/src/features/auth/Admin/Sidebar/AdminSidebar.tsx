@@ -74,7 +74,7 @@ export default function AdminSidebar() {
             <div className="asb-profile-name">
               {user.first_name} {user.last_name}
             </div>
-            <div className="asb-profile-role">Administrator</div>
+            <div className="asb-profile-role">Admin</div>
           </div>
         </div>
 
