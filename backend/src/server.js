@@ -7,6 +7,7 @@ import User from "./models/user.model.js";
 import Notification from "./models/notification.model.js";
 import PostReport from "./models/postreport.model.js";
 import Place from "./models/place.model.js";
+import PlaceVisit from "./models/placevisit.model.js";
 
 const PORT = process.env.PORT || 5001;
 
@@ -29,6 +30,9 @@ const startServer = async () => {
 
     await Place.sync({ alter: true });
     console.log("Place model updated");
+
+    await PlaceVisit.sync({ alter: true });
+    console.log("PlaceVisit model updated");
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
