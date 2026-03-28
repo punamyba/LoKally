@@ -36,18 +36,10 @@ export type MapViewProps = {
   onClickViewPlaceDetails:  () => void;
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   ZOOM THRESHOLDS — progressive visibility
-   zoom < 10   → kei nadekhnu  (Nepal full view, too crowded)
-   zoom 10–12  → featured places only (golden star teardrop)
-   zoom 13–14  → all places (blue teardrop)
-   zoom ≥ 15   → all places (photo circle marker)
-───────────────────────────────────────────────────────────────── */
-const ZOOM_SHOW_FEATURED = 7;
-const ZOOM_SHOW_ALL      = 11;
-const ZOOM_SHOW_PHOTO    = 14;
+// Photo circle only at zoom >= 14, otherwise teardrop
+const ZOOM_SHOW_PHOTO = 14;
 
-/* ── inner hooks ─────────────────────────────────────────────────── */
+// ── Inner hooks ──────────────────────────────────────────────────
 
 function MapReadyEmitter({ onMapReady }: { onMapReady?: (map: L.Map) => void }) {
   const map = useMap();
@@ -78,7 +70,9 @@ function FlyToSelected({ selectedPlace }: { selectedPlace: Place | null }) {
   const map = useMap();
   useEffect(() => {
     if (!selectedPlace) return;
-    map.flyTo([selectedPlace.lat, selectedPlace.lng], 14, { duration: 0.8 });
+    const currentZoom = map.getZoom();
+    const targetZoom  = Math.max(currentZoom, 13);
+    map.flyTo([selectedPlace.lat, selectedPlace.lng], targetZoom, { duration: 0.8 });
   }, [selectedPlace]); // eslint-disable-line
   return null;
 }
@@ -95,8 +89,9 @@ function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
   return null;
 }
 
-/* ── icons ───────────────────────────────────────────────────────── */
+// ── Icons ────────────────────────────────────────────────────────
 
+// GPS blue pulse circle
 function makeUserLocationIcon() {
   return L.divIcon({
     className: "lk-gpsPin",
@@ -110,7 +105,7 @@ function makeUserLocationIcon() {
   });
 }
 
-/* Blue teardrop — normal places */
+// Blue teardrop — normal approved places
 function makeTearDropIcon() {
   return L.divIcon({
     className: "lk-dotMarker",
@@ -129,7 +124,7 @@ function makeTearDropIcon() {
   });
 }
 
-/* Golden star teardrop — featured/admin places */
+// Golden star teardrop — featured places
 function makeFeaturedIcon() {
   return L.divIcon({
     className: "lk-dotMarker lk-dotMarker--featured",
@@ -150,11 +145,31 @@ function makeFeaturedIcon() {
   });
 }
 
-/* Photo circle — zoomed in (zoom ≥ 15) */
-function makePhotoIcon(p: Place) {
+// Red teardrop — selected place OR map click pin
+function makeRedIcon() {
+  return L.divIcon({
+    className: "lk-dotMarker lk-dotMarker--selected",
+    html: `
+      <div class="lk-dotMarker__drop lk-dotMarker__drop--selected">
+        <svg viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 2C8.925 2 4 6.925 4 13c0 8.5 11 27 11 27S26 21.5 26 13C26 6.925 21.075 2 15 2z"
+            fill="#ef4444" stroke="white" stroke-width="1.8"/>
+          <circle cx="15" cy="13" r="5" fill="white" opacity="0.95"/>
+        </svg>
+        <div class="lk-dotMarker__ring"></div>
+      </div>
+    `,
+    iconSize:    [34, 48],
+    iconAnchor:  [17, 48],
+    popupAnchor: [0, -50],
+  });
+}
+
+// Photo circle — zoom >= 14
+function makePhotoIcon(p: Place, isSelected: boolean) {
   const img        = p.image || "";
   const isFeatured = !!(p as any).is_featured;
-  const ringColor  = isFeatured ? "#f59e0b" : "#167ee0";
+  const ringColor  = isSelected ? "#ef4444" : (isFeatured ? "#f59e0b" : "#167ee0");
   return L.divIcon({
     className: "lk-photoMarker",
     html: `
@@ -169,15 +184,7 @@ function makePhotoIcon(p: Place) {
   });
 }
 
-const tempPinIcon = new L.Icon({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize:   [25, 41],
-  iconAnchor: [12, 41],
-});
-
-/* ── main component ─────────────────────────────────────────────── */
+// ── Main component ───────────────────────────────────────────────
 
 export default function MapView({
   fullHeight = false,
@@ -199,8 +206,8 @@ export default function MapView({
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [zoom, setZoom]       = useState(7);
   const fallbackPos           = useMemo<[number, number]>(() => [27.7172, 85.324], []);
-  const tempMarkerRef         = useRef<L.Marker | null>(null);
   const gpsIcon               = useMemo(() => makeUserLocationIcon(), []);
+  const tempMarkerRef         = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) { setUserPos(fallbackPos); return; }
@@ -218,25 +225,29 @@ export default function MapView({
     return fallbackPos;
   }, [selectedPlace, tempPin, userPos, fallbackPos]);
 
-  useEffect(() => {
-    if (!tempPin || !tempMarkerRef.current) return;
-    tempMarkerRef.current.openPopup();
-  }, [tempPin]);
-
-  /* decide icon per place + zoom */
+  // Get correct icon
   const getPlaceIcon = (p: Place) => {
+    const isSelected = selectedPlace?.id === p.id;
     const isFeatured = !!(p as any).is_featured;
-    if (zoom >= ZOOM_SHOW_PHOTO) return makePhotoIcon(p);
-    if (zoom >= ZOOM_SHOW_ALL)   return isFeatured ? makeFeaturedIcon() : makeTearDropIcon();
-    return makeFeaturedIcon(); // zoom 10-12: only featured shown, always golden
+    if (zoom >= ZOOM_SHOW_PHOTO) return makePhotoIcon(p, isSelected);
+    if (isSelected)  return makeRedIcon();
+    if (isFeatured)  return makeFeaturedIcon();
+    return makeTearDropIcon();
   };
 
-  /* which places to render at this zoom level */
+  // Featured matra zoom out maa, sabai zoom in maa
   const visiblePlaces = useMemo(() => {
-    if (zoom < ZOOM_SHOW_FEATURED) return [];
-    if (zoom < ZOOM_SHOW_ALL)      return places.filter(p => !!(p as any).is_featured);
+    if (zoom < 9) {
+      // Zoom out — featured matra + selected always
+      const featured = places.filter(p => !!(p as any).is_featured);
+      if (selectedPlace && !featured.find(p => p.id === selectedPlace.id)) {
+        return [...featured, selectedPlace];
+      }
+      return featured;
+    }
+    // Zoom in — sabai dekhaucha
     return places;
-  }, [places, zoom]);
+  }, [places, zoom, selectedPlace]);
 
   return (
     <MapContainer
@@ -257,7 +268,7 @@ export default function MapView({
       <ClickHandler onMapPick={onMapPick} />
       <ZoomWatcher onZoom={setZoom} />
 
-      {/* GPS pulse marker */}
+      {/* GPS blue pulse circle */}
       {userPos && (
         <Marker position={userPos} icon={gpsIcon}>
           <Popup autoClose={false} closeOnClick={false}>
@@ -268,22 +279,23 @@ export default function MapView({
         </Marker>
       )}
 
-      {/* Place markers — progressive zoom visibility */}
+      {/* Place markers — SABAI HAMESHA VISIBLE */}
       {visiblePlaces.map((p) => (
         <Marker
           key={p.id}
           position={[p.lat, p.lng]}
           icon={getPlaceIcon(p)}
+          zIndexOffset={selectedPlace?.id === p.id ? 1000 : 0}
           eventHandlers={{ click: () => onSelectPlace(p) }}
         />
       ))}
 
-      {/* Temp pin (add mode) */}
+      {/* Map click / add pin — RED + DRAGGABLE */}
       {tempPin && (
         <Marker
           position={[tempPin.lat, tempPin.lng]}
-          icon={tempPinIcon}
-          draggable={mode === "add"}
+          icon={makeRedIcon()}
+          draggable={true}
           ref={(ref) => {
             const a = ref as any;
             tempMarkerRef.current = a?.leafletElement || a || null;
@@ -297,7 +309,7 @@ export default function MapView({
         >
           <Popup autoClose={false} closeOnClick={false} closeButton>
             <div className="lk-pickPopup">
-              <div className="lk-pickPopup__title">Selected location</div>
+              <div className="lk-pickPopup__title">📍 Selected location</div>
               <div className="lk-pickPopup__coords">
                 <div><b>Lat:</b> {tempPin.lat.toFixed(6)}</div>
                 <div><b>Lng:</b> {tempPin.lng.toFixed(6)}</div>

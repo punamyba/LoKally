@@ -44,7 +44,7 @@ function distanceMeters(a: LatLng, b: LatLng) {
 
 const CATEGORIES = [
   "Nature","Heritage","Temple","Lake","Viewpoint",
-  "Hidden Gem","Adventure","Cultural","Food","Other",
+  "Hidden Gem","Adventure","Cultural","Food","City","Other",
 ];
 
 const PREDEFINED_TAGS = [
