@@ -455,3 +455,35 @@ export const adminDeletePost = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+export const updatePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+
+    if (post.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    const caption = req.body.caption?.trim() ?? post.caption;
+
+    let existingImages = [];
+    try { existingImages = JSON.parse(req.body.existingImages || "[]"); } catch {}
+
+    let newImages = [];
+    if (req.files && req.files.length > 0) {
+      newImages = req.files.map(f => `/uploads/posts/${f.filename}`);
+    }
+
+    const allImages = [...existingImages, ...newImages];
+    const images = allImages.length > 0 ? JSON.stringify(allImages) : null;
+
+    await post.update({ caption: caption || null, images });
+
+    const full = await Post.findByPk(post.id, { include: [AUTHOR_INCLUDE] });
+    const [data] = await attachUserFlags([full], req.user.id);
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error("updatePost:", err.message);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};

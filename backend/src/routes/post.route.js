@@ -25,6 +25,7 @@ router.get("/:id/comments", PostCtrl.getComments);
 router.get("/:id/likes", optionalAuth, PostCtrl.getLikers);
 
 router.post("/", authMiddleware, postUpload.array("images", 10), PostCtrl.createPost);
+router.put("/:id", authMiddleware, postUpload.array("images", 10), PostCtrl.updatePost);
 router.delete("/:id", authMiddleware, PostCtrl.deletePost);
 router.post("/:id/like", authMiddleware, PostCtrl.toggleLike);
 router.post("/:id/comments", authMiddleware, PostCtrl.addComment);
