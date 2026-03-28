@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../Components/Layout/Navbar/Navbar";
+import Footer from "../Components/Layout/Footer/Footer";
 import {
   Sparkles, Search, X, MapPin, Navigation,
-  ChevronRight, Loader2, AlertCircle, LocateFixed,
+  ChevronRight, Loader2, LocateFixed, Zap,
 } from "lucide-react";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import { getImageUrl } from "../../../shared/config/imageUrl";
@@ -12,6 +14,7 @@ interface Place {
   id: number | null;
   name: string;
   address: string;
+  description?: string;
   image: string | null;
   category: string;
   lat: number | null;
@@ -37,32 +40,31 @@ function PlaceCard({ place, showDistance }: { place: Place; showDistance?: boole
   const coverImg = images[0] ? getImageUrl(images[0]) : null;
 
   return (
-    <div className="ais-card" onClick={() => place.id && navigate(`/place/${place.id}`)}>
-      <div className="ais-card-img">
+    <div className="ai-place-card" onClick={() => place.id && navigate(`/place/${place.id}`)}>
+      <div className="ai-card-image">
         {coverImg
           ? <img src={coverImg} alt={place.name} />
-          : <div className="ais-card-no-img"><MapPin size={28} strokeWidth={1.5} /></div>}
-        <div className="ais-card-badges">
-          {place.category && <span className="ais-badge-cat">{place.category}</span>}
-          {place.similarity_score && (
-            <span className="ais-badge-ai"><Sparkles size={10} /> AI Match</span>
-          )}
+          : <div className="ai-card-no-image"><MapPin size={26} strokeWidth={1.2} /></div>}
+        <div className="ai-card-overlay" />
+        <div className="ai-card-badges">
+          {place.category && <span className="ai-badge-category">{place.category}</span>}
+          {place.similarity_score && <span className="ai-badge-ai"><Zap size={9} /> AI</span>}
           {showDistance && place.distance_km && (
-            <span className="ais-badge-dist"><Navigation size={10} /> {place.distance_km} km</span>
+            <span className="ai-badge-distance"><Navigation size={9} /> {place.distance_km} km</span>
           )}
         </div>
       </div>
-      <div className="ais-card-body">
-        <div className="ais-card-name">{place.name}</div>
-        <div className="ais-card-addr"><MapPin size={12} strokeWidth={2} />{place.address}</div>
+      <div className="ai-card-body">
+        <div className="ai-card-name">{place.name}</div>
+        <div className="ai-card-address"><MapPin size={11} strokeWidth={2} />{place.address}</div>
         {place.tags && place.tags.length > 0 && (
-          <div className="ais-card-tags">
+          <div className="ai-card-tags">
             {place.tags.slice(0, 3).map(t => (
-              <span key={t} className="ais-card-tag">{t}</span>
+              <span key={t} className="ai-card-tag">{t}</span>
             ))}
           </div>
         )}
-        <button className="ais-card-btn">View Details <ChevronRight size={13} /></button>
+        <button className="ai-card-button">View Details <ChevronRight size={12} /></button>
       </div>
     </div>
   );
@@ -75,38 +77,37 @@ function Section({
   loading?: boolean; empty?: boolean; children?: React.ReactNode;
 }) {
   return (
-    <div className="ais-section">
-      <div className="ais-section-header">
-        <div className="ais-section-icon">{icon}</div>
-        <div className="ais-section-header-text">
-          <div className="ais-section-title-row">
-            <span className="ais-section-title">{title}</span>
+    <div className="ai-section">
+      <div className="ai-section-header">
+        <div className="ai-section-icon">{icon}</div>
+        <div className="ai-section-header-text">
+          <div className="ai-section-title-row">
+            <span className="ai-section-title">{title}</span>
             {count !== undefined && count > 0 && (
-              <span className="ais-section-count">{count} results</span>
+              <span className="ai-section-count">{count} results</span>
             )}
           </div>
-          {subtitle && <div className="ais-section-sub">{subtitle}</div>}
+          {subtitle && <div className="ai-section-subtitle">{subtitle}</div>}
         </div>
       </div>
       {loading ? (
-        <div className="ais-section-state">
-          <Loader2 size={20} className="ais-spin" />
-          <span>Finding places with AI...</span>
+        <div className="ai-section-state">
+          <Loader2 size={18} className="ai-spin" />
+          <span>Finding with AI...</span>
         </div>
       ) : empty ? (
-        <div className="ais-section-state ais-section-empty">
-          <AlertCircle size={16} />
-          <span>No places found in this area</span>
+        <div className="ai-section-state ai-section-empty">
+          <span>No places found</span>
         </div>
       ) : (
-        <div className="ais-cards-grid">{children}</div>
+        <div className="ai-cards-grid">{children}</div>
       )}
     </div>
   );
 }
 
-const QUICK_TAGS    = ["Peaceful", "Scenic", "Hiking", "Adventure", "Cultural", "Photography", "Sunrise", "Wildlife"];
-const QUICK_PLACES  = ["Pokhara", "Kathmandu", "Lumbini", "Gorkha", "Ilam", "Jumla"];
+const QUICK_TAGS   = ["Peaceful", "Scenic", "Hiking", "Adventure", "Photography", "Sunrise", "Wildlife", "Cultural"];
+const QUICK_PLACES = ["Pokhara", "Kathmandu", "Lumbini", "Gorkha", "Ilam", "Jumla"];
 
 export default function AISearch() {
   const [query,         setQuery]         = useState("");
@@ -116,6 +117,7 @@ export default function AISearch() {
   const [nearbyResults, setNearbyResults] = useState<Place[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyName,    setNearbyName]    = useState("");
+  const [isTagSearch,   setIsTagSearch]   = useState(false);
   const [nearMeResults, setNearMeResults] = useState<Place[]>([]);
   const [nearMeLoading, setNearMeLoading] = useState(false);
   const [userLocation,  setUserLocation]  = useState<{ lat: number; lng: number } | null>(null);
@@ -137,20 +139,14 @@ export default function AISearch() {
   const requestLocation = () => {
     setLocRequested(true);
     setLocError("");
-    if (!navigator.geolocation) {
-      setLocError("Geolocation not supported by your browser");
-      return;
-    }
+    if (!navigator.geolocation) { setLocError("Geolocation not supported"); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
         fetchNearMe(loc.lat, loc.lng);
       },
-      () => {
-        setLocError("Location access denied. Please allow location in browser settings.");
-        setLocRequested(false);
-      }
+      () => { setLocError("Location access denied."); setLocRequested(false); }
     );
   };
 
@@ -163,7 +159,17 @@ export default function AISearch() {
     setNearbyResults([]);
     setNearbyName("");
 
-    // Section 1 — AI Recommend
+    // Tag/category search detect gara — Nearby nadekhaunu
+    const KNOWN_TAGS = ["Peaceful","Scenic","Hiking","Adventure","Photography",
+      "Sunrise","Wildlife","Cultural","Trekking","Boating","Bird Watching",
+      "Waterfall","Sunset","Camping","Family Friendly","Budget Friendly",
+      "Historical","Off the beaten path"];
+    const KNOWN_CATEGORIES = ["Nature","Heritage","Temple","Lake","Viewpoint",
+      "Hidden Gem","Adventure","Cultural","Food","City","Other"];
+    const isTag = KNOWN_TAGS.some(t => t.toLowerCase() === q.toLowerCase());
+    const isCat = KNOWN_CATEGORIES.some(c => c.toLowerCase() === q.toLowerCase());
+    setIsTagSearch(isTag || isCat);
+
     setAiLoading(true);
     try {
       const res = await axiosInstance.get("/recommendations", {
@@ -173,18 +179,20 @@ export default function AISearch() {
     } catch {}
     setAiLoading(false);
 
-    // Section 2 — Nearby (15km same locality)
-    setNearbyLoading(true);
-    try {
-      const res = await axiosInstance.get("/recommendations/nearby", {
-        params: { place_name: q, radius_km: 15, limit: 8 },
-      });
-      if (res.data?.success) {
-        setNearbyResults(res.data.data || []);
-        setNearbyName(res.data.searched_place?.name || q);
-      }
-    } catch {}
-    setNearbyLoading(false);
+    // Nearby — place search matra, tag/category search maa nadekhaunu
+    if (!isTag && !isCat) {
+      setNearbyLoading(true);
+      try {
+        const res = await axiosInstance.get("/recommendations/nearby", {
+          params: { place_name: q, radius_km: 15, limit: 8 },
+        });
+        if (res.data?.success) {
+          setNearbyResults(res.data.data || []);
+          setNearbyName(res.data.searched_place?.name || q);
+        }
+      } catch {}
+      setNearbyLoading(false);
+    }
   };
 
   const handleClear = () => {
@@ -197,84 +205,91 @@ export default function AISearch() {
   };
 
   return (
-    <div className="ais-root">
+    <>
+    <Navbar />
+    <div className="ai-page">
+      {/* Animated background blobs */}
+      <div className="ai-background">
+        <div className="ai-glow-blob ai-glow-blob-green" />
+        <div className="ai-glow-blob ai-glow-blob-blue" />
+        <div className="ai-glow-blob ai-glow-blob-purple" />
+      </div>
 
-      {/* ── HERO ── */}
-      <div className="ais-hero">
-        <div className="ais-hero-badge"><Sparkles size={13} /> AI-POWERED SEARCH</div>
-        <h1 className="ais-hero-title">Discover Places with AI</h1>
-        <p className="ais-hero-sub">
-          Search by place name, category, or tags like "peaceful", "scenic", "hiking" — our KNN model finds the best matches
+      {/* Hero */}
+      <div className="ai-hero">
+        <div className="ai-hero-badge">
+          <Sparkles size={12} />
+          <span>KNN-POWERED AI SEARCH</span>
+        </div>
+
+        <h1 className="ai-hero-title">
+          Discover Nepal's<br />
+          <span className="ai-title-gradient">Hidden Gems</span>
+        </h1>
+
+        <p className="ai-hero-subtitle">
+          Search by place, category, or mood tags like "peaceful", "scenic", "hiking"
         </p>
 
         {/* Search bar */}
-        <div className="ais-search-row">
-          <div className="ais-search-bar">
-            <Search size={18} className="ais-search-icon" />
+        <div className="ai-search-box">
+          <div className="ai-search-inner">
+            <Search size={17} className="ai-search-icon" />
             <input
               ref={inputRef}
-              className="ais-search-input"
+              className="ai-search-input"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
-              placeholder='Try "Pokhara", "peaceful", "scenic", "hiking"...'
+              placeholder='Try "Pokhara", "peaceful", "hiking"...'
             />
             {query && (
-              <button className="ais-clear-btn" onClick={handleClear}><X size={15} /></button>
+              <button className="ai-clear-button" onClick={handleClear}><X size={14} /></button>
             )}
           </div>
-          <button className="ais-search-btn" onClick={() => handleSearch()}>
-            <Sparkles size={15} /> Find Similar
+          <button className="ai-search-button" onClick={() => handleSearch()}>
+            <Sparkles size={14} /> Find
           </button>
         </div>
 
         {/* Quick tags */}
-        <div className="ais-quick-section">
-          <div className="ais-quick-label">🏷️ Search by tag</div>
-          <div className="ais-quick-pills">
-            {QUICK_TAGS.map(t => (
-              <button key={t} className="ais-quick-pill ais-quick-pill--tag"
-                onClick={() => handleSearch(t)}>{t}</button>
-            ))}
-          </div>
+        <div className="ai-quick-row">
+          <span className="ai-quick-label">Tags:</span>
+          {QUICK_TAGS.map(t => (
+            <button key={t} className="ai-pill ai-tag-pill" onClick={() => handleSearch(t)}>{t}</button>
+          ))}
         </div>
 
-        {/* Quick places */}
-        <div className="ais-quick-section">
-          <div className="ais-quick-label">📍 Popular places</div>
-          <div className="ais-quick-pills">
-            {QUICK_PLACES.map(p => (
-              <button key={p} className="ais-quick-pill ais-quick-pill--place"
-                onClick={() => handleSearch(p)}>{p}</button>
-            ))}
-          </div>
+        <div className="ai-quick-row">
+          <span className="ai-quick-label">Places:</span>
+          {QUICK_PLACES.map(p => (
+            <button key={p} className="ai-pill ai-place-pill" onClick={() => handleSearch(p)}>{p}</button>
+          ))}
         </div>
 
-        {/* Near Me button — hero maa */}
-        <div className="ais-nearme-hero">
-          {!userLocation ? (
-            <button className="ais-nearme-btn" onClick={requestLocation}>
-              <LocateFixed size={15} />
-              {locRequested ? "Getting location..." : "Show Places Near Me"}
-            </button>
-          ) : (
-            <div className="ais-nearme-active">
-              <LocateFixed size={14} /> Location found — scroll down to see nearby places
-            </div>
-          )}
-          {locError && <p className="ais-loc-error">{locError}</p>}
-        </div>
+        {/* Near me button */}
+        {!userLocation && (
+          <button className="ai-nearme-button" onClick={requestLocation}>
+            <LocateFixed size={14} />
+            {locRequested ? "Getting location..." : "Show Places Near Me"}
+          </button>
+        )}
+        {userLocation && (
+          <div className="ai-nearme-active">
+            <LocateFixed size={13} /> Location found — see below
+          </div>
+        )}
+        {locError && <p className="ai-location-error">{locError}</p>}
       </div>
 
-      {/* ── BODY ── */}
-      <div className="ais-body">
+      {/* Results */}
+      <div className="ai-results-body">
 
-        {/* Section 1 — AI Recommended */}
         {hasSearched && (
           <Section
-            icon={<Sparkles size={17} />}
+            icon={<Sparkles size={16} />}
             title={`AI Recommended — "${query}"`}
-            subtitle="Places matched by AI using category, tags and description"
+            subtitle="Matched by AI using category, tags and description"
             count={aiResults.length}
             loading={aiLoading}
             empty={!aiLoading && aiResults.length === 0}
@@ -283,10 +298,9 @@ export default function AISearch() {
           </Section>
         )}
 
-        {/* Section 2 — Nearby searched place (15km) */}
-        {hasSearched && (
+        {hasSearched && !isTagSearch && (nearbyLoading || nearbyResults.length > 0) && (
           <Section
-            icon={<MapPin size={17} />}
+            icon={<MapPin size={16} />}
             title={`Nearby ${nearbyName || query}`}
             subtitle="Places within 15km — same locality"
             count={nearbyResults.length}
@@ -297,12 +311,11 @@ export default function AISearch() {
           </Section>
         )}
 
-        {/* Section 3 — Near Me (user location) */}
         {(userLocation || nearMeLoading) && (
           <Section
-            icon={<LocateFixed size={17} />}
+            icon={<LocateFixed size={16} />}
             title="Near You"
-            subtitle="Places within 30km of your current location"
+            subtitle="Places within 30km of your location"
             count={nearMeResults.length}
             loading={nearMeLoading}
             empty={!nearMeLoading && nearMeResults.length === 0}
@@ -311,19 +324,17 @@ export default function AISearch() {
           </Section>
         )}
 
-        {/* Near Me prompt — show only if not yet requested */}
-        {!userLocation && !locRequested && !hasSearched && (
-          <div className="ais-nearme-prompt">
-            <LocateFixed size={36} strokeWidth={1.5} />
-            <h3>Discover Places Near You</h3>
-            <p>Allow location access to find hidden gems in your area</p>
-            <button className="ais-location-btn" onClick={requestLocation}>
-              <Navigation size={15} /> Use My Location
-            </button>
+        {!hasSearched && !userLocation && (
+          <div className="ai-empty-state">
+            <div className="ai-empty-icon"><Sparkles size={32} /></div>
+            <h3>Start Discovering</h3>
+            <p>Search for a place or click a tag above to find similar places across Nepal</p>
           </div>
         )}
 
       </div>
     </div>
+    <Footer />
+    </>
   );
 }
