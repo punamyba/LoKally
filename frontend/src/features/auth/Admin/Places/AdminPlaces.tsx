@@ -18,7 +18,7 @@ type ModalTab = "details" | "conditions" | "tags";
 const PAGE_SIZE = 10;
 const CATEGORIES = [
   "Nature", "Heritage", "Temple", "Lake", "Viewpoint",
-  "Hidden Gem", "Adventure", "Cultural", "Food", "Other",
+  "Hidden Gem", "Adventure", "Cultural", "Food", "City", "Other", 
 ];
 const PREDEFINED_TAGS = [
   "Scenic", "Hiking", "Photography", "Peaceful", "Family Friendly",
