@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import { LogOut, Menu, X, Users2, Mail, Compass, User, ChevronDown, Settings, Sparkles } from "lucide-react";
+import {
+  LogOut, Menu, X, Users2, Mail, Compass, User,
+  ChevronDown, Settings, Sparkles, Home, Phone,
+} from "lucide-react";
 import NotificationDropdown from "../../../Notifications/NotificationDropdown";
+import logo from "../../../../../assets/logo1.png";
 
 const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
 const SERVER = import.meta.env.VITE_API_BASE_URL || API.replace("/api", "");
@@ -77,8 +81,9 @@ const Navbar = () => {
     <header className={`lk-nav ${isHome && !scrolled ? "lk-nav--transparent" : "lk-nav--scrolled"}`}>
       <div className="lk-nav__inner">
 
-        {/* Brand */}
+        {/* Brand — logo image + LoKally Nepal text */}
         <Link to={isLoggedIn ? "/home" : "/"} className="lk-brand">
+          <img src={logo} alt="LoKally Logo" className="lk-brand__logo" />
           <div className="lk-brand__text">
             <div className="lk-brand__main">LoKally</div>
             <div className="lk-brand__sub">NEPAL</div>
@@ -89,24 +94,22 @@ const Navbar = () => {
           <nav className="lk-links">
             {isLoggedIn && (
               <NavLink to="/home" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
-                Home
+                <Home size={13} strokeWidth={2.5} /> Home
               </NavLink>
             )}
             <NavLink to="/explore-map" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
-              Map View
+              <Compass size={13} strokeWidth={2.5} /> Map View
             </NavLink>
             {isLoggedIn && (
               <NavLink to="/community" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
-                Community
+                <Users2 size={13} strokeWidth={2.5} /> Community
               </NavLink>
             )}
             <NavLink to="/contact" className={({ isActive }) => isActive ? "lk-link lk-link--active" : "lk-link"}>
-              Contact
+              <Phone size={13} strokeWidth={2.5} /> Contact
             </NavLink>
-            {/* AI Search link */}
             <NavLink to="/ai-search" className={({ isActive }) => isActive ? "lk-link lk-link--active lk-link--ai" : "lk-link lk-link--ai"}>
-              <Sparkles size={13} strokeWidth={2.5} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-              AI Search
+              <Sparkles size={13} strokeWidth={2.5} /> AI Search
             </NavLink>
           </nav>
 
@@ -174,10 +177,17 @@ const Navbar = () => {
       {/* Mobile drawer */}
       {open && (
         <div className="lk-mobile">
+          {isLoggedIn && (
+            <NavLink to="/home"
+              className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
+              onClick={() => setOpen(false)}>
+              <Home size={18} /><span>Home</span>
+            </NavLink>
+          )}
           <NavLink to="/explore-map"
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
-            <Compass size={18} /><span>Explore</span>
+            <Compass size={18} /><span>Map View</span>
           </NavLink>
           {isLoggedIn && (
             <NavLink to="/community"
@@ -189,9 +199,8 @@ const Navbar = () => {
           <NavLink to="/contact"
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
-            <Mail size={18} /><span>Contact</span>
+            <Phone size={18} /><span>Contact</span>
           </NavLink>
-          {/* AI Search mobile */}
           <NavLink to="/ai-search"
             className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
             onClick={() => setOpen(false)}>
