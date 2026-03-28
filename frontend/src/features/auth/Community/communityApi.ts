@@ -20,6 +20,10 @@ export const communityApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }).then((r) => r.data),
 
+  updatePost: (id: number, formData: FormData) =>
+    axiosInstance.put(`/posts/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data),
   deletePost: (id: number) =>
     axiosInstance.delete(`/posts/${id}`).then((r) => r.data),
 
