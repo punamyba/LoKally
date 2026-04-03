@@ -1,212 +1,215 @@
-import PlaceVisit from "../models/placevisit.model.js";
-import Place from "../models/place.model.js";
-import User from "../models/user.model.js";
-import Notification from "../models/notification.model.js";
-import { sendEmail } from "../Utils/email.js";
+import * as PlaceVisitService from "../services/placevisit.service.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// ── Multer setup for visit photos ──────────────────────────────
+// ── Multer setup for visit photos ─────────────────────────────────────────────
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/visits/";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     cb(null, dir);
   },
   filename: (req, file, cb) => {
     cb(null, `visit-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
-export const visitUpload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ── Submit visit ───────────────────────────────────────────────
+export const visitUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
+// ── USER ──────────────────────────────────────────────────────────────────────
+
 export const submitVisit = async (req, res) => {
+  const { visit_date, experience } = req.body;
+
+  if (!visit_date) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Visit date is required" });
+  }
+
   try {
-    const { id: place_id } = req.params;
-    const user_id = req.user.id;
-    const { visit_date, experience } = req.body;
-
-    if (!visit_date) return res.status(400).json({ success: false, message: "Visit date required" });
-
-    // check duplicate pending/approved
-    const existing = await PlaceVisit.findOne({
-      where: { place_id, user_id, status: ["pending", "approved"] }
-    });
-    if (existing) return res.status(409).json({ success: false, message: "You already have a pending or approved visit for this place" });
-
-    const photo = req.file ? `/uploads/visits/${req.file.filename}` : null;
-
-    const visit = await PlaceVisit.create({
-      place_id, user_id, visit_date, experience: experience?.trim() || null, photo,
+    const result = await PlaceVisitService.submitVisit({
+      place_id: req.params.id,
+      user_id: req.user.id,
+      visit_date,
+      experience,
+      file: req.file,
     });
 
-    return res.json({ success: true, message: "Visit submitted for review!", data: visit });
+    if (result.duplicate) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a pending or approved visit for this place",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Visit submitted for review!",
+      data: result.visit,
+    });
   } catch (err) {
-    console.error("submitVisit:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("submitVisit error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
-// ── Get my visits ──────────────────────────────────────────────
 export const getMyVisits = async (req, res) => {
   try {
-    const visits = await PlaceVisit.findAll({
-      where: { user_id: req.user.id },
-      include: [{ model: Place, as: "place", attributes: ["id", "name", "image"] }],
-      order: [["created_at", "DESC"]],
-    });
-    return res.json({ success: true, data: visits });
+    const data = await PlaceVisitService.fetchMyVisits(req.user.id);
+    return res.json({ success: true, data });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getMyVisits error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
-// ── ADMIN: get all pending visits ─────────────────────────────
+export const removeVisit = async (req, res) => {
+  try {
+    const result = await PlaceVisitService.removeVisit({
+      place_id: req.params.id,
+      user_id: req.user.id,
+    });
+
+    if (result.notFound) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No approved visit found" });
+    }
+
+    return res.json({ success: true, message: "Visit removed" });
+  } catch (err) {
+    console.error("removeVisit error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
+  }
+};
+
+export const getPlaceVisitStatus = async (req, res) => {
+  try {
+    const data = await PlaceVisitService.fetchPlaceVisitStatus(
+      parseInt(req.params.id, 10),
+      parseInt(req.user.id, 10)
+    );
+
+    return res.json({ success: true, ...data });
+  } catch (err) {
+    console.error("getPlaceVisitStatus error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
+  }
+};
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+
 export const getAdminVisits = async (req, res) => {
-  try {
-    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Admin only" });
-    const { status = "pending", page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin only" });
+  }
 
-    const { count, rows } = await PlaceVisit.findAndCountAll({
-      where: status !== "all" ? { status } : {},
-      include: [
-        { model: Place, as: "place", attributes: ["id", "name", "image", "address"] },
-        { model: User,  as: "user",  attributes: ["id", "first_name", "last_name", "email"] },
-      ],
-      order: [["created_at", "DESC"]],
-      limit: parseInt(limit), offset: parseInt(offset),
+  const { status = "pending", page = 1, limit = 20 } = req.query;
+
+  try {
+    const data = await PlaceVisitService.fetchAdminVisits({
+      status,
+      page: Number(page),
+      limit: Number(limit),
     });
 
-    return res.json({ success: true, data: rows, total: count, page: parseInt(page) });
+    return res.json({
+      success: true,
+      data: data.rows,
+      total: data.total,
+      page: data.page,
+    });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getAdminVisits error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
-// ── ADMIN: approve visit ───────────────────────────────────────
 export const approveVisit = async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin only" });
+  }
+
   try {
-    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Admin only" });
-    const visit = await PlaceVisit.findByPk(req.params.id, {
-      include: [
-        { model: Place, as: "place", attributes: ["id", "name"] },
-        { model: User,  as: "user",  attributes: ["id", "first_name", "last_name", "email"] },
-      ],
-    });
-    if (!visit) return res.status(404).json({ success: false, message: "Visit not found" });
+    const result = await PlaceVisitService.approveVisit(req.params.id);
 
-    await visit.update({ status: "approved", points_awarded: true });
-
-    // notify user
-    await Notification.create({
-      user_id: visit.user_id,
-      type: "visit_approved",
-      message: `Your visit to "${visit.place?.name}" was approved!`,
-      place_id: visit.place_id,
-    });
-
-    // email
-    try {
-      await sendEmail({
-        to: visit.user.email,
-        subject: "Visit Approved — LoKally Nepal",
-        html: `<p>Hi ${visit.user.first_name},</p>
-               <p>Your visit to <strong>${visit.place?.name}</strong> has been approved! 🎉</p>
-               <p>Your visit has been verified and your "Visited" badge is now showing on your profile.</p>`,
-      });
-    } catch {}
+    if (result.notFound) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Visit not found" });
+    }
 
     return res.json({ success: true, message: "Visit approved" });
   } catch (err) {
-    console.error("approveVisit:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("approveVisit error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
-// ── ADMIN: reject visit ────────────────────────────────────────
 export const rejectVisit = async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin only" });
+  }
+
+  const { reason } = req.body;
+
   try {
-    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Admin only" });
-    const { reason } = req.body;
-    const visit = await PlaceVisit.findByPk(req.params.id, {
-      include: [
-        { model: Place, as: "place", attributes: ["id", "name"] },
-        { model: User,  as: "user",  attributes: ["id", "first_name", "last_name", "email"] },
-      ],
-    });
-    if (!visit) return res.status(404).json({ success: false, message: "Visit not found" });
+    const result = await PlaceVisitService.rejectVisit(req.params.id, reason);
 
-    await visit.update({ status: "rejected" });
-
-    // notify user
-    await Notification.create({
-      user_id: visit.user_id,
-      type: "visit_rejected",
-      message: `Your visit to "${visit.place?.name}" was not approved.${reason ? ` Reason: ${reason}` : ""}`,
-      place_id: visit.place_id,
-    });
-
-    try {
-      await sendEmail({
-        to: visit.user.email,
-        subject: "Visit Submission Update — LoKally Nepal",
-        html: `<p>Hi ${visit.user.first_name},</p>
-               <p>Unfortunately your visit submission for <strong>${visit.place?.name}</strong> was not approved.</p>
-               ${reason ? `<p>Reason: ${reason}</p>` : ""}
-               <p>You can resubmit with clearer proof of visit.</p>`,
-      });
-    } catch {}
+    if (result.notFound) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Visit not found" });
+    }
 
     return res.json({ success: true, message: "Visit rejected" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("rejectVisit error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
-// ── User: remove visit ─────────────────────────────────────────
-export const removeVisit = async (req, res) => {
-  try {
-    const { id: place_id } = req.params;
-    const user_id = req.user.id;
-    const visit = await PlaceVisit.findOne({ where: { place_id, user_id, status: "approved" } });
-    if (!visit) return res.status(404).json({ success: false, message: "No approved visit found" });
-
-    await visit.destroy();
-    return res.json({ success: true, message: "Visit removed" });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// ── ADMIN: unapprove / remove visit ───────────────────────────
 export const unapproveVisit = async (req, res) => {
-  try {
-    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Admin only" });
-    const visit = await PlaceVisit.findByPk(req.params.id, {
-      include: [{ model: User, as: "user", attributes: ["id", "first_name", "last_name", "email"] }],
-    });
-    if (!visit) return res.status(404).json({ success: false, message: "Visit not found" });
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin only" });
+  }
 
-    await visit.destroy();
+  try {
+    const result = await PlaceVisitService.unapproveVisit(req.params.id);
+
+    if (result.notFound) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Visit not found" });
+    }
+
     return res.json({ success: true, message: "Visit removed" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// ── Get visit status for a place (for PlaceDetails page) ──────
-export const getPlaceVisitStatus = async (req, res) => {
-  try {
-    const place_id = parseInt(req.params.id);
-    const user_id  = parseInt(req.user.id);
-    const visit = await PlaceVisit.findOne({
-      where: { place_id, user_id, status: "approved" }
-    });
-    return res.json({ success: true, visitedByMe: !!visit, visitId: visit?.id || null });
-  } catch (err) {
-    console.error("getPlaceVisitStatus:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("unapproveVisit error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
