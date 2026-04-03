@@ -1,489 +1,274 @@
-import { Op } from "sequelize";
-import Post from "../models/post.model.js";
-import PostLike from "../models/postlike.model.js";
-import PostComment from "../models/postcomment.model.js";
-import PostBookmark from "../models/postbookmark.model.js";
-import PostReport from "../models/postreport.model.js";
-import User from "../models/user.model.js";
-import { createNotification } from "./notification.controller.js";
+// post.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in post.service.js
 
-async function attachUserFlags(posts, userId) {
-  if (!userId || posts.length === 0) {
-    return posts.map((p) => (p.toJSON ? p.toJSON() : p));
-  }
+import * as PostService from "../services/post.service.js";
 
-  const ids = posts.map((p) => p.id);
-
-  const [likes, bookmarks] = await Promise.all([
-    PostLike.findAll({
-      where: { post_id: { [Op.in]: ids }, user_id: userId },
-      attributes: ["post_id", "react_type"],
-    }),
-    PostBookmark.findAll({
-      where: { post_id: { [Op.in]: ids }, user_id: userId },
-      attributes: ["post_id"],
-    }),
-  ]);
-
-  const likeMap = Object.fromEntries(likes.map((l) => [l.post_id, l.react_type]));
-  const bookmarkSet = new Set(bookmarks.map((b) => b.post_id));
-
-  return posts.map((p) => ({
-    ...(p.toJSON ? p.toJSON() : p),
-    has_liked: likeMap[p.id] !== undefined,
-    liked_type: likeMap[p.id] || "like",
-    is_bookmarked: bookmarkSet.has(p.id),
-  }));
-}
-
-const POST_ATTRS = [
-  "id", "user_id", "caption", "images", "place_id",
-  "likes_count", "comments_count", "reports_count",
-  "is_hidden", "created_at", "updated_at",
-];
-
-const AUTHOR_INCLUDE = {
-  model: User,
-  as: "author",
-  attributes: ["id", "first_name", "last_name", "avatar"],
-};
-
-// ── Helper: cascade delete a post ─────────────────────────────
-async function cascadeDeletePost(postId) {
-  await PostLike.destroy({ where: { post_id: postId } });
-  await PostComment.destroy({ where: { post_id: postId } });
-  await PostBookmark.destroy({ where: { post_id: postId } });
-  await PostReport.destroy({ where: { post_id: postId } });
-  await Post.destroy({ where: { id: postId } });
-}
+// ── FEED ──────────────────────────────────────────────────────────────────────
 
 export const getFeed = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
-    const offset = (page - 1) * limit;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
 
-    const posts = await Post.findAll({
-      where: { is_hidden: false },
-      attributes: POST_ATTRS,
-      include: [AUTHOR_INCLUDE],
-      order: [["created_at", "DESC"]],
-      limit, offset, subQuery: false,
-    });
-
-    const data = await attachUserFlags(posts, req.user?.id);
-    return res.json({ success: true, data, page, limit, hasMore: data.length === limit });
+    const data = await PostService.fetchFeed({ page, limit, userId: req.user?.id });
+    res.json({ success: true, data, page, limit, hasMore: data.length === limit });
   } catch (err) {
-    console.error("getFeed:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getFeed error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getTrending = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
-    const offset = (page - 1) * limit;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
 
-    const posts = await Post.findAll({
-      where: { is_hidden: false },
-      attributes: POST_ATTRS,
-      include: [AUTHOR_INCLUDE],
-      order: [["likes_count", "DESC"], ["created_at", "DESC"]],
-      limit, offset, subQuery: false,
-    });
-
-    const data = await attachUserFlags(posts, req.user?.id);
-    return res.json({ success: true, data, page, limit, hasMore: data.length === limit });
+    const data = await PostService.fetchTrending({ page, limit, userId: req.user?.id });
+    res.json({ success: true, data, page, limit, hasMore: data.length === limit });
   } catch (err) {
-    console.error("getTrending:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getTrending error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getSaved = async (req, res) => {
   try {
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(10, parseInt(req.query.limit) || 10);
-    const offset = (page - 1) * limit;
-    const userId = req.user.id;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(10, parseInt(req.query.limit) || 10);
 
-    const bookmarks = await PostBookmark.findAll({
-      where: { user_id: userId },
-      attributes: ["post_id"],
-      order: [["created_at", "DESC"]],
-      limit, offset,
-    });
-
-    const postIds = bookmarks.map((b) => b.post_id);
-    if (postIds.length === 0) {
-      return res.json({ success: true, data: [], page, limit, hasMore: false });
-    }
-
-    const posts = await Post.findAll({
-      where: { id: { [Op.in]: postIds }, is_hidden: false },
-      attributes: POST_ATTRS,
-      include: [AUTHOR_INCLUDE],
-    });
-
-    const postMap = Object.fromEntries(posts.map((p) => [p.id, p]));
-    const ordered = postIds.map((id) => postMap[id]).filter(Boolean);
-
-    const data = await attachUserFlags(ordered, userId);
-    return res.json({ success: true, data, page, limit, hasMore: data.length === limit });
+    const data = await PostService.fetchSaved({ page, limit, userId: req.user.id });
+    res.json({ success: true, data, page, limit, hasMore: data.length === limit });
   } catch (err) {
-    console.error("getSaved:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getSaved error full:", err);
+console.error("getSaved error message:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// ── SINGLE POST ───────────────────────────────────────────────────────────────
+
 export const getPost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id, { include: [AUTHOR_INCLUDE] });
-    if (!post || post.is_hidden) {
+    const result = await PostService.fetchPost(req.params.id, req.user?.id);
+    if (result.notFound)
       return res.status(404).json({ success: false, message: "Post not found" });
-    }
-    const [data] = await attachUserFlags([post], req.user?.id);
-    return res.json({ success: true, data });
+
+    res.json({ success: true, data: result.post });
   } catch (err) {
-    console.error("getPost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getPost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getLikers = async (req, res) => {
   try {
-    const postId = parseInt(req.params.id);
-    const likes  = await PostLike.findAll({
-      where: { post_id: postId },
-      include: [{ model: User, as: "liker", attributes: ["id", "first_name", "last_name", "avatar"] }],
-      order: [["created_at", "DESC"]],
-    });
-
-    const data = likes.map((l) => ({
-      user_id:    l.user_id,
-      react_type: l.react_type,
-      first_name: l.liker?.first_name,
-      last_name:  l.liker?.last_name,
-      avatar:     l.liker?.avatar || null,
-    }));
-
-    return res.json({ success: true, data });
+    const data = await PostService.fetchLikers(parseInt(req.params.id));
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getLikers:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getLikers error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getComments = async (req, res) => {
   try {
-    const postId   = parseInt(req.params.id);
-    const topLevel = await PostComment.findAll({
-      where:   { post_id: postId, parent_id: null, is_hidden: false },
-      order:   [["created_at", "ASC"]],
-      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
-    });
-
-    const parentIds = topLevel.map((c) => c.id);
-    const replies   = parentIds.length > 0
-      ? await PostComment.findAll({
-          where:   { parent_id: { [Op.in]: parentIds }, is_hidden: false },
-          order:   [["created_at", "ASC"]],
-          include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
-        })
-      : [];
-
-    const replyMap = {};
-    replies.forEach((r) => {
-      if (!replyMap[r.parent_id]) replyMap[r.parent_id] = [];
-      replyMap[r.parent_id].push({ ...r.toJSON(), user: r.commenter });
-    });
-
-    const data = topLevel.map((c) => ({
-      ...c.toJSON(),
-      user:    c.commenter,
-      replies: replyMap[c.id] || [],
-    }));
-
-    return res.json({ success: true, data });
+    const data = await PostService.fetchComments(parseInt(req.params.id));
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getComments:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("getComments error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// ── MUTATIONS ─────────────────────────────────────────────────────────────────
+
 export const createPost = async (req, res) => {
+  const { caption, place_id } = req.body;
+
+  // at least caption or image required
+  if (!caption?.trim() && (!req.files || req.files.length === 0))
+    return res.status(400).json({ success: false, message: "Caption or image is required" });
+
   try {
-    const { caption, place_id } = req.body;
-
-    if (!caption?.trim() && (!req.files || req.files.length === 0)) {
-      return res.status(400).json({ success: false, message: "Caption or image required" });
-    }
-
-    let images = null;
-    if (req.files && req.files.length > 0) {
-      images = JSON.stringify(req.files.map((f) => `/uploads/posts/${f.filename}`));
-    }
-
-    const post = await Post.create({
-      user_id:  req.user.id,
-      caption:  caption?.trim() || null,
-      images,
-      place_id: place_id || null,
+    const data = await PostService.createPost({
+      userId: req.user.id,
+      caption,
+      files:    req.files,
+      place_id,
     });
-
-    const full = await Post.findByPk(post.id, { include: [AUTHOR_INCLUDE] });
-
-    return res.status(201).json({
-      success: true,
-      data: { ...full.toJSON(), has_liked: false, liked_type: "like", is_bookmarked: false },
-    });
+    res.status(201).json({ success: true, data });
   } catch (err) {
-    console.error("createPost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("createPost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const updatePost = async (req, res) => {
+  let existingImages = [];
+  try { existingImages = JSON.parse(req.body.existingImages || "[]"); }
+  catch { existingImages = []; } // invalid JSON → treat as empty
+
+  try {
+    const result = await PostService.updatePost({
+      postId:         req.params.id,
+      userId:         req.user.id,
+      caption:        req.body.caption,
+      existingImages,
+      files:          req.files || [],
+    });
+
+    if (result.notFound)  return res.status(404).json({ success: false, message: "Post not found" });
+    if (result.forbidden) return res.status(403).json({ success: false, message: "You can only edit your own posts" });
+
+    res.json({ success: true, data: result.post });
+  } catch (err) {
+    console.error("updatePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const deletePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+    const result = await PostService.deletePost(req.params.id, req.user.id, req.user.role);
+    if (result.notFound)  return res.status(404).json({ success: false, message: "Post not found" });
+    if (result.forbidden) return res.status(403).json({ success: false, message: "You can only delete your own posts" });
 
-    if (post.user_id !== req.user.id && req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Forbidden" });
-    }
-
-    await cascadeDeletePost(post.id);
-    return res.json({ success: true, message: "Deleted" });
+    res.json({ success: true, message: "Post deleted successfully" });
   } catch (err) {
-    console.error("deletePost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("deletePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const toggleLike = async (req, res) => {
+  const reactType = req.body.react_type || "like";
+
   try {
-    const postId    = parseInt(req.params.id);
-    const userId    = req.user.id;
-    const reactType = req.body.react_type || "like";
+    const result = await PostService.toggleLike({
+      postId:   parseInt(req.params.id),
+      userId:   req.user.id,
+      reactType,
+      user:     req.user, // passed for notification message
+    });
 
-    const post = await Post.findByPk(postId);
-    if (!post || post.is_hidden) {
+    if (result.notFound)
       return res.status(404).json({ success: false, message: "Post not found" });
-    }
 
-    const existing = await PostLike.findOne({ where: { post_id: postId, user_id: userId } });
-
-    if (existing) {
-      if (existing.react_type === reactType) {
-        await existing.destroy();
-        await post.decrement("likes_count");
-        return res.json({ success: true, liked: false, react_type: null });
-      } else {
-        await existing.update({ react_type: reactType });
-        return res.json({ success: true, liked: true, react_type: reactType });
-      }
-    } else {
-      await PostLike.create({ post_id: postId, user_id: userId, react_type: reactType });
-      await post.increment("likes_count");
-
-      await createNotification({
-        user_id:  post.user_id,
-        actor_id: userId,
-        type:     "like",
-        post_id:  postId,
-        message:  `${req.user.first_name} ${req.user.last_name} liked your post`,
-      });
-
-      return res.json({ success: true, liked: true, react_type: reactType });
-    }
+    res.json({ success: true, liked: result.liked, react_type: result.react_type });
   } catch (err) {
-    console.error("toggleLike:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("toggleLike error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const addComment = async (req, res) => {
+  const { body, parent_id } = req.body;
+
+  if (!body?.trim()) // empty comment not allowed
+    return res.status(400).json({ success: false, message: "Comment cannot be empty" });
+
   try {
-    const postId    = parseInt(req.params.id);
-    const { body, parent_id } = req.body;
+    const result = await PostService.addComment({
+      postId:    parseInt(req.params.id),
+      userId:    req.user.id,
+      body,
+      parent_id,
+      user:      req.user, // passed for notification message
+    });
 
-    if (!body?.trim()) {
-      return res.status(400).json({ success: false, message: "Comment cannot be empty" });
-    }
-
-    const post = await Post.findByPk(postId);
-    if (!post || post.is_hidden) {
+    if (result.notFound)
       return res.status(404).json({ success: false, message: "Post not found" });
-    }
 
-    const comment = await PostComment.create({
-      post_id:   postId,
-      user_id:   req.user.id,
-      parent_id: parent_id || null,
-      body:      body.trim(),
-    });
-
-    if (!parent_id) await post.increment("comments_count");
-
-    if (!parent_id) {
-      await createNotification({
-        user_id:  post.user_id,
-        actor_id: req.user.id,
-        type:     "comment",
-        post_id:  postId,
-        message:  `${req.user.first_name} ${req.user.last_name} commented on your post`,
-      });
-    }
-
-    const full = await PostComment.findByPk(comment.id, {
-      include: [{ model: User, as: "commenter", attributes: ["id", "first_name", "last_name", "avatar"] }],
-    });
-
-    return res.status(201).json({
-      success: true,
-      data: { ...full.toJSON(), user: full.commenter },
-    });
+    res.status(201).json({ success: true, data: result.comment });
   } catch (err) {
-    console.error("addComment:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("addComment error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const deleteComment = async (req, res) => {
   try {
-    const comment = await PostComment.findByPk(req.params.commentId);
-    if (!comment) return res.status(404).json({ success: false, message: "Not found" });
+    const result = await PostService.deleteComment(
+      req.params.commentId,
+      req.user.id,
+      req.user.role
+    );
 
-    if (comment.user_id !== req.user.id && req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Forbidden" });
-    }
+    if (result.notFound)  return res.status(404).json({ success: false, message: "Comment not found" });
+    if (result.forbidden) return res.status(403).json({ success: false, message: "You can only delete your own comments" });
 
-    const post = await Post.findByPk(comment.post_id);
-    await comment.destroy();
-    if (!comment.parent_id && post) await post.decrement("comments_count");
-
-    return res.json({ success: true, message: "Deleted" });
+    res.json({ success: true, message: "Comment deleted successfully" });
   } catch (err) {
-    console.error("deleteComment:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("deleteComment error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const toggleBookmark = async (req, res) => {
   try {
-    const postId = parseInt(req.params.id);
-    const userId = req.user.id;
-
-    const existing = await PostBookmark.findOne({ where: { post_id: postId, user_id: userId } });
-
-    if (existing) {
-      await existing.destroy();
-      return res.json({ success: true, bookmarked: false });
-    } else {
-      await PostBookmark.create({ post_id: postId, user_id: userId });
-      return res.json({ success: true, bookmarked: true });
-    }
+    const result = await PostService.toggleBookmark(
+      parseInt(req.params.id),
+      req.user.id
+    );
+    res.json({ success: true, bookmarked: result.bookmarked });
   } catch (err) {
-    console.error("toggleBookmark:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("toggleBookmark error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const reportPost = async (req, res) => {
+  const { reason } = req.body;
+
+  if (!reason?.trim()) // reason required so admin knows why it was reported
+    return res.status(400).json({ success: false, message: "Report reason is required" });
+
   try {
-    const postId = parseInt(req.params.id);
-    const userId = req.user.id;
-    const { reason } = req.body;
+    const result = await PostService.reportPost({
+      postId: parseInt(req.params.id),
+      userId: req.user.id,
+      reason,
+    });
 
-    if (!reason?.trim()) {
-      return res.status(400).json({ success: false, message: "Reason required" });
-    }
+    if (result.notFound)       return res.status(404).json({ success: false, message: "Post not found" });
+    if (result.alreadyReported) return res.status(409).json({ success: false, message: "You have already reported this post" });
 
-    const post = await Post.findByPk(postId);
-    if (!post) return res.status(404).json({ success: false, message: "Post not found" });
-
-    const exists = await PostReport.findOne({ where: { post_id: postId, user_id: userId } });
-    if (exists) {
-      return res.status(409).json({ success: false, message: "Already reported" });
-    }
-
-    await PostReport.create({ post_id: postId, user_id: userId, reason: reason.trim() });
-    await post.increment("reports_count");
-
-    if (post.reports_count + 1 >= 5) {
-      await post.update({ is_hidden: true });
-    }
-
-    return res.json({ success: true, message: "Report submitted" });
+    res.json({ success: true, message: "Report submitted successfully" });
   } catch (err) {
-    console.error("reportPost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("reportPost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// ── Admin functions ────────────────────────────────────────────
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+
 export const adminHidePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.update({ is_hidden: true });
-    return res.json({ success: true });
+    const result = await PostService.adminHidePost(req.params.id);
+    if (result.notFound) return res.status(404).json({ success: false, message: "Post not found" });
+    res.json({ success: true, message: "Post hidden" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const adminUnhidePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.update({ is_hidden: false });
-    return res.json({ success: true });
+    const result = await PostService.adminUnhidePost(req.params.id);
+    if (result.notFound) return res.status(404).json({ success: false, message: "Post not found" });
+    res.json({ success: true, message: "Post unhidden" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const adminDeletePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await cascadeDeletePost(post.id);
-    return res.json({ success: true });
+    const result = await PostService.adminDeletePost(req.params.id);
+    if (result.notFound) return res.status(404).json({ success: false, message: "Post not found" });
+    res.json({ success: true, message: "Post deleted" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-export const updatePost = async (req, res) => {
-  try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-
-    if (post.user_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: "Forbidden" });
-    }
-
-    const caption = req.body.caption?.trim() ?? post.caption;
-
-    let existingImages = [];
-    try { existingImages = JSON.parse(req.body.existingImages || "[]"); } catch {}
-
-    let newImages = [];
-    if (req.files && req.files.length > 0) {
-      newImages = req.files.map(f => `/uploads/posts/${f.filename}`);
-    }
-
-    const allImages = [...existingImages, ...newImages];
-    const images = allImages.length > 0 ? JSON.stringify(allImages) : null;
-
-    await post.update({ caption: caption || null, images });
-
-    const full = await Post.findByPk(post.id, { include: [AUTHOR_INCLUDE] });
-    const [data] = await attachUserFlags([full], req.user.id);
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error("updatePost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
