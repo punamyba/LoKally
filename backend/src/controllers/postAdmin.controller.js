@@ -1,169 +1,148 @@
-import { Op, literal, fn, col } from "sequelize";
-import Post from "../models/post.model.js";
-import PostReport from "../models/postreport.model.js";
-import User from "../models/user.model.js";
+// postAdmin.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in postAdmin.service.js
 
-// GET /api/admin/posts?filter=all|reported|hidden&page=1&limit=12
+import * as PostAdminService from "../services/postAdmin.service.js";
+
+// ── GET ALL POSTS ─────────────────────────────────────────────────────────────
+
 export const adminGetPosts = async (req, res) => {
+  const { filter = "all" } = req.query;
+  const VALID_FILTERS = ["all", "reported", "hidden"];
+
+  if (!VALID_FILTERS.includes(filter)) // only these 3 filters allowed
+    return res.status(400).json({ success: false, message: `Invalid filter. Must be: ${VALID_FILTERS.join(", ")}` });
+
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(20, parseInt(req.query.limit) || 12);
+
   try {
-    const filter = req.query.filter || "all";
-    const page   = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit  = Math.min(20, parseInt(req.query.limit) || 12);
-    const offset = (page - 1) * limit;
-
-    let where = {};
-    if (filter === "reported") where = { reports_count: { [Op.gt]: 0 } };
-    if (filter === "hidden")   where = { is_hidden: true };
-
-    // Single query — posts + total count together (no 3 separate COUNT calls)
-    const { count: totalFiltered, rows: posts } = await Post.findAndCountAll({
-      where,
-      attributes: [
-        "id", "user_id", "caption", "images",
-        "likes_count", "comments_count", "reports_count",
-        "is_hidden", "created_at",
-      ],
-      include: [{
-        model: User,
-        as: "author",
-        attributes: ["id", "first_name", "last_name"],
-      }],
-      order: [["created_at", "DESC"]],
-      limit,
-      offset,
-      distinct: true,   // needed for correct count with include
-    });
-
-    // Counts — one single raw query instead of 3 separate Post.count() calls
-    const [[countRow]] = await Post.sequelize.query(`
-      SELECT
-        COUNT(*)                                          AS total,
-        SUM(CASE WHEN reports_count > 0 THEN 1 ELSE 0 END) AS reported,
-        SUM(CASE WHEN is_hidden = true  THEN 1 ELSE 0 END)  AS hidden
-      FROM posts
-    `);
-
-    const counts = {
-      total:    parseInt(countRow.total    || 0),
-      reported: parseInt(countRow.reported || 0),
-      hidden:   parseInt(countRow.hidden   || 0),
-    };
-
-    return res.json({
+    const result = await PostAdminService.fetchAdminPosts({ filter, page, limit });
+    res.json({
       success: true,
-      data:    posts,
-      counts,
-      page,
-      limit,
-      hasMore: offset + posts.length < totalFiltered,
+      data:    result.posts,
+      counts:  result.counts,
+      page:    result.page,
+      limit:   result.limit,
+      hasMore: (page - 1) * limit + result.posts.length < result.totalFiltered,
     });
   } catch (err) {
-    console.error("adminGetPosts:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminGetPosts error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// GET /api/admin/posts/:id
+// ── GET SINGLE POST ───────────────────────────────────────────────────────────
+
 export const adminGetPost = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(id)) // must be a valid number
+    return res.status(400).json({ success: false, message: "Valid post ID is required" });
+
   try {
-    const post = await Post.findByPk(req.params.id, {
-      include: [{
-        model: User,
-        as: "author",
-        attributes: ["id", "first_name", "last_name", "email"],
-      }],
-    });
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
+    const result = await PostAdminService.fetchAdminPost(id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Post not found" });
 
-    const reports = await PostReport.findAll({
-      where: { post_id: post.id, dismissed: false },
-      include: [{ model: User, as: "reporter", attributes: ["id", "first_name", "last_name"] }],
-      order: [["created_at", "DESC"]],
-    });
-
-    return res.json({ success: true, data: { ...post.toJSON(), reports } });
+    res.json({ success: true, data: result.post });
   } catch (err) {
-    console.error("adminGetPost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminGetPost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// PATCH /api/admin/posts/:id/hide
+// ── HIDE POST ─────────────────────────────────────────────────────────────────
+
 export const adminHidePost = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(id))
+    return res.status(400).json({ success: false, message: "Valid post ID is required" });
+
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.update({ is_hidden: true });
-    return res.json({ success: true, message: "Post hidden" });
+    const result = await PostAdminService.hidePost(id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Post not found" });
+
+    res.json({ success: true, message: "Post hidden" });
   } catch (err) {
-    console.error("adminHidePost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminHidePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// PATCH /api/admin/posts/:id/unhide
+// ── UNHIDE POST ───────────────────────────────────────────────────────────────
+
 export const adminUnhidePost = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(id))
+    return res.status(400).json({ success: false, message: "Valid post ID is required" });
+
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.update({ is_hidden: false });
-    return res.json({ success: true, message: "Post visible again" });
+    const result = await PostAdminService.unhidePost(id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Post not found" });
+
+    res.json({ success: true, message: "Post visible again" });
   } catch (err) {
-    console.error("adminUnhidePost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminUnhidePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// DELETE /api/admin/posts/:id
+// ── DELETE POST ───────────────────────────────────────────────────────────────
+
 export const adminDeletePost = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(id))
+    return res.status(400).json({ success: false, message: "Valid post ID is required" });
+
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await post.destroy();
-    return res.json({ success: true, message: "Deleted" });
+    const result = await PostAdminService.deletePost(id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Post not found" });
+
+    res.json({ success: true, message: "Post deleted" });
   } catch (err) {
-    console.error("adminDeletePost:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminDeletePost error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// PATCH /api/admin/posts/:id/dismiss-reports
+// ── DISMISS REPORTS ───────────────────────────────────────────────────────────
+
 export const adminDismissReports = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(id))
+    return res.status(400).json({ success: false, message: "Valid post ID is required" });
+
   try {
-    const post = await Post.findByPk(req.params.id);
-    if (!post) return res.status(404).json({ success: false, message: "Not found" });
-    await PostReport.update({ dismissed: true }, { where: { post_id: post.id } });
-    await post.update({ reports_count: 0, is_hidden: false });
-    return res.json({ success: true, message: "Reports dismissed" });
+    const result = await PostAdminService.dismissReports(id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Post not found" });
+
+    res.json({ success: true, message: "Reports dismissed" });
   } catch (err) {
-    console.error("adminDismissReports:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminDismissReports error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// GET /api/admin/posts/reports
+// ── GET ALL REPORTS ───────────────────────────────────────────────────────────
+
 export const adminGetReports = async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = 20;
+
   try {
-    const page   = Math.max(1, parseInt(req.query.page) || 1);
-    const limit  = 20;
-    const offset = (page - 1) * limit;
-
-    const reports = await PostReport.findAll({
-      where: { dismissed: false },
-      order: [["created_at", "DESC"]],
-      limit, offset,
-      include: [
-        { model: User, as: "reporter", attributes: ["id", "first_name", "last_name"] },
-        {
-          model: Post, as: "post",
-          include: [{ model: User, as: "author", attributes: ["id", "first_name", "last_name"] }],
-        },
-      ],
-    });
-
-    return res.json({ success: true, data: reports });
+    const data = await PostAdminService.fetchReports({ page, limit });
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("adminGetReports:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("adminGetReports error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
