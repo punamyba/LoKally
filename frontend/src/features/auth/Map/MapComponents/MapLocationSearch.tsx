@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Search, MapPin, X } from "lucide-react";
 
@@ -10,9 +9,10 @@ interface GeoResult {
 
 interface Props {
   onPick: (lat: number, lng: number, label: string) => void;
+  onClear?: () => void; // ← added
 }
 
-export default function MapLocationSearch({ onPick }: Props) {
+export default function MapLocationSearch({ onPick, onClear }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,6 @@ export default function MapLocationSearch({ onPick }: Props) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        // Try backend proxy first
         let data: GeoResult[] = [];
         try {
           const res = await fetch(
@@ -43,7 +42,6 @@ export default function MapLocationSearch({ onPick }: Props) {
           // Backend proxy failed — fallback to Nominatim directly
         }
 
-        // Fallback: call Nominatim directly
         if (data.length === 0) {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&countrycodes=np&accept-language=en`,
@@ -70,7 +68,6 @@ export default function MapLocationSearch({ onPick }: Props) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
@@ -81,13 +78,17 @@ export default function MapLocationSearch({ onPick }: Props) {
 
   const handlePick = (r: GeoResult) => {
     onPick(r.lat, r.lng, r.display_name);
-    // Show short name (first part before comma)
     setQuery(r.display_name.split(",")[0]);
     setOpen(false);
     setResults([]);
   };
 
-  const handleClear = () => { setQuery(""); setResults([]); setOpen(false); };
+  const handleClear = () => {
+    setQuery("");
+    setResults([]);
+    setOpen(false);
+    onClear?.(); // ← notify parent to exit geo search mode
+  };
 
   return (
     <div className="exmap-locWrap" ref={wrapRef}>

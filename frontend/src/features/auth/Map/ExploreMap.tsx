@@ -94,8 +94,20 @@ export default function ExploreMap() {
 
   /* geocode flyTo target */
   const [geoTarget, setGeoTarget] = useState<[number, number] | null>(null);
+
+  /* FIX: track whether a geo search is active — hides place markers while geo pin is shown */
+  const [geoSearchActive, setGeoSearchActive] = useState(false);
+
   const handleLocationPick = (lat: number, lng: number) => {
     setGeoTarget([lat, lng]);
+    setGeoSearchActive(true);  // hide all place markers
+    setSelectedPlace(null);    // close any open place detail card
+  };
+
+  /* called when user clears the location search input */
+  const handleGeoSearchClear = () => {
+    setGeoSearchActive(false);
+    setGeoTarget(null);
   };
 
   /* UI state */
@@ -173,9 +185,11 @@ export default function ExploreMap() {
     setActiveSlide(prev => Math.max(0, Math.min(prev, uploadedImages.length - 2)));
   };
 
-  /* map pick */
+  /* map pick — also clears geo search */
   const onMapPickLocation = (pos: LatLng) => {
-    setSelectedPlace(null); setTempPin(pos);
+    setGeoSearchActive(false);  // FIX: clicking map dismisses geo search mode
+    setSelectedPlace(null);
+    setTempPin(pos);
     let best: Place | null = null, bestDist = Infinity;
     for (const p of places) {
       const d = distanceMeters(pos, { lat: p.lat, lng: p.lng });
@@ -215,12 +229,11 @@ export default function ExploreMap() {
     try {
       const res = await axiosInstance.post("/places", fd, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data?.success) {
-        // save tags if any
         if (selectedTags.length > 0 && res.data?.data?.id) {
           try { await axiosInstance.put(`/places/${res.data.data.id}/tags`, { tags: selectedTags }); }
           catch {}
         }
-        setSubmitMsg({ type: "success", text: "Place submitted! Admin review paछि map ma dekhauxa." });
+        setSubmitMsg({ type: "success", text: "Place submitted! Admin review pachhi map ma dekhauxa." });
         setForm({ name: "", address: "", description: "", category: "" });
         setUploadedImages([]); setImageFiles([]); setActiveSlide(0); setTempPin(null);
         setSelectedTags([]); setTagInput("");
@@ -243,9 +256,16 @@ export default function ExploreMap() {
             selectedPlace={selectedPlace}
             zoomTarget={zoomTarget}
             geoTarget={geoTarget}
+            geoSearchActive={geoSearchActive}
             onGeoTargetConsumed={() => setGeoTarget(null)}
             onMapReady={(map) => { mapRef.current = map; }}
-            onSelectPlace={p => { setMode("explore"); setSelectedPlace(p); setMobilePanelOpen(false); setMobileAddOpen(false); }}
+            onSelectPlace={p => {
+              setGeoSearchActive(false); // FIX: selecting a place clears geo search
+              setMode("explore");
+              setSelectedPlace(p);
+              setMobilePanelOpen(false);
+              setMobileAddOpen(false);
+            }}
             onMapPick={onMapPickLocation}
             tempPin={tempPin}
             setTempPin={pos => setTempPin(pos)}
@@ -259,7 +279,8 @@ export default function ExploreMap() {
 
           {/* FLOATING GEOCODE SEARCH */}
           <div className="exmap-mapSearchOverlay">
-            <MapLocationSearch onPick={handleLocationPick} />
+            {/* FIX: pass onClear so clearing the search input exits geo search mode */}
+            <MapLocationSearch onPick={handleLocationPick} onClear={handleGeoSearchClear} />
           </div>
 
           {/* mobile open sidebar button */}
@@ -307,7 +328,12 @@ export default function ExploreMap() {
                 query={query} setQuery={setQuery}
                 results={filteredPlaces}
                 selectedPlaceId={selectedPlace?.id || null}
-                onPick={p => { setSelectedPlace(p); setZoomTarget(p); setMobilePanelOpen(false); }}
+                onPick={p => {
+                  setGeoSearchActive(false); // FIX: sidebar pick clears geo search
+                  setSelectedPlace(p);
+                  setZoomTarget(p);
+                  setMobilePanelOpen(false);
+                }}
               />
             </div>
           )}
@@ -403,7 +429,6 @@ export default function ExploreMap() {
                       placeholder="What makes this place special?" />
                   </div>
 
-                  {/* ── TAGS ── */}
                   <div className="exmap-field">
                     <label className="exmap-fieldLabel">
                       <Tag size={12} strokeWidth={2} />
@@ -452,7 +477,6 @@ export default function ExploreMap() {
                     )}
                   </div>
 
-                  {/* Photos */}
                   <div className="exmap-field">
                     <div className="exmap-photoHeader">
                       <label className="exmap-fieldLabel">
@@ -491,7 +515,6 @@ export default function ExploreMap() {
                       onChange={e => handleImageFiles(e.target.files)} />
                   </div>
 
-                  {/* Coordinates */}
                   <div className="exmap-coordsRow">
                     <div className="exmap-field">
                       <label className="exmap-fieldLabel">Latitude</label>
