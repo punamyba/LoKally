@@ -33,7 +33,7 @@ const upload = multer({
 
 // Own profile
 router.get("/profile", authMiddleware, userController.getProfile);
-router.put("/profile", authMiddleware, userController.updateProfile);
+router.put("/profile", authMiddleware, upload.single("avatar"), userController.updateProfile);
 
 // Profile picture
 router.post(

@@ -1,178 +1,179 @@
-import bcrypt from "bcryptjs";
-import { v2 as cloudinaryV2 } from "cloudinary";
-import User from "../models/user.model.js";
-import Post from "../models/post.model.js";
-import Place from "../models/place.model.js";
+// user.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in user.service.js
+
+import * as UserService from "../services/user.service.js";
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
 
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ["password","verification_token","reset_code_hash","reset_session_hash","reset_code_expires","reset_session_expires"] },
-    });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    return res.json({ success: true, data: user });
+    const result = await UserService.fetchProfile(req.user.id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, data: result.user });
   } catch (err) {
-    console.error("getProfile:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getProfile error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const updateProfile = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    const { first_name, last_name, bio, gender, location, website } = req.body;
-    await user.update({
-      first_name: first_name ?? user.first_name,
-      last_name:  last_name  ?? user.last_name,
-      bio:        bio        ?? user.bio,
-      gender:     gender     ?? user.gender,
-      location:   location   ?? user.location,
-      website:    website    ?? user.website,
-    });
-    const updated = await User.findByPk(req.user.id, {
-      attributes: { exclude: ["password","verification_token","reset_code_hash","reset_session_hash","reset_code_expires","reset_session_expires"] },
-    });
-    return res.json({ success: true, data: updated });
+    const result = await UserService.updateProfile(req.user.id, req.body);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, data: result.user });
   } catch (err) {
-    console.error("updateProfile:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("updateProfile error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// ── PROFILE PICTURE ───────────────────────────────────────────────────────────
+
 export const uploadProfilePicture = async (req, res) => {
+  if (!req.file) // multer sets req.file if upload succeeded
+    return res.status(400).json({ success: false, message: "No file uploaded" });
+
   try {
-    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    const imageUrl = req.file.path || req.file.secure_url;
-    await user.update({ avatar: imageUrl });
-    return res.json({ success: true, message: "Profile picture updated successfully", data: { avatar: imageUrl } });
+    const result = await UserService.uploadProfilePicture(req.user.id, req.file);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, message: "Profile picture updated successfully", data: { avatar: result.avatar } });
   } catch (err) {
-    console.error("uploadProfilePicture:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("uploadProfilePicture error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const deleteProfilePicture = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    const avatar = user.avatar;
-    if (avatar && avatar.includes("cloudinary")) {
-      try {
-        const parts = avatar.split("/");
-        const fileName = parts[parts.length - 1];
-        const publicId = `lokally/profile-pictures/${fileName.split(".")[0]}`;
-        await cloudinaryV2.uploader.destroy(publicId);
-      } catch (cloudErr) {
-        console.warn("Cloudinary delete warning:", cloudErr.message);
-      }
-    }
-    await user.update({ avatar: null });
-    return res.json({ success: true, message: "Profile picture removed successfully" });
+    const result = await UserService.deleteProfilePicture(req.user.id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, message: "Profile picture removed successfully" });
   } catch (err) {
-    console.error("deleteProfilePicture:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("deleteProfilePicture error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// ── PASSWORD ──────────────────────────────────────────────────────────────────
+
 export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) // both required to change password
+    return res.status(400).json({ success: false, message: "Current password and new password are required" });
+
+  if (newPassword.length < 6) // enforce minimum length
+    return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+
+  if (currentPassword === newPassword) // no point changing to same password
+    return res.status(400).json({ success: false, message: "New password must be different from current password" });
+
   try {
-    const { currentPassword, newPassword } = req.body;
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    if (!user.password) return res.status(400).json({ success: false, message: "This account uses social login. Password change is not available." });
-    const ok = await bcrypt.compare(currentPassword, user.password);
-    if (!ok) return res.status(400).json({ success: false, message: "Current password is incorrect" });
-    await user.update({ password: await bcrypt.hash(newPassword, 10) });
-    return res.json({ success: true, message: "Password updated successfully" });
+    const result = await UserService.changePassword(req.user.id, currentPassword, newPassword);
+
+    if (result.notFound)     return res.status(404).json({ success: false, message: "User not found" });
+    if (result.socialLogin)  return res.status(400).json({ success: false, message: "This account uses social login. Password change is not available." });
+    if (result.wrongPassword) return res.status(400).json({ success: false, message: "Current password is incorrect" });
+
+    res.json({ success: true, message: "Password updated successfully" });
   } catch (err) {
-    console.error("changePassword:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("changePassword error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+// ── ACCOUNT ───────────────────────────────────────────────────────────────────
 
 export const deleteAccount = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    await user.destroy();
-    return res.json({ success: true, message: "Account deleted successfully" });
+    const result = await UserService.deleteAccount(req.user.id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, message: "Account deleted successfully" });
   } catch (err) {
-    console.error("deleteAccount:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("deleteAccount error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+// ── OWN CONTENT ───────────────────────────────────────────────────────────────
 
 export const getMyPosts = async (req, res) => {
   try {
-    const posts = await Post.findAll({
-      where: { user_id: req.user.id },
-      include: [{ model: User, as: "author", attributes: ["id", "first_name", "last_name", "avatar"] }],
-      order: [["created_at", "DESC"]],
-    });
-    return res.json({ success: true, data: posts });
+    const data = await UserService.fetchMyPosts(req.user.id);
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getMyPosts:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getMyPosts error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// ← FIXED: user_id → submitted_by
 export const getMyPlaces = async (req, res) => {
   try {
-    const places = await Place.findAll({
-      where: { submitted_by: req.user.id },
-      order: [["created_at", "DESC"]],
-    });
-    return res.json({ success: true, data: places });
+    const data = await UserService.fetchMyPlaces(req.user.id);
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getMyPlaces:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getMyPlaces error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// ── PUBLIC PROFILE ────────────────────────────────────────────────────────────
+
 export const getPublicProfile = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || isNaN(userId)) // must be a valid number
+    return res.status(400).json({ success: false, message: "Valid user ID is required" });
+
   try {
-    const { userId } = req.params;
-    const user = await User.findByPk(userId, {
-      attributes: ["id", "first_name", "last_name", "avatar", "bio", "gender", "role", "created_at"],
-    });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    return res.json({ success: true, data: user });
+    const result = await UserService.fetchPublicProfile(userId);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, data: result.user });
   } catch (err) {
-    console.error("getPublicProfile:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getPublicProfile error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const getPublicUserPosts = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || isNaN(userId))
+    return res.status(400).json({ success: false, message: "Valid user ID is required" });
+
   try {
-    const { userId } = req.params;
-    const posts = await Post.findAll({
-      where: { user_id: userId, is_hidden: false },
-      include: [{ model: User, as: "author", attributes: ["id", "first_name", "last_name", "avatar"] }],
-      order: [["created_at", "DESC"]],
-    });
-    return res.json({ success: true, data: posts });
+    const data = await UserService.fetchPublicUserPosts(userId);
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getPublicUserPosts:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getPublicUserPosts error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// ← FIXED: user_id → submitted_by
 export const getPublicUserPlaces = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || isNaN(userId))
+    return res.status(400).json({ success: false, message: "Valid user ID is required" });
+
   try {
-    const { userId } = req.params;
-    const places = await Place.findAll({
-      where: { submitted_by: userId },
-      order: [["created_at", "DESC"]],
-    });
-    return res.json({ success: true, data: places });
+    const data = await UserService.fetchPublicUserPlaces(userId);
+    res.json({ success: true, data });
   } catch (err) {
-    console.error("getPublicUserPlaces:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("getPublicUserPlaces error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
