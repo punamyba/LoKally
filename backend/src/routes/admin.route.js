@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(authMiddleware, adminOnly);
 
 router.get("/stats", AdminController.getStats);
+router.get("/chart-data", AdminController.getChartData);  // ← NEW
 router.get("/places", AdminController.getPlaces);
 router.patch("/places/:id/approve", AdminController.approvePlace);
 router.patch("/places/:id/reject", AdminController.rejectPlace);
