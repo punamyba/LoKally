@@ -1,14 +1,14 @@
-import { Place, User } from "../models/index.js";
-import PostReport from "../models/postreport.model.js";
+// place.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in place.service.js
 
-/* PUBLIC: approved places only */
+import * as PlaceService from "../services/place.service.js";
+
+// ── PUBLIC ────────────────────────────────────────────────────────────────────
+
 export const getPlaces = async (req, res) => {
   try {
-    const places = await Place.findAll({
-      where: { status: "approved" },
-      include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name"] }],
-      order: [["created_at", "DESC"]],
-    });
+    const places = await PlaceService.fetchApprovedPlaces();
     res.json({ success: true, data: places });
   } catch (err) {
     console.error("getPlaces error:", err.message);
@@ -16,77 +16,52 @@ export const getPlaces = async (req, res) => {
   }
 };
 
-/* PUBLIC: single approved place */
 export const getPlaceById = async (req, res) => {
   try {
-    const place = await Place.findOne({
-      where: { id: req.params.id, status: "approved" },
-      include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name"] }],
-    });
-    if (!place)
-      return res.status(404).json({ success: false, message: "Place feuna" });
-    res.json({ success: true, data: place });
+    const result = await PlaceService.fetchPlaceById(req.params.id);
+    if (result.notFound)
+      return res.status(404).json({ success: false, message: "Place not found" });
+    res.json({ success: true, data: result.place });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* PUBLIC: featured — admin ley is_featured = true mark gareka places */
-// ── UPDATED: aghi latest 6 matra linthyo, aba is_featured: true wala matra ──
 export const getFeaturedPlaces = async (req, res) => {
   try {
-    const places = await Place.findAll({
-      where: {
-        status: "approved",
-        is_featured: true,        // ← only admin-marked featured places
-      },
-      order: [["created_at", "DESC"]],
-    });
+    const places = await PlaceService.fetchFeaturedPlaces();
     res.json({ success: true, data: places });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* PUBLIC: stats */
 export const getPlaceStats = async (req, res) => {
   try {
-    const total    = await Place.count();
-    const approved = await Place.count({ where: { status: "approved" } });
-    const users    = await User.count();
-    res.json({ success: true, data: { total, approved, users } });
+    const data = await PlaceService.fetchPlaceStats();
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* USER: submit new place (pending) */
+// ── USER ──────────────────────────────────────────────────────────────────────
+
 export const createPlace = async (req, res) => {
+  const { name, address, lat, lng } = req.body;
+
+  if (!name || !name.trim())    return res.status(400).json({ success: false, message: "Name is required" });
+  if (!address || !address.trim()) return res.status(400).json({ success: false, message: "Address is required" });
+  if (!lat || isNaN(parseFloat(lat))) return res.status(400).json({ success: false, message: "Valid latitude is required" });
+  if (!lng || isNaN(parseFloat(lng))) return res.status(400).json({ success: false, message: "Valid longitude is required" });
+
   try {
-    const { name, address, description, category, lat, lng } = req.body;
-    if (!name || !address || !lat || !lng)
-      return res.status(400).json({ success: false, message: "name, address, lat, lng chainxa" });
-
-    let imageValue = null;
-    if (req.files && req.files.length > 0) {
-      const paths = req.files.map(f => `/uploads/places/${f.filename}`);
-      imageValue = paths.length === 1 ? paths[0] : JSON.stringify(paths);
-    } else if (req.file) {
-      imageValue = `/uploads/places/${req.file.filename}`;
-    }
-
-    const place = await Place.create({
-      name,
-      address,
-      description: description || "",
-      category:    category || null,
-      lat:         parseFloat(lat),
-      lng:         parseFloat(lng),
-      image:       imageValue,
-      submitted_by: req.user.id,
-      status:      "pending",
+    const place = await PlaceService.createPlace({
+      ...req.body,
+      files:  req.files,   // multiple images from multer
+      file:   req.file,    // single image fallback
+      userId: req.user.id,
     });
-
     res.status(201).json({ success: true, data: place });
   } catch (err) {
     console.error("createPlace error:", err.message);
@@ -94,70 +69,62 @@ export const createPlace = async (req, res) => {
   }
 };
 
-/* USER: update own place */
 export const updatePlace = async (req, res) => {
+  const { lat, lng } = req.body;
+
+  if (lat && isNaN(parseFloat(lat))) // only validate if provided — partial update allowed
+    return res.status(400).json({ success: false, message: "Invalid latitude" });
+  if (lng && isNaN(parseFloat(lng)))
+    return res.status(400).json({ success: false, message: "Invalid longitude" });
+
   try {
-    const place = await Place.findOne({
-      where: { id: req.params.id, submitted_by: req.user.id },
+    const result = await PlaceService.updateUserPlace({
+      placeId: req.params.id,
+      userId:  req.user.id,
+      fields:  req.body,
+      file:    req.file,
     });
-    if (!place)
-      return res.status(403).json({ success: false, message: "Place feuna ya timi owner hoina" });
-
-    const { name, address, description, category, lat, lng } = req.body;
-    const updates = { name, address, description, category };
-    if (lat) updates.lat = parseFloat(lat);
-    if (lng) updates.lng = parseFloat(lng);
-    if (req.file) updates.image = `/uploads/places/${req.file.filename}`;
-
-    await place.update(updates);
-    res.json({ success: true, data: place });
+    if (result.notFound)
+      return res.status(403).json({ success: false, message: "Place not found or you are not the owner" });
+    res.json({ success: true, data: result.place });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* USER: delete own place */
 export const deletePlace = async (req, res) => {
   try {
-    const affected = await Place.destroy({
-      where: { id: req.params.id, submitted_by: req.user.id },
+    const result = await PlaceService.deleteUserPlace({
+      placeId: req.params.id,
+      userId:  req.user.id,
     });
-    if (affected === 0)
-      return res.status(403).json({ success: false, message: "Place feuna ya timi owner hoina" });
-    res.json({ success: true, message: "Place delete vayo" });
+    if (result.notFound)
+      return res.status(403).json({ success: false, message: "Place not found or you are not the owner" });
+    res.json({ success: true, message: "Place deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const reportPlace = async (req, res) => {
+  const { reason, note } = req.body;
+
+  if (!reason?.trim()) // reason tells admin why it was reported
+    return res.status(400).json({ success: false, message: "Report reason is required" });
+
   try {
-    const { id } = req.params;
-    const { reason, note } = req.body;
-    const userId = req.user.id;
-
-    if (!reason?.trim()) {
-      return res.status(400).json({ success: false, message: "Reason required" });
-    }
-
-    const place = await Place.findByPk(id);
-    if (!place) return res.status(404).json({ success: false, message: "Place not found" });
-
-    const existing = await PostReport.findOne({ where: { place_id: id, user_id: userId } });
-    if (existing) {
-      return res.status(409).json({ success: false, message: "Already reported" });
-    }
-
-    await PostReport.create({
-      place_id: id,
-      user_id: userId,
-      reason: reason.trim(),
-      note: note?.trim() || null,
+    const result = await PlaceService.reportPlace({
+      placeId: req.params.id,
+      userId:  req.user.id,
+      reason,
+      note,
     });
+    if (result.notFound)        return res.status(404).json({ success: false, message: "Place not found" });
+    if (result.alreadyReported) return res.status(409).json({ success: false, message: "You have already reported this place" });
 
-    return res.json({ success: true, message: "Report submitted." });
+    res.json({ success: true, message: "Report submitted successfully" });
   } catch (err) {
     console.error("reportPlace error:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
