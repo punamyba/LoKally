@@ -56,12 +56,15 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("verify");
+  
     if (status === "success") {
       toast.success("Email verified! ✅", "Your account is now active. Please sign in.");
       window.history.replaceState({}, "", "/");
-    }
-    if (status === "invalid") {
+    } else if (status === "invalid") {
       toast.error("Invalid link", "This verification link is invalid or has expired.");
+      window.history.replaceState({}, "", "/");
+    } else if (status === "error") {
+      toast.error("Verification failed", "Something went wrong while verifying your email.");
       window.history.replaceState({}, "", "/");
     }
   }, [location.search]);

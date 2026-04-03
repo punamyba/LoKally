@@ -1,22 +1,47 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST || "sandbox.smtp.mailtrap.io",
-  port: Number(process.env.MAIL_PORT || 2525),
-  secure: false,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
+const isGmail = (process.env.MAIL_SERVICE || "").toLowerCase() === "gmail";
+
+const transporter = nodemailer.createTransport(
+  isGmail
+    ? {
+        service: "gmail",
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
+        },
+      }
+    : {
+        host: process.env.MAIL_HOST,
+        port: Number(process.env.MAIL_PORT || 587),
+        secure: process.env.MAIL_SECURE === "true",
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
+        },
+      }
+);
+
+// optional check
+export const verifyMailerConnection = async () => {
+  try {
+    await transporter.verify();
+    console.log("Email transporter ready");
+  } catch (error) {
+    console.error("Email transporter error:", error.message);
+  }
+};
 
 // ── Base send ─────────────────────────────────────────────────
-export const sendEmail = async ({ to, subject, html }) => {
+export const sendEmail = async ({ to, subject, html, text }) => {
   return transporter.sendMail({
-    from: process.env.MAIL_FROM || "LoKally Nepal <support@lokally.com>",
+    from:
+      process.env.MAIL_FROM ||
+      `"LoKally Nepal" <${process.env.MAIL_USER}>`,
     to,
     subject,
     html,
+    text,
   });
 };
 
@@ -35,7 +60,8 @@ const footer = `
 
 const wrapper = (inner) => `
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"/></head>
+<html>
+<head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:40px 16px;">
     <tr><td align="center">
@@ -48,19 +74,24 @@ const wrapper = (inner) => `
       </table>
     </td></tr>
   </table>
-</body></html>`;
+</body>
+</html>`;
 
-const reasonBox = (reason) => reason ? `
+const reasonBox = (reason) =>
+  reason
+    ? `
   <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
     <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#92400e;">Reason</p>
     <p style="margin:0;font-size:14px;color:#78350f;line-height:1.6;">${reason}</p>
-  </div>` : "";
+  </div>`
+    : "";
 
 // ── Place Approved ────────────────────────────────────────────
 export const sendPlaceApprovedEmail = async ({ to, firstName, placeName }) => {
   return sendEmail({
     to,
     subject: `"${placeName}" is now live — LoKally Nepal`,
+    text: `Hi ${firstName}, your place "${placeName}" has been approved and is now live on LoKally Nepal.`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#16a34a,#0d9488,#1a7fe8);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -90,6 +121,7 @@ export const sendPlaceRejectedEmail = async ({ to, firstName, placeName, reason 
   return sendEmail({
     to,
     subject: `Update on your place submission — LoKally Nepal`,
+    text: `Hi ${firstName}, your place "${placeName}" was not approved.${reason ? ` Reason: ${reason}` : ""}`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#dc2626,#e11d48,#f59e0b);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -118,6 +150,7 @@ export const sendPlaceDeletedEmail = async ({ to, firstName, placeName, reason }
   return sendEmail({
     to,
     subject: `Your place has been removed — LoKally Nepal`,
+    text: `Hi ${firstName}, your place "${placeName}" has been removed.${reason ? ` Reason: ${reason}` : ""}`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#dc2626,#b91c1c);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -148,6 +181,7 @@ export const sendContentHiddenEmail = async ({ to, firstName, contentType, reaso
   return sendEmail({
     to,
     subject: `Your content has been hidden — LoKally Nepal`,
+    text: `Hi ${firstName}, your ${contentType || "content"} has been hidden.${reason ? ` Reason: ${reason}` : ""}`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#f59e0b,#d97706);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -176,6 +210,7 @@ export const sendWarningEmail = async ({ to, firstName, contentType, reason }) =
   return sendEmail({
     to,
     subject: `Content Warning — LoKally Nepal`,
+    text: `Hi ${firstName}, your ${contentType || "content"} has been flagged.${reason ? ` Reason: ${reason}` : ""}`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#f59e0b,#dc2626);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -204,15 +239,38 @@ export const sendWarningEmail = async ({ to, firstName, contentType, reason }) =
 // ── Report Status Updated ─────────────────────────────────────
 export const sendReportStatusEmail = async ({ to, firstName, status }) => {
   const s = {
-    resolved:  { label: "Resolved",  emoji: "✅", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", msg: "The reported content has been reviewed and appropriate action has been taken. Thank you for helping keep LoKally Nepal safe." },
-    dismissed: { label: "Dismissed", emoji: "📋", color: "#475569", bg: "#f8fafc", border: "#e2e8f0", msg: "After review, we found the reported content does not violate our community guidelines." },
-    open:      { label: "In Review", emoji: "🔍", color: "#1a7fe8", bg: "#f0f7ff", border: "#bfdbfe", msg: "Your report is currently being reviewed by our moderation team. We will get back to you soon." },
+    resolved: {
+      label: "Resolved",
+      emoji: "✅",
+      color: "#16a34a",
+      bg: "#f0fdf4",
+      border: "#bbf7d0",
+      msg: "The reported content has been reviewed and appropriate action has been taken. Thank you for helping keep LoKally Nepal safe.",
+    },
+    dismissed: {
+      label: "Dismissed",
+      emoji: "📋",
+      color: "#475569",
+      bg: "#f8fafc",
+      border: "#e2e8f0",
+      msg: "After review, we found the reported content does not violate our community guidelines.",
+    },
+    open: {
+      label: "In Review",
+      emoji: "🔍",
+      color: "#1a7fe8",
+      bg: "#f0f7ff",
+      border: "#bfdbfe",
+      msg: "Your report is currently being reviewed by our moderation team. We will get back to you soon.",
+    },
   }[status];
+
   if (!s) return;
 
   return sendEmail({
     to,
     subject: `Report update: ${s.label} — LoKally Nepal`,
+    text: `Hi ${firstName}, your report status is now: ${s.label}.`,
     html: wrapper(`
       <div style="height:5px;background:linear-gradient(90deg,#1a7fe8,#0d9488);"></div>
       <table width="100%" cellpadding="0" cellspacing="0">

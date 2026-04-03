@@ -1,299 +1,164 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { Op } from "sequelize";
-import { User } from "../models/index.js";
-import sendMail from "../services/mailer.js";
-import {
-  getVerifyEmailHTML,
-  getPasswordResetHTML,
-} from "../utils/authEmailtemp.js";
+// auth.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in auth.service.js
 
-/* Generate 6-digit OTP */
-const generateOtp = () => crypto.randomInt(100000, 999999).toString();
+import * as AuthService from "../services/auth.service.js";
 
-/* Generate random token for reset session */
-const generateSessionToken = () => crypto.randomBytes(32).toString("hex");
+// ── REGISTER ──────────────────────────────────────────────────────────────────
 
-/* Register user */
 export const registerUser = async (req, res) => {
+  const { email, password, confirm_password } = req.body;
+
+  if (!email || !password || !confirm_password) // all three required to create account
+    return res.status(400).json({ message: "Email, password and confirm password are required" });
+
+  if (password !== confirm_password) // must match before we even hit the db
+    return res.status(400).json({ message: "Passwords do not match" });
+
+  if (password.length < 6) // minimum password length check
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+
   try {
-    const {
-      first_name,
-      last_name,
-      email,
-      phone,
-      dob,
-      address,
-      gender,
-      password,
-      confirm_password,
-    } = req.body;
+    const result = await AuthService.registerUser(req.body);
+    if (result.conflict)
+      return res.status(400).json({ message: "Email already registered" });
 
-    if (!email || !password || !confirm_password) {
-      return res.status(400).json({ message: "Required fields missing" });
-    }
-
-    if (password !== confirm_password) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-
-    await User.create({
-      first_name,
-      last_name,
-      email,
-      phone,
-      dob,
-      address,
-      gender,
-      password: hashedPassword,
-      is_verified: false,
-      verification_token: verificationToken,
-    });
-
-    try {
-      const verifyLink = `${process.env.BACKEND_URL || "http://localhost:5001"}/api/auth/verify-email/${verificationToken}`;
-
-      await sendMail({
-        to: email,
-        subject: "Verify your email — LoKally Nepal",
-        html: getVerifyEmailHTML(verifyLink),
-        text: `Verify your email using this link: ${verifyLink}`,
-      });
-    } catch (e) {
-      console.error("Register email failed:", e.message);
-    }
-
-    return res.status(201).json({
-      message: "Registered successfully! Please verify your email",
-    });
+    res.status(201).json({ message: "Registered successfully! Please verify your email" });
   } catch (err) {
-    console.error("registerUser error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("registerUser error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* Verify email */
+// ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
+
 export const verifyEmail = async (req, res) => {
+  const { token } = req.params;
+
+  if (!token) {
+    return res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=invalid`
+    );
+  }
+
   try {
-    const { token } = req.params;
+    const result = await AuthService.verifyEmail(token);
 
-    const user = await User.findOne({
-      where: { verification_token: token },
-    });
-
-    if (!user) {
-      return res.status(400).send("Invalid or expired verification link.");
+    if (result.invalid) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=invalid`
+      );
     }
 
-    await user.update({
-      is_verified: true,
-      verification_token: null,
-    });
-
-    return res.send("Email verified successfully. You can now log in.");
+    return res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=success`
+    );
   } catch (err) {
-    console.error("verifyEmail error:", err);
-    return res.status(500).send("Server error");
+    console.error("verifyEmail error:", err.message);
+    return res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=error`
+    );
   }
 };
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
 
-/* Login user */
 export const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) // both required — no partial login attempts
+    return res.status(400).json({ message: "Email and password are required" });
+
   try {
-    const { email, password } = req.body;
+    const result = await AuthService.loginUser(email, password);
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
-    }
+    if (result.notFound)
+      return res.status(400).json({ message: "No account found with this email" });
 
-    const user = await User.findOne({ where: { email } });
+    if (result.unverified)
+      return res.status(403).json({ message: "Please verify your email before logging in" });
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    if (result.wrongPassword)
+      return res.status(400).json({ message: "Incorrect password" });
 
-    if (!user.is_verified) {
-      return res.status(403).json({
-        message: "Please verify your email before logging in",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    return res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+    res.json({ message: "Login successful", token: result.token, user: result.user });
   } catch (err) {
-    console.error("loginUser error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("loginUser error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* Send OTP for forgot password */
+// ── FORGOT PASSWORD — SEND OTP ────────────────────────────────────────────────
+
 export const forgotPasswordSendCode = async (req, res) => {
+  const { email } = req.body;
+
+  // even if email is missing, return same response — prevents email enumeration
+  if (!email)
+    return res.json({ message: "If an account exists, a code was sent." });
+
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.json({ message: "If account exists, code was sent." });
-    }
-
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      return res.json({ message: "If account exists, code was sent." });
-    }
-
-    const otp = generateOtp();
-    const otpHash = await bcrypt.hash(otp, 10);
-
-    await user.update({
-      reset_code_hash: otpHash,
-      reset_code_expires: new Date(Date.now() + 10 * 60 * 1000),
-      reset_session_hash: null,
-      reset_session_expires: null,
-    });
-
-    try {
-      await sendMail({
-        to: email,
-        subject: "Password Reset Code — LoKally Nepal",
-        html: getPasswordResetHTML(otp),
-        text: `Your LoKally password reset code is: ${otp}`,
-      });
-    } catch (e) {
-      console.error("Forgot password email failed:", e.message);
-    }
-
-    return res.json({ message: "If account exists, code was sent." });
+    await AuthService.sendForgotPasswordCode(email);
+    res.json({ message: "If an account exists, a code was sent." });
   } catch (err) {
-    console.error("forgotPasswordSendCode error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("forgotPasswordSendCode error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* Resend OTP */
+// ── FORGOT PASSWORD — RESEND OTP ──────────────────────────────────────────────
+
 export const resendForgotCode = async (req, res) => {
-  return forgotPasswordSendCode(req, res);
+  return forgotPasswordSendCode(req, res); // reuse the same handler
 };
 
-/* Verify OTP */
+// ── FORGOT PASSWORD — VERIFY OTP ──────────────────────────────────────────────
+
 export const forgotPasswordVerifyCode = async (req, res) => {
+  const { email, code } = req.body;
+
+  if (!email || !code) // need both to verify the OTP
+    return res.status(400).json({ message: "Email and verification code are required" });
+
   try {
-    const { email, code } = req.body;
+    const result = await AuthService.verifyForgotPasswordCode(email, code);
 
-    if (!email || !code) {
-      return res.status(400).json({ message: "Email and code required" });
-    }
+    if (result.invalid)
+      return res.status(400).json({ message: "Code has expired or does not exist" });
 
-    const user = await User.findOne({
-      where: {
-        email,
-        reset_code_hash: { [Op.ne]: null },
-        reset_code_expires: { [Op.gt]: new Date() },
-      },
-    });
+    if (result.wrongCode)
+      return res.status(400).json({ message: "Incorrect verification code" });
 
-    if (!user) {
-      return res.status(400).json({ message: "Code expired or invalid" });
-    }
-
-    const validOtp = await bcrypt.compare(code, user.reset_code_hash);
-
-    if (!validOtp) {
-      return res.status(400).json({ message: "Invalid code" });
-    }
-
-    const resetSessionToken = generateSessionToken();
-    const resetSessionHash = await bcrypt.hash(resetSessionToken, 10);
-
-    await user.update({
-      reset_session_hash: resetSessionHash,
-      reset_session_expires: new Date(Date.now() + 10 * 60 * 1000),
-    });
-
-    return res.json({
-      message: "Code verified",
-      resetSessionToken,
-    });
+    // return session token — frontend uses this in the reset password step
+    res.json({ message: "Code verified", resetSessionToken: result.resetSessionToken });
   } catch (err) {
-    console.error("forgotPasswordVerifyCode error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("forgotPasswordVerifyCode error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* Reset password */
+// ── RESET PASSWORD ────────────────────────────────────────────────────────────
+
 export const resetPasswordWithSession = async (req, res) => {
+  const { email, resetSessionToken, newPassword } = req.body;
+
+  if (!email || !resetSessionToken || !newPassword) // all three needed to complete reset
+    return res.status(400).json({ message: "Email, session token and new password are required" });
+
+  if (newPassword.length < 6) // enforce same minimum as registration
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+
   try {
-    const { email, resetSessionToken, newPassword } = req.body;
+    const result = await AuthService.resetPassword(email, resetSessionToken, newPassword);
 
-    if (!email || !resetSessionToken || !newPassword) {
-      return res.status(400).json({ message: "Invalid request" });
-    }
+    if (result.expired)
+      return res.status(400).json({ message: "Reset session has expired, please request a new code" });
 
-    const user = await User.findOne({
-      where: {
-        email,
-        reset_session_expires: { [Op.gt]: new Date() },
-      },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        message: "Reset session expired or invalid",
-      });
-    }
-
-    const validSession = await bcrypt.compare(
-      resetSessionToken,
-      user.reset_session_hash
-    );
-
-    if (!validSession) {
+    if (result.invalidSession)
       return res.status(400).json({ message: "Invalid reset session" });
-    }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await user.update({
-      password: hashedPassword,
-      is_verified: true,
-      reset_code_hash: null,
-      reset_code_expires: null,
-      reset_session_hash: null,
-      reset_session_expires: null,
-    });
-
-    return res.json({ message: "Password updated successfully" });
+    res.json({ message: "Password updated successfully" });
   } catch (err) {
-    console.error("resetPasswordWithSession error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("resetPasswordWithSession error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
