@@ -8,7 +8,7 @@ export const verifyEmail = async (req, res) => {
 
     if (!user) {
       return res.redirect(
-        `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=invalid`
+        `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?verify=invalid`
       );
     }
 
@@ -18,12 +18,12 @@ export const verifyEmail = async (req, res) => {
     });
 
     return res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=success`
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?verify=success`
     );
   } catch (err) {
     console.error("verifyEmail error:", err);
     return res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:5173"}/?verify=error`
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?verify=error`
     );
   }
 };
