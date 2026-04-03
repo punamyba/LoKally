@@ -1,311 +1,189 @@
-import { Op } from "sequelize";
-import PlaceLike      from "../models/placelike.model.js";
-import PlaceComment   from "../models/placecomment.model.js";
-import PlaceRating    from "../models/placerating.model.js";
-import PlaceVisit     from "../models/placevisit.model.js";
-import PlaceTag       from "../models/placetag.model.js";
-import PlaceCondition from "../models/placecondition.model.js";
-import { User }       from "../models/index.js";
+// placeFeatures.controller.js
+// Only handles: request parsing, validation, calling service, sending response.
+// Zero business logic here — all logic lives in placeFeatures.service.js
 
-/* ── helpers ─────────────────────────────────────────────── */
-const userId = (req) => req.user?.id;
+import * as PlaceFeaturesService from "../services/placeFeatures.service.js";
 
-/* ══════════════════════════════════════════════════════════
-   LIKES
-══════════════════════════════════════════════════════════ */
+// ── LIKES ─────────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/likes
 export const getLikes = async (req, res) => {
   try {
-    const { id } = req.params;
-    const uid = userId(req);
-
-    const likes = await PlaceLike.findAll({
-      where: { place_id: id },
-      include: [{ model: User, as: "user", attributes: ["id","first_name","last_name"] }],
-    });
-
-    const likedByMe = uid ? likes.some(l => l.user_id === uid) : false;
-
-    return res.json({
-      count: likes.length,
-      likedByMe,
-      users: likes.map(l => l.user),
-    });
+    const data = await PlaceFeaturesService.fetchLikes(req.params.id, req.user?.id);
+    res.json(data);
   } catch (err) {
-    console.error("getLikes:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getLikes error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// POST /api/places/:id/like  (toggle)
 export const toggleLike = async (req, res) => {
   try {
-    const { id } = req.params;
-    const uid = userId(req);
-
-    const existing = await PlaceLike.findOne({ where: { place_id: id, user_id: uid } });
-    if (existing) {
-      await existing.destroy();
-      return res.json({ liked: false });
-    }
-    await PlaceLike.create({ place_id: id, user_id: uid });
-    return res.json({ liked: true });
+    const result = await PlaceFeaturesService.toggleLike(req.params.id, req.user.id);
+    res.json(result);
   } catch (err) {
-    console.error("toggleLike:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("toggleLike error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   COMMENTS
-══════════════════════════════════════════════════════════ */
+// ── COMMENTS ──────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/comments
 export const getComments = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const comments = await PlaceComment.findAll({
-      where: { place_id: id, parent_id: null }, // top-level only
-      include: [
-        { model: User, as: "user", attributes: ["id","first_name","last_name","avatar"] },
-        {
-          model: PlaceComment, as: "replies",
-          include: [{ model: User, as: "user", attributes: ["id","first_name","last_name","avatar"] }],
-          order: [["created_at", "ASC"]],
-        },
-      ],
-      order: [["created_at", "DESC"]],
-    });
-
-    return res.json(comments);
+    const comments = await PlaceFeaturesService.fetchComments(req.params.id);
+    res.json(comments);
   } catch (err) {
-    console.error("getComments:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getComments error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// POST /api/places/:id/comments
 export const addComment = async (req, res) => {
+  const { text, parent_id } = req.body;
+
+  if (!text?.trim()) // empty comment not allowed
+    return res.status(400).json({ message: "Comment text is required" });
+
   try {
-    const { id } = req.params;
-    const { text, parent_id } = req.body;
-    const uid = userId(req);
-
-    if (!text?.trim()) return res.status(400).json({ message: "Comment text required" });
-
-    const comment = await PlaceComment.create({
-      place_id:  id,
-      user_id:   uid,
-      parent_id: parent_id || null,
-      text:      text.trim(),
+    const comment = await PlaceFeaturesService.addComment({
+      placeId:   req.params.id,
+      userId:    req.user.id,
+      text,
+      parent_id, // null = top-level comment, id = reply to another comment
     });
-
-    // Return with user info
-    const full = await PlaceComment.findByPk(comment.id, {
-      include: [{ model: User, as: "user", attributes: ["id","first_name","last_name","avatar"] }],
-    });
-
-    return res.status(201).json(full);
+    res.status(201).json(comment);
   } catch (err) {
-    console.error("addComment:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("addComment error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// DELETE /api/places/comments/:commentId
 export const deleteComment = async (req, res) => {
   try {
-    const { commentId } = req.params;
-    const uid = userId(req);
+    const result = await PlaceFeaturesService.deleteComment(
+      req.params.commentId,
+      req.user.id,
+      req.user.role
+    );
 
-    const comment = await PlaceComment.findByPk(commentId);
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
-    if (comment.user_id !== uid && req.user?.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+    if (result.notFound) return res.status(404).json({ message: "Comment not found" });
+    if (result.forbidden) return res.status(403).json({ message: "You are not allowed to delete this comment" });
 
-    await comment.destroy();
-    return res.json({ message: "Deleted" });
+    res.json({ message: "Comment deleted successfully" });
   } catch (err) {
-    console.error("deleteComment:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("deleteComment error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   RATINGS
-══════════════════════════════════════════════════════════ */
+// ── RATINGS ───────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/ratings
 export const getRatings = async (req, res) => {
   try {
-    const { id } = req.params;
-    const uid = userId(req);
-
-    const ratings = await PlaceRating.findAll({ where: { place_id: id } });
-
-    const total = ratings.length;
-    const avg   = total ? (ratings.reduce((s, r) => s + r.rating, 0) / total).toFixed(1) : "0.0";
-
-    // Distribution
-    const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    ratings.forEach(r => dist[r.rating]++);
-
-    const myRating = uid ? ratings.find(r => r.user_id === uid)?.rating || 0 : 0;
-
-    return res.json({ avg: parseFloat(avg), total, dist, myRating });
+    const data = await PlaceFeaturesService.fetchRatings(req.params.id, req.user?.id);
+    res.json(data);
   } catch (err) {
-    console.error("getRatings:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getRatings error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// POST /api/places/:id/rate
 export const ratePlace = async (req, res) => {
+  const { rating } = req.body;
+
+  if (!rating || isNaN(rating))        // must be a number
+    return res.status(400).json({ message: "Rating is required" });
+  if (rating < 1 || rating > 5)        // only 1–5 stars allowed
+    return res.status(400).json({ message: "Rating must be between 1 and 5" });
+
   try {
-    const { id } = req.params;
-    const { rating } = req.body;
-    const uid = userId(req);
-
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be 1–5" });
-    }
-
-    await PlaceRating.upsert({ place_id: id, user_id: uid, rating });
-
-    // Return updated stats
-    const ratings = await PlaceRating.findAll({ where: { place_id: id } });
-    const total = ratings.length;
-    const avg   = (ratings.reduce((s, r) => s + r.rating, 0) / total).toFixed(1);
-    const dist  = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    ratings.forEach(r => dist[r.rating]++);
-
-    return res.json({ avg: parseFloat(avg), total, dist, myRating: rating });
+    const data = await PlaceFeaturesService.ratePlace(req.params.id, req.user.id, Number(rating));
+    res.json(data);
   } catch (err) {
-    console.error("ratePlace:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("ratePlace error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   VISITS
-══════════════════════════════════════════════════════════ */
+// ── VISITS ────────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/visits
 export const getVisits = async (req, res) => {
   try {
-    const { id } = req.params;
-    const uid = userId(req);
-
-    const visits = await PlaceVisit.findAll({
-      where: { place_id: id },
-      include: [{ model: User, as: "user", attributes: ["id","first_name","last_name"] }],
-    });
-
-    const visitedByMe = uid ? visits.some(v => v.user_id === uid) : false;
-
-    return res.json({ count: visits.length, visitedByMe, users: visits.map(v => v.user) });
+    const data = await PlaceFeaturesService.fetchVisits(req.params.id, req.user?.id);
+    res.json(data);
   } catch (err) {
-    console.error("getVisits:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getVisits error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// POST /api/places/:id/visit (toggle)
 export const toggleVisit = async (req, res) => {
   try {
-    const { id } = req.params;
-    const uid = userId(req);
-
-    const existing = await PlaceVisit.findOne({ where: { place_id: id, user_id: uid } });
-    if (existing) {
-      await existing.destroy();
-      return res.json({ visited: false });
-    }
-    await PlaceVisit.create({ place_id: id, user_id: uid });
-    return res.json({ visited: true });
+    const result = await PlaceFeaturesService.toggleVisit(req.params.id, req.user.id);
+    res.json(result);
   } catch (err) {
-    console.error("toggleVisit:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("toggleVisit error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   TAGS
-══════════════════════════════════════════════════════════ */
+// ── TAGS ──────────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/tags
 export const getTags = async (req, res) => {
   try {
-    const tags = await PlaceTag.findAll({ where: { place_id: req.params.id } });
-    return res.json(tags.map(t => t.tag));
+    const tags = await PlaceFeaturesService.fetchTags(req.params.id);
+    res.json(tags);
   } catch (err) {
-    console.error("getTags:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getTags error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// PUT /api/places/:id/tags  (admin or submitter)
 export const updateTags = async (req, res) => {
+  const { tags } = req.body;
+
+  if (!Array.isArray(tags)) // tags must be a string array e.g. ["hiking", "lake"]
+    return res.status(400).json({ message: "tags must be an array of strings" });
+
+  if (tags.some(t => typeof t !== "string" || !t.trim())) // no empty strings in array
+    return res.status(400).json({ message: "Each tag must be a non-empty string" });
+
   try {
-    const { id } = req.params;
-    const { tags } = req.body; // string[]
-
-    if (!Array.isArray(tags)) return res.status(400).json({ message: "tags must be array" });
-
-    // Delete existing, insert new
-    await PlaceTag.destroy({ where: { place_id: id } });
-    if (tags.length > 0) {
-      await PlaceTag.bulkCreate(tags.map(tag => ({ place_id: id, tag })));
-    }
-
-    return res.json({ tags });
+    const result = await PlaceFeaturesService.updateTags(req.params.id, tags);
+    res.json(result);
   } catch (err) {
-    console.error("updateTags:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("updateTags error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   CONDITIONS  (admin only update)
-══════════════════════════════════════════════════════════ */
+// ── CONDITIONS ────────────────────────────────────────────────────────────────
 
-// GET /api/places/:id/conditions
 export const getConditions = async (req, res) => {
   try {
-    let cond = await PlaceCondition.findOne({ where: { place_id: req.params.id } });
-    if (!cond) {
-      // Return defaults if not set yet
-      cond = { trail: "Good", road: "Paved", best_time: "Oct–Mar", difficulty: "Moderate", note: null };
-    }
-    return res.json(cond);
+    const data = await PlaceFeaturesService.fetchConditions(req.params.id);
+    res.json(data);
   } catch (err) {
-    console.error("getConditions:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("getConditions error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// PUT /api/places/:id/conditions  (admin only)
 export const updateConditions = async (req, res) => {
+  const { trail, road, best_time, difficulty, note } = req.body;
+
+  if (!trail && !road && !best_time && !difficulty) // at least one field required
+    return res.status(400).json({ message: "At least one condition field is required" });
+
   try {
-    const { id } = req.params;
-    const { trail, road, best_time, difficulty, note } = req.body;
-    const uid = userId(req);
-
-    const [cond, created] = await PlaceCondition.findOrCreate({
-      where: { place_id: id },
-      defaults: { trail, road, best_time, difficulty, note, updated_by: uid },
+    const data = await PlaceFeaturesService.updateConditions({
+      placeId: req.params.id,
+      trail, road, best_time, difficulty, note,
+      userId: req.user.id,
     });
-
-    if (!created) {
-      await cond.update({ trail, road, best_time, difficulty, note, updated_by: uid });
-    }
-
-    return res.json(cond);
+    res.json(data);
   } catch (err) {
-    console.error("updateConditions:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("updateConditions error:", err.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
