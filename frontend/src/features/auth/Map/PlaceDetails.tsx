@@ -1,10 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import {
-  ArrowLeft, MapPin, Navigation, Cloud, Wind, Droplets,
+  ArrowLeft, MapPin, Cloud, Wind, Droplets,
   CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight,
   ThumbsUp, Footprints, Star, MessageCircle, Send,
   User, Tag, Flag, BadgeCheck, Images, X, Reply, Trash2, Upload, Calendar, FileText,
@@ -13,13 +10,7 @@ import axiosInstance from "../../../shared/config/axiosinstance";
 import type { Place } from "./Type";
 import Navbar from "../Components/Layout/Navbar/Navbar";
 import "./PlaceDetails.css";
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import { PlaceDistance } from "./MapComponents/DistanceMeasure";
 
 function parseImages(image: string | null | undefined): string[] {
   if (!image) return [];
@@ -94,13 +85,11 @@ export default function PlaceDetails() {
   const [showLikers,  setShowLikers]  = useState(false);
   const [weather,     setWeather]     = useState<any>(null);
 
-  // Report modal state
   const [reportOpen,   setReportOpen]   = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportNote,   setReportNote]   = useState("");
   const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
-  // Visit submission modal
   const [visitOpen,    setVisitOpen]    = useState(false);
   const [visitDate,    setVisitDate]    = useState("");
   const [visitExp,     setVisitExp]     = useState("");
@@ -138,7 +127,7 @@ export default function PlaceDetails() {
       setVisitStatus("done");
     } catch (err: any) {
       if (err?.response?.status === 409) {
-        setVisitStatus("done"); // already submitted — treat as done
+        setVisitStatus("done");
       } else {
         setVisitStatus("error");
       }
@@ -198,7 +187,7 @@ export default function PlaceDetails() {
     if (!id) return;
     const [l, v, r, c, t, cond] = await Promise.allSettled([
       axiosInstance.get(`/places/${id}/likes`),
-      axiosInstance.get(`/places/${id}/visits`),
+      axiosInstance.get(`/places/${id}/visit-status`),
       axiosInstance.get(`/places/${id}/ratings`),
       axiosInstance.get(`/places/${id}/comments`),
       axiosInstance.get(`/places/${id}/tags`),
@@ -210,19 +199,16 @@ export default function PlaceDetails() {
     if (t.status    === "fulfilled") setTags(t.value.data);
     if (cond.status === "fulfilled") setConditions(cond.value.data);
 
-    // Check approved visit status separately
     if (v.status === "fulfilled") {
       const vdata = v.value.data;
       try {
         const vs = await axiosInstance.get(`/places/${id}/visit-status`);
-        console.log("visit-status response:", vs.data);
         if (vs.data?.success) {
           setVisits({ ...vdata, visitedByMe: vs.data.visitedByMe });
         } else {
           setVisits(vdata);
         }
-      } catch (err: any) {
-        console.log("visit-status error:", err?.response?.status, err?.message);
+      } catch {
         setVisits(vdata);
       }
     }
@@ -270,13 +256,6 @@ export default function PlaceDetails() {
     try {
       const res = await axiosInstance.post(`/places/${id}/like`);
       setLikes(p => ({ ...p, likedByMe: res.data.liked, count: res.data.liked ? p.count + 1 : p.count - 1 }));
-    } catch {}
-  };
-
-  const handleVisit = async () => {
-    try {
-      const res = await axiosInstance.post(`/places/${id}/visit`);
-      setVisits(p => ({ ...p, visitedByMe: res.data.visited, count: res.data.visited ? p.count + 1 : p.count - 1 }));
     } catch {}
   };
 
@@ -538,12 +517,11 @@ export default function PlaceDetails() {
               </div>
             </div>
 
-            {/* ── RATING BREAKDOWN — Google Maps style ── */}
+            {/* Rating breakdown */}
             {ratings.total > 0 && (
               <div className="pd-card pd-rating-breakdown">
                 <div className="pd-section-label"><Star size={13} strokeWidth={2} /> Review Summary</div>
                 <div className="pd-rb-inner">
-                  {/* Left: big number */}
                   <div className="pd-rb-left">
                     <div className="pd-rb-big">{ratings.avg.toFixed(1)}</div>
                     <div className="pd-rb-stars">
@@ -555,14 +533,12 @@ export default function PlaceDetails() {
                     </div>
                     <div className="pd-rb-total">{ratings.total} review{ratings.total !== 1 ? "s" : ""}</div>
                   </div>
-                  {/* Right: bars */}
                   <div className="pd-rb-bars">
                     {[5,4,3,2,1].map(s => (
                       <div key={s} className="pd-rb-row">
                         <span className="pd-rb-label">{s}</span>
                         <div className="pd-rb-track">
-                          <div className="pd-rb-fill"
-                            style={{ width: `${(ratings.dist[s] / maxDist) * 100}%` }} />
+                          <div className="pd-rb-fill" style={{ width: `${(ratings.dist[s] / maxDist) * 100}%` }} />
                         </div>
                         <span className="pd-rb-count">{ratings.dist[s]}</span>
                       </div>
@@ -577,16 +553,12 @@ export default function PlaceDetails() {
               <div className="pd-section-label">
                 <MessageCircle size={13} strokeWidth={2} /> Comments ({comments.length})
               </div>
-
               {replyTo && (
                 <div className="pd-reply-indicator">
                   <Reply size={13} /> Replying to <strong>{replyTo.name}</strong>
-                  <button onClick={() => setReplyTo(null)} className="pd-reply-cancel">
-                    <X size={13} />
-                  </button>
+                  <button onClick={() => setReplyTo(null)} className="pd-reply-cancel"><X size={13} /></button>
                 </div>
               )}
-
               <form className="pd-comment-form" onSubmit={handleComment}>
                 <div className="pd-comment-avatar pd-comment-avatar--you">
                   {currentUser.first_name?.[0] || "Y"}
@@ -598,7 +570,6 @@ export default function PlaceDetails() {
                   <Send size={14} strokeWidth={2.5} />
                 </button>
               </form>
-
               <div className="pd-comments-list">
                 {comments.map((c) => (
                   <div key={c.id} className="pd-comment">
@@ -620,8 +591,7 @@ export default function PlaceDetails() {
                           <Reply size={12} /> Reply
                         </button>
                         {(currentUser.id === c.user?.id || currentUser.role === "admin") && (
-                          <button className="pd-comment-delete-btn"
-                            onClick={() => handleDeleteComment(c.id)}>
+                          <button className="pd-comment-delete-btn" onClick={() => handleDeleteComment(c.id)}>
                             <Trash2 size={12} /> Delete
                           </button>
                         )}
@@ -640,8 +610,7 @@ export default function PlaceDetails() {
                                 </div>
                                 <div className="pd-comment-text">{r.text}</div>
                                 {(currentUser.id === r.user?.id || currentUser.role === "admin") && (
-                                  <button className="pd-comment-delete-btn"
-                                    onClick={() => handleDeleteComment(r.id)}>
+                                  <button className="pd-comment-delete-btn" onClick={() => handleDeleteComment(r.id)}>
                                     <Trash2 size={12} /> Delete
                                   </button>
                                 )}
@@ -659,27 +628,8 @@ export default function PlaceDetails() {
 
           {/* RIGHT */}
           <div className="pd-right">
-            <div className="pd-card pd-card--map">
-              <div className="pd-section-label"><MapPin size={13} strokeWidth={2} /> Location</div>
-              <div className="pd-minimap">
-                <MapContainer center={[place.lat, place.lng]} zoom={14}
-                  style={{ height: "210px", width: "100%", borderRadius: "12px" }}
-                  zoomControl={false} dragging={false} scrollWheelZoom={false}>
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <Marker position={[place.lat, place.lng]} />
-                </MapContainer>
-              </div>
-              <div className="pd-latlng">
-                <div><span>Lat:</span> {place.lat.toFixed(5)}</div>
-                <div><span>Lng:</span> {place.lng.toFixed(5)}</div>
-              </div>
-              <a className="pd-view-map-btn"
-                href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`}
-                target="_blank" rel="noreferrer">
-                <Navigation size={13} strokeWidth={2.5} /> View on Map
-              </a>
-            </div>
 
+            {/* Submitted By */}
             <div className="pd-card">
               <div className="pd-section-label"><User size={13} strokeWidth={2} /> Submitted By</div>
               <div className="pd-submitter">
@@ -693,6 +643,14 @@ export default function PlaceDetails() {
               </div>
             </div>
 
+            {/* Distance */}
+            <PlaceDistance
+              placeLat={place.lat}
+              placeLng={place.lng}
+              placeName={place.name}
+            />
+
+            {/* Tags */}
             {tags.length > 0 && (
               <div className="pd-card">
                 <div className="pd-section-label"><Tag size={13} strokeWidth={2} /> Tags</div>
@@ -702,7 +660,7 @@ export default function PlaceDetails() {
               </div>
             )}
 
-            {/* Report button */}
+            {/* Report */}
             <button className="pd-report-btn" onClick={() => setReportOpen(true)}>
               <Flag size={13} strokeWidth={2.5} /> Report Issue
             </button>
@@ -746,7 +704,7 @@ export default function PlaceDetails() {
         </div>
       )}
 
-      {/* ── REMOVE VISIT CONFIRM ── */}
+      {/* REMOVE VISIT CONFIRM */}
       {showRemoveConfirm && (
         <div className="pd-report-overlay" onClick={() => setShowRemoveConfirm(false)}>
           <div className="pd-report-modal pd-confirm-modal" onClick={e => e.stopPropagation()}>
@@ -763,7 +721,6 @@ export default function PlaceDetails() {
             <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
               <p style={{ fontSize: "14px", color: "#475569", lineHeight: 1.6 }}>
                 Are you sure you want to remove your visit to <strong>{place?.name}</strong>?
-
               </p>
               <div style={{ display: "flex", gap: "10px" }}>
                 <button className="pd-report-submit" style={{ background: "#ef4444", flex: 1 }}
@@ -771,16 +728,14 @@ export default function PlaceDetails() {
                   {removing ? "Removing…" : <><Trash2 size={14} /> Yes, Remove</>}
                 </button>
                 <button className="pd-report-submit" style={{ background: "#64748b", flex: 1 }}
-                  onClick={() => setShowRemoveConfirm(false)}>
-                  Cancel
-                </button>
+                  onClick={() => setShowRemoveConfirm(false)}>Cancel</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── VISIT SUBMISSION MODAL ── */}
+      {/* VISIT MODAL */}
       {visitOpen && (
         <div className="pd-report-overlay" onClick={closeVisitModal}>
           <div className="pd-report-modal pd-visit-modal" onClick={e => e.stopPropagation()}>
@@ -794,7 +749,6 @@ export default function PlaceDetails() {
               </div>
               <button className="pd-report-close" onClick={closeVisitModal}><X size={16} /></button>
             </div>
-
             {visitStatus === "done" ? (
               <div className="pd-report-done">
                 <CheckCircle size={40} strokeWidth={1.5} className="pd-report-done-icon" />
@@ -813,7 +767,6 @@ export default function PlaceDetails() {
                     value={visitDate} max={new Date().toISOString().split("T")[0]}
                     onChange={e => setVisitDate(e.target.value)} required />
                 </div>
-
                 <div className="pd-report-field">
                   <label className="pd-report-label">
                     <FileText size={13} strokeWidth={2} style={{ display:"inline", marginRight:4 }} />
@@ -823,7 +776,6 @@ export default function PlaceDetails() {
                     value={visitExp} onChange={e => setVisitExp(e.target.value)}
                     placeholder="What was it like? Any tips for others?" />
                 </div>
-
                 <div className="pd-report-field">
                   <label className="pd-report-label">
                     <Upload size={13} strokeWidth={2} style={{ display:"inline", marginRight:4 }} />
@@ -832,7 +784,8 @@ export default function PlaceDetails() {
                   {visitPreview ? (
                     <div className="pd-visit-preview">
                       <img src={visitPreview} alt="preview" />
-                      <button type="button" className="pd-visit-remove" onClick={() => { setVisitPhoto(null); setVisitPreview(null); }}>
+                      <button type="button" className="pd-visit-remove"
+                        onClick={() => { setVisitPhoto(null); setVisitPreview(null); }}>
                         <X size={14} />
                       </button>
                     </div>
@@ -845,17 +798,14 @@ export default function PlaceDetails() {
                     </label>
                   )}
                 </div>
-
                 {visitStatus === "error" && (
                   <div className="pd-report-err">Failed to submit. Please try again.</div>
                 )}
-
                 <button className="pd-report-submit" type="submit"
                   disabled={!visitDate || visitStatus === "sending"}
                   style={{ background: "#16a34a" }}>
                   {visitStatus === "sending" ? "Submitting…" : <><CheckCircle size={14} /> Submit Visit</>}
                 </button>
-
                 <div style={{ textAlign:"center", fontSize:"12px", color:"#94a3b8", marginTop:"4px" }}>
                   Your "Visited" badge will appear after admin approval
                 </div>
@@ -865,7 +815,7 @@ export default function PlaceDetails() {
         </div>
       )}
 
-      {/* ── REPORT MODAL ── */}
+      {/* REPORT MODAL */}
       {reportOpen && (
         <div className="pd-report-overlay" onClick={closeReport}>
           <div className="pd-report-modal" onClick={e => e.stopPropagation()}>
@@ -877,7 +827,6 @@ export default function PlaceDetails() {
               </div>
               <button className="pd-report-close" onClick={closeReport}><X size={16} /></button>
             </div>
-
             {reportStatus === "done" ? (
               <div className="pd-report-done">
                 <CheckCircle size={40} strokeWidth={1.5} className="pd-report-done-icon" />
@@ -903,8 +852,7 @@ export default function PlaceDetails() {
                 <div className="pd-report-field">
                   <label className="pd-report-label">Additional details <span className="pd-report-optional">(optional)</span></label>
                   <textarea className="pd-report-textarea" rows={3}
-                    value={reportNote}
-                    onChange={e => setReportNote(e.target.value)}
+                    value={reportNote} onChange={e => setReportNote(e.target.value)}
                     placeholder="Describe the issue in more detail..." />
                 </div>
                 {reportStatus === "error" && (
