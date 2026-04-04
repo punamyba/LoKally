@@ -6,31 +6,29 @@ import {
   getTags, updateTags,
   getConditions, updateConditions,
 } from "../controllers/placeFeatures.controller.js";
-import { authenticateToken, requireAdmin } from "../middleware/auth.middleware.js";
-    
+import { authenticateToken, requireAdmin, optionalAuth } from "../middleware/auth.middleware.js";
+
 const router = express.Router();
 
 // LIKES
-router.get ("/:id/likes", authenticateToken, getLikes);
+router.get ("/:id/likes", optionalAuth, getLikes);
 router.post("/:id/like",  authenticateToken, toggleLike);
 
 // COMMENTS
-router.get   ("/:id/comments",                    getComments);           // public
+router.get   ("/:id/comments",                    getComments);
 router.post  ("/:id/comments", authenticateToken, addComment);
 router.delete("/comments/:commentId", authenticateToken, deleteComment);
 
-// RATINGS
-router.get ("/:id/ratings",              getRatings);                     // public
-router.post("/:id/rate",   authenticateToken, ratePlace);
+// RATINGS — optionalAuth so logged-in users get myRating, guests get 0
+router.get ("/:id/ratings", optionalAuth, getRatings);
+router.post("/:id/rate",    authenticateToken, ratePlace);
 
 // TAGS
-router.get("/:id/tags",                  getTags);                        // public
+router.get("/:id/tags",                  getTags);
 router.put("/:id/tags",    authenticateToken, updateTags);
 
 // CONDITIONS
-router.get("/:id/conditions",                                getConditions);     // public
-router.put("/:id/conditions", authenticateToken, requireAdmin, updateConditions); // admin only
-
-// NOTE: Visit routes removed — now handled by placevisit.route.js
+router.get("/:id/conditions",                                getConditions);
+router.put("/:id/conditions", authenticateToken, requireAdmin, updateConditions);
 
 export default router;

@@ -39,6 +39,21 @@ export const adminOnly = (req, res, next) => {
   return next();
 };
 
+/*
+  Optional auth — does NOT block the request if no token.
+  Sets req.user if token is valid, otherwise req.user = undefined.
+  Use for public routes where logged-in users get extra data (e.g. myRating).
+*/
+export const optionalAuth = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    try {
+      req.user = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
+    } catch {}
+  }
+  return next(); // always continue — guests are fine too
+};
+
 // Aliases — placeFeatures.route.js le yei naam use garcha
 export const authenticateToken = authMiddleware;
 export const requireAdmin      = adminOnly;

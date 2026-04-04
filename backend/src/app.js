@@ -45,6 +45,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 // serve uploads
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.resolve("uploads")));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
 
