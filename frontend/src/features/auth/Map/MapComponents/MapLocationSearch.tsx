@@ -9,41 +9,62 @@ interface GeoResult {
 
 interface Props {
   onPick: (lat: number, lng: number, label: string) => void;
-  onClear?: () => void; // ← added
+  onClear?: () => void;
 }
 
+const MIN_CHARS   = 5;   // start searching after 5 chars
+const DEBOUNCE_MS = 500; // wait 500ms after user stops typing
+
 export default function MapLocationSearch({ onPick, onClear }: Props) {
-  const [query, setQuery] = useState("");
+  const [query,   setQuery]   = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const [hint,    setHint]    = useState(""); // shows "keep typing..." message
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const wrapRef     = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    const q = query.trim();
-    if (q.length < 2) { setResults([]); setOpen(false); return; }
 
+    const q = query.trim();
+
+    // less than MIN_CHARS — show hint, clear results
+    if (q.length > 0 && q.length < MIN_CHARS) {
+      setResults([]);
+      setOpen(false);
+      setHint(`Type ${MIN_CHARS - q.length} more character${MIN_CHARS - q.length === 1 ? "" : "s"} to search…`);
+      return;
+    }
+
+    // empty — reset everything
+    if (q.length === 0) {
+      setResults([]);
+      setOpen(false);
+      setHint("");
+      return;
+    }
+
+    // 5+ chars — debounce then search
+    setHint("");
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         let data: GeoResult[] = [];
+
+        // try backend proxy first
         try {
-          const res = await fetch(
+          const res  = await fetch(
             `http://localhost:5001/api/geocode?q=${encodeURIComponent(q)}`,
             { headers: { "Content-Type": "application/json" } }
           );
           const json = await res.json();
-          if (json.success && json.data?.length > 0) {
-            data = json.data;
-          }
-        } catch {
-          // Backend proxy failed — fallback to Nominatim directly
-        }
+          if (json.success && json.data?.length > 0) data = json.data;
+        } catch {}
 
+        // fallback to Nominatim if backend fails
         if (data.length === 0) {
-          const res = await fetch(
+          const res  = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&countrycodes=np&accept-language=en`,
             { headers: { "User-Agent": "lokally-nepal/1.0" } }
           );
@@ -56,18 +77,20 @@ export default function MapLocationSearch({ onPick, onClear }: Props) {
         }
 
         setResults(data);
-        setOpen(data.length > 0);
+        setOpen(true); // open dropdown — even if empty (shows "no results")
       } catch (err) {
         console.error("Geocode error:", err);
         setResults([]);
+        setOpen(false);
       } finally {
         setLoading(false);
       }
-    }, 450);
+    }, DEBOUNCE_MS);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  // close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
@@ -81,13 +104,15 @@ export default function MapLocationSearch({ onPick, onClear }: Props) {
     setQuery(r.display_name.split(",")[0]);
     setOpen(false);
     setResults([]);
+    setHint("");
   };
 
   const handleClear = () => {
     setQuery("");
     setResults([]);
     setOpen(false);
-    onClear?.(); // ← notify parent to exit geo search mode
+    setHint("");
+    onClear?.();
   };
 
   return (
@@ -111,6 +136,14 @@ export default function MapLocationSearch({ onPick, onClear }: Props) {
         )}
       </div>
 
+      {/* hint shown while typing < MIN_CHARS */}
+      {hint && !open && (
+        <div className="exmap-locResults">
+          <div className="exmap-locHint">{hint}</div>
+        </div>
+      )}
+
+      {/* results dropdown */}
       {open && results.length > 0 && (
         <div className="exmap-locResults">
           {results.map((r, i) => (
@@ -126,7 +159,8 @@ export default function MapLocationSearch({ onPick, onClear }: Props) {
         </div>
       )}
 
-      {open && !loading && results.length === 0 && query.trim().length >= 2 && (
+      {/* no results */}
+      {open && !loading && results.length === 0 && (
         <div className="exmap-locResults">
           <div className="exmap-locEmpty">No results found for "{query}"</div>
         </div>
