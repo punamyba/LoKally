@@ -75,7 +75,7 @@ export default function AdminPending() {
   const loadVisits = useCallback(async () => {
     setVisitsLoading(true);
     try {
-      const r = await axiosInstance.get("/admin/visits", {
+      const r = await axiosInstance.get("/admin/visit-status", {
         params: { status: visitFilter, page: 1, limit: 50 },
       });
       if (r.data.success) {
@@ -93,7 +93,7 @@ export default function AdminPending() {
   const handleApprove = async (visitId: number) => {
     setActing("approve");
     try {
-      await axiosInstance.patch(`/admin/visits/${visitId}/approve`);
+      await axiosInstance.patch(`/admin/visit-status/${visitId}/approve`);
       setVisits(prev => prev.filter(v => v.id !== visitId));
       setVisitTotal(t => t - 1);
       setSelectedVisit(null);
@@ -105,7 +105,7 @@ export default function AdminPending() {
   const handleReject = async (visitId: number) => {
     setActing("reject");
     try {
-      await axiosInstance.patch(`/admin/visits/${visitId}/reject`, { reason: rejectMsg });
+      await axiosInstance.patch(`/admin/visit-status/${visitId}/reject`, { reason: rejectMsg });
       setVisits(prev => prev.filter(v => v.id !== visitId));
       setVisitTotal(t => t - 1);
       setSelectedVisit(null); setShowReject(false); setRejectMsg("");
@@ -121,7 +121,7 @@ export default function AdminPending() {
   const handleUnapprove = async (visitId: number) => {
     setActing("reject");
     try {
-      await axiosInstance.delete(`/admin/visits/${visitId}`);
+      await axiosInstance.delete(`/admin/visit-status/${visitId}`);
       setVisits(prev => prev.filter(v => v.id !== visitId));
       setVisitTotal(t => t - 1);
       setSelectedVisit(null);
@@ -133,7 +133,7 @@ export default function AdminPending() {
   // pending visits count for badge
   const [pendingVisitCount, setPendingVisitCount] = useState(0);
   useEffect(() => {
-    axiosInstance.get("/admin/visits", { params: { status: "pending", page: 1, limit: 1 } })
+    axiosInstance.get("/admin/visit-status", { params: { status: "pending", page: 1, limit: 1 } })
       .then(r => { if (r.data.success) setPendingVisitCount(r.data.total); })
       .catch(() => {});
   }, []);
