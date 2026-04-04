@@ -37,10 +37,11 @@ export type MapViewProps = {
   onClickViewPlaceDetails: () => void;
 };
 
-const ZOOM_SHOW_ALL   = 10;  // all markers at zoom >= 10, only featured below
-const INITIAL_ZOOM    = 7;
+const ZOOM_SHOW_ALL = 10;
+const INITIAL_ZOOM  = 7;
+const NEPAL_CENTER: [number, number] = [27.7172, 85.324];
 
-// ── hooks ────────────────────────────────────────────────────────
+// ── hooks ─────────────────────────────────────────────────────────────────────
 
 function MapReadyEmitter({ onMapReady }: { onMapReady?: (map: L.Map) => void }) {
   const map = useMap();
@@ -67,14 +68,13 @@ function FlyToTarget({ target }: { target: Place | null }) {
   return null;
 }
 
-// Only flies — never causes marker re-render (selectedPlace.id as dep, not whole object)
 function FlyToSelected({ lat, lng, trigger }: { lat: number; lng: number; trigger: string | null }) {
   const map = useMap();
   useEffect(() => {
     if (!trigger) return;
     const currentZoom = map.getZoom();
     map.flyTo([lat, lng], Math.max(currentZoom, 13), { duration: 0.8 });
-  }, [trigger]); // eslint-disable-line — only re-fly when id changes
+  }, [trigger]); // eslint-disable-line
   return null;
 }
 
@@ -84,15 +84,11 @@ function ClickHandler({ onMapPick }: { onMapPick: (pos: LatLng) => void }) {
 }
 
 function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
-  // Only update on zoomend — NOT moveend.
-  // moveend fires continuously during flyTo causing icon/marker re-renders mid-animation.
-  const map = useMapEvents({
-    zoomend() { onZoom(map.getZoom()); },
-  });
+  const map = useMapEvents({ zoomend() { onZoom(map.getZoom()); } });
   return null;
 }
 
-// ── icons ─────────────────────────────────────────────────────────
+// ── icons ─────────────────────────────────────────────────────────────────────
 
 const makeUserLocationIcon = () => L.divIcon({
   className: "lk-gpsPin",
@@ -153,8 +149,7 @@ const makeRedIcon = () => L.divIcon({
   iconSize: [34, 48], iconAnchor: [17, 48], popupAnchor: [0, -50],
 });
 
-
-// ── component ─────────────────────────────────────────────────────
+// ── component ─────────────────────────────────────────────────────────────────
 
 export default function MapView({
   fullHeight = false,
@@ -174,41 +169,56 @@ export default function MapView({
   onClickAddPlace,
   onClickViewPlaceDetails,
 }: MapViewProps) {
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
-  const [zoom, setZoom]       = useState(INITIAL_ZOOM);
-  const fallbackPos           = useMemo<[number, number]>(() => [27.7172, 85.324], []);
-  const gpsIcon               = useMemo(() => makeUserLocationIcon(), []);
-  const geoSearchIcon         = useMemo(() => makeGeoSearchIcon(), []);
-  const tempMarkerRef         = useRef<L.Marker | null>(null);
+  const [userPos, setUserPos]             = useState<[number, number] | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [zoom, setZoom]                   = useState(INITIAL_ZOOM);
+  const gpsIcon                           = useMemo(() => makeUserLocationIcon(), []);
+  const geoSearchIcon                     = useMemo(() => makeGeoSearchIcon(), []);
+  const tempMarkerRef                     = useRef<L.Marker | null>(null);
 
+  // Request location only once on mount — handle denied gracefully
   useEffect(() => {
-    if (!navigator.geolocation) { setUserPos(fallbackPos); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos  => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-      ()   => setUserPos(fallbackPos),
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  }, [fallbackPos]);
+    if (!navigator.geolocation) {
+      setLocationDenied(true);
+      return;
+    }
+
+    navigator.permissions?.query({ name: "geolocation" }).then((result) => {
+      if (result.state === "denied") {
+        setLocationDenied(true);
+        return;
+      }
+
+      // Ask for location — browser shows permission prompt if not decided yet
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+        () => setLocationDenied(true), // user denied or error — just hide the dot
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }).catch(() => {
+      // permissions API not supported — try directly
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+        () => setLocationDenied(true),
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
+  }, []);
 
   const center = useMemo<[number, number]>(() => {
     if (selectedPlace) return [selectedPlace.lat, selectedPlace.lng];
     if (tempPin)       return [tempPin.lat, tempPin.lng];
     if (userPos)       return userPos;
-    return fallbackPos;
-  }, [selectedPlace, tempPin, userPos, fallbackPos]);
+    return NEPAL_CENTER; // fallback to Kathmandu
+  }, [selectedPlace, tempPin, userPos]);
 
-  // ── visible places (background markers, never includes selectedPlace) ──
-  // During geo search → hide everything, show only the red geo pin
   const visiblePlaces = useMemo(() => {
     if (geoSearchActive) return [];
-    // zoom < ZOOM_SHOW_ALL → show NO markers (clean initial view)
-    // zoom >= ZOOM_SHOW_ALL → show all markers
     if (zoom < ZOOM_SHOW_ALL) return [];
     const base = places;
     return selectedPlace ? base.filter(p => p.id !== selectedPlace.id) : base;
   }, [places, zoom, selectedPlace, geoSearchActive]);
 
-  // Stable icon map — only recalculates when the visible set or zoom changes
   const iconMap = useMemo(() => {
     const m = new Map<string, L.DivIcon>();
     for (const p of visiblePlaces) {
@@ -219,13 +229,10 @@ export default function MapView({
     return m;
   }, [visiblePlaces, zoom]);
 
-  // Selected place icon — NEVER depends on zoom so it never re-renders during flyTo
-  // Always red teardrop. This is intentional: stability > visual perfection.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const selectedIcon = useMemo(() => {
     if (!selectedPlace) return null;
     return makeRedIcon();
-  }, [selectedPlace?.id]); // only recompute when a DIFFERENT place is selected
+  }, [selectedPlace?.id]); // eslint-disable-line
 
   return (
     <MapContainer
@@ -241,7 +248,6 @@ export default function MapView({
 
       <MapReadyEmitter onMapReady={onMapReady} />
       <FlyToGeo target={geoTarget} onConsumed={onGeoTargetConsumed} />
-      {/* KEY FIX: pass id as trigger so FlyToSelected only flies, never causes marker re-render */}
       <FlyToSelected
         lat={selectedPlace?.lat ?? 0}
         lng={selectedPlace?.lng ?? 0}
@@ -251,8 +257,8 @@ export default function MapView({
       <ClickHandler onMapPick={onMapPick} />
       <ZoomWatcher onZoom={setZoom} />
 
-      {/* GPS dot */}
-      {userPos && (
+      {/* GPS dot — only shown if location was granted */}
+      {userPos && !locationDenied && (
         <Marker position={userPos} icon={gpsIcon}>
           <Popup autoClose={false} closeOnClick={false}>
             <b>📍 Your Location</b><br />
@@ -262,7 +268,7 @@ export default function MapView({
         </Marker>
       )}
 
-      {/* Background place markers — zoom filtered, selectedPlace excluded */}
+      {/* Background place markers */}
       {visiblePlaces.map(p => (
         <Marker
           key={p.id}
@@ -273,9 +279,7 @@ export default function MapView({
         />
       ))}
 
-      {/* ── SELECTED PLACE MARKER ──
-          Rendered completely independently. ALWAYS shows when a place is selected,
-          regardless of zoom level or geo search state. Never unmounts during flyTo. */}
+      {/* Selected place marker */}
       {selectedPlace && selectedIcon && (
         <Marker
           key={`sel-${selectedPlace.id}`}
@@ -286,8 +290,7 @@ export default function MapView({
         />
       )}
 
-      {/* ── GEO SEARCH PIN ──
-          Red pulsing pin at the geocoded location. Only shown during active geo search. */}
+      {/* Geo search pin */}
       {geoSearchActive && geoTarget && (
         <Marker
           key="geo-search-pin"

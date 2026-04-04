@@ -1,5 +1,3 @@
-// Features: real places API, category filter, add place panel, geocode search overlay
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import L from "leaflet";
@@ -11,9 +9,10 @@ import MapLocationSearch from "../Map/MapComponents/MapLocationSearch";
 import axiosInstance from "../../../shared/config/axiosinstance";
 import {
   MapPin, Upload, X, Plus, Images, CheckCircle,
-  ChevronLeft, ChevronRight, Navigation, Search, Tag,
+  ChevronLeft, ChevronRight, Navigation, Search, Tag, Info,
 } from "lucide-react";
 import "./ExploreMap.css";
+import { RulerTool } from "./MapComponents/DistanceMeasure";
 
 type Mode   = "explore" | "add";
 type LatLng = { lat: number; lng: number };
@@ -56,13 +55,109 @@ const PREDEFINED_TAGS = [
 
 const MAX_IMAGES = 20;
 
+// ── MAP LEGEND ────────────────────────────────────────────────────────────────
+
+function MapLegend() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const items = [
+    {
+      label: "Place",
+      icon: (
+        <svg width="16" height="22" viewBox="0 0 30 42">
+          <path d="M15 2C8.925 2 4 6.925 4 13c0 8.5 11 27 11 27S26 21.5 26 13C26 6.925 21.075 2 15 2z" fill="#167ee0" stroke="white" strokeWidth="1.8"/>
+          <circle cx="15" cy="13" r="5" fill="white" opacity="0.95"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Featured place",
+      icon: (
+        <svg width="18" height="24" viewBox="0 0 30 42">
+          <path d="M15 2C8.925 2 4 6.925 4 13c0 8.5 11 27 11 27S26 21.5 26 13C26 6.925 21.075 2 15 2z" fill="#f59e0b" stroke="white" strokeWidth="1.8"/>
+          <polygon points="15,6.5 16.8,11.5 22,11.5 17.9,14.6 19.4,19.5 15,16.5 10.6,19.5 12.1,14.6 8,11.5 13.2,11.5" fill="white" opacity="0.95"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Selected place",
+      icon: (
+        <svg width="17" height="23" viewBox="0 0 30 42">
+          <path d="M15 2C8.925 2 4 6.925 4 13c0 8.5 11 27 11 27S26 21.5 26 13C26 6.925 21.075 2 15 2z" fill="#ef4444" stroke="white" strokeWidth="1.8"/>
+          <circle cx="15" cy="13" r="5" fill="white" opacity="0.95"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Your location",
+      icon: (
+        <div style={{
+          width: 14, height: 14, borderRadius: "50%",
+          background: "#167ee0", border: "3px solid white",
+          boxShadow: "0 0 0 3px rgba(22,126,224,0.3)",
+        }} />
+      ),
+    },
+  ];
+
+  return (
+    <>
+      {/* Desktop legend box */}
+      <div className="lk-legend">
+        <div className="lk-legend__title">Map legend</div>
+        {items.map((item) => (
+          <div key={item.label} className="lk-legend__item">
+            <div className="lk-legend__icon">{item.icon}</div>
+            <span className="lk-legend__label">{item.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile legend icon button */}
+      <button
+        className="lk-legendBtn"
+        onClick={() => setMobileOpen(true)}
+        type="button"
+        aria-label="Map legend"
+      >
+        <Info size={16} strokeWidth={2} />
+      </button>
+
+      {/* Mobile legend bottom sheet */}
+      {mobileOpen && (
+        <div className="lk-legendSheet" onClick={() => setMobileOpen(false)}>
+          <div className="lk-legendSheet__box" onClick={(e) => e.stopPropagation()}>
+            <div className="lk-legendSheet__handle" />
+            <div className="lk-legend__title">Map legend</div>
+            {items.map((item) => (
+              <div key={item.label} className="lk-legend__item">
+                <div className="lk-legend__icon">{item.icon}</div>
+                <span className="lk-legend__label">{item.label}</span>
+              </div>
+            ))}
+            <button
+              className="lk-legendSheet__close"
+              onClick={() => setMobileOpen(false)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+
+    </>
+  );
+}
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
+
 export default function ExploreMap() {
   const navigate = useNavigate();
   const location = useLocation();
-
   const mapRef = useRef<L.Map | null>(null);
 
-  /* places */
   const [places, setPlaces]               = useState<Place[]>([]);
   const [placesLoading, setPlacesLoading] = useState(true);
 
@@ -85,32 +180,26 @@ export default function ExploreMap() {
       .finally(() => setPlacesLoading(false));
   }, []);
 
-  /* category filter from URL ?category=Temple */
   const [categoryFilter, setCategoryFilter] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setCategoryFilter(params.get("category") || "");
   }, [location.search]);
 
-  /* geocode flyTo target */
-  const [geoTarget, setGeoTarget] = useState<[number, number] | null>(null);
-
-  /* FIX: track whether a geo search is active — hides place markers while geo pin is shown */
+  const [geoTarget, setGeoTarget]           = useState<[number, number] | null>(null);
   const [geoSearchActive, setGeoSearchActive] = useState(false);
 
   const handleLocationPick = (lat: number, lng: number) => {
     setGeoTarget([lat, lng]);
-    setGeoSearchActive(true);  // hide all place markers
-    setSelectedPlace(null);    // close any open place detail card
+    setGeoSearchActive(true);
+    setSelectedPlace(null);
   };
 
-  /* called when user clears the location search input */
   const handleGeoSearchClear = () => {
     setGeoSearchActive(false);
     setGeoTarget(null);
   };
 
-  /* UI state */
   const [mode, setMode]                           = useState<Mode>("explore");
   const [mobilePanelOpen, setMobilePanelOpen]     = useState(false);
   const [mobileAddOpen, setMobileAddOpen]         = useState(false);
@@ -121,8 +210,7 @@ export default function ExploreMap() {
   const [tempPin, setTempPin]                     = useState<LatLng | null>(null);
   const [nearbyPlace, setNearbyPlace]             = useState<Place | null>(null);
 
-  /* add place form */
-  const [form, setForm]           = useState({ name: "", address: "", description: "", category: "" });
+  const [form, setForm]             = useState({ name: "", address: "", description: "", category: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg]   = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -130,7 +218,6 @@ export default function ExploreMap() {
   const [activeSlide, setActiveSlide]       = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* tags */
   const [selectedTags,   setSelectedTags]   = useState<string[]>([]);
   const [tagInput,       setTagInput]       = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
@@ -150,7 +237,6 @@ export default function ExploreMap() {
   const removeTag    = (tag: string) => setSelectedTags(prev => prev.filter(t => t !== tag));
   const togglePreTag = (tag: string) => selectedTags.includes(tag) ? removeTag(tag) : addTag(tag);
 
-  /* filtered places */
   const filteredPlaces = useMemo(() => {
     let result = places;
     if (categoryFilter) result = result.filter(p => (p.category || "").toLowerCase() === categoryFilter.toLowerCase());
@@ -163,7 +249,6 @@ export default function ExploreMap() {
     return result;
   }, [places, query, categoryFilter]);
 
-  /* image handlers */
   const handleImageFiles = (files: FileList | null) => {
     if (!files) return;
     const toProcess = Array.from(files).slice(0, MAX_IMAGES - imageFiles.length);
@@ -185,9 +270,8 @@ export default function ExploreMap() {
     setActiveSlide(prev => Math.max(0, Math.min(prev, uploadedImages.length - 2)));
   };
 
-  /* map pick — also clears geo search */
   const onMapPickLocation = (pos: LatLng) => {
-    setGeoSearchActive(false);  // FIX: clicking map dismisses geo search mode
+    setGeoSearchActive(false);
     setSelectedPlace(null);
     setTempPin(pos);
     let best: Place | null = null, bestDist = Infinity;
@@ -198,7 +282,6 @@ export default function ExploreMap() {
     setNearbyPlace(best && bestDist <= 120 ? best : null);
   };
 
-  /* add mode */
   const goAddMode = () => {
     setMode("add");
     if (!tempPin) setTempPin({ lat: 27.7172, lng: 85.324 });
@@ -211,7 +294,6 @@ export default function ExploreMap() {
     setSubmitMsg(null); setAddPanelMinimized(false);
   };
 
-  /* submit place */
   const submitNewPlace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.address.trim()) {
@@ -230,8 +312,7 @@ export default function ExploreMap() {
       const res = await axiosInstance.post("/places", fd, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data?.success) {
         if (selectedTags.length > 0 && res.data?.data?.id) {
-          try { await axiosInstance.put(`/places/${res.data.data.id}/tags`, { tags: selectedTags }); }
-          catch {}
+          try { await axiosInstance.put(`/places/${res.data.data.id}/tags`, { tags: selectedTags }); } catch {}
         }
         setSubmitMsg({ type: "success", text: "Place submitted! Admin review pachhi map ma dekhauxa." });
         setForm({ name: "", address: "", description: "", category: "" });
@@ -260,7 +341,7 @@ export default function ExploreMap() {
             onGeoTargetConsumed={() => setGeoTarget(null)}
             onMapReady={(map) => { mapRef.current = map; }}
             onSelectPlace={p => {
-              setGeoSearchActive(false); // FIX: selecting a place clears geo search
+              setGeoSearchActive(false);
               setMode("explore");
               setSelectedPlace(p);
               setMobilePanelOpen(false);
@@ -279,11 +360,15 @@ export default function ExploreMap() {
 
           {/* FLOATING GEOCODE SEARCH */}
           <div className="exmap-mapSearchOverlay">
-            {/* FIX: pass onClear so clearing the search input exits geo search mode */}
             <MapLocationSearch onPick={handleLocationPick} onClear={handleGeoSearchClear} />
           </div>
 
-          {/* mobile open sidebar button */}
+          {/* MAP LEGEND */}
+          <MapLegend />
+
+          <RulerTool map={mapRef.current} />
+
+          {/* Mobile open sidebar button */}
           {mode === "explore" && (
             <button className="exmap-openSidebar" onClick={() => setMobilePanelOpen(true)} type="button">
               <Search size={14} strokeWidth={2.5} /> Explore
@@ -329,7 +414,7 @@ export default function ExploreMap() {
                 results={filteredPlaces}
                 selectedPlaceId={selectedPlace?.id || null}
                 onPick={p => {
-                  setGeoSearchActive(false); // FIX: sidebar pick clears geo search
+                  setGeoSearchActive(false);
                   setSelectedPlace(p);
                   setZoomTarget(p);
                   setMobilePanelOpen(false);
