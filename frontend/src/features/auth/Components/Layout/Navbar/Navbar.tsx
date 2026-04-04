@@ -46,7 +46,7 @@ const Navbar = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`${API}/user/profile`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
