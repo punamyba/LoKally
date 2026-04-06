@@ -3,34 +3,39 @@
 import { Place, User } from "../models/index.js";
 import PostReport from "../models/postreport.model.js";
 import { MapPlaceDTO, FeaturedPlaceDTO, PlaceDetailDTO } from "../DTOs/place.dto.js";
+import { earnPoints } from "./points.service.js";
 
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 
+// returns all approved places for the map — only necessary fields via DTO
 export const fetchApprovedPlaces = async () => {
   const places = await Place.findAll({
     where: { status: "approved" },
     order: [["created_at", "DESC"]],
   });
-  return places.map(MapPlaceDTO); // map markers — sirf necessary fields
+  return places.map(MapPlaceDTO);
 };
 
+// returns a single approved place with submitter info for the detail page
 export const fetchPlaceById = async (id) => {
   const place = await Place.findOne({
     where:   { id, status: "approved" },
     include: [{ model: User, as: "submitter", attributes: ["id", "first_name", "last_name"] }],
   });
   if (!place) return { notFound: true };
-  return { place: PlaceDetailDTO(place) }; // detail page — sabai fields
+  return { place: PlaceDetailDTO(place) };
 };
 
+// returns only featured places for the home page cards
 export const fetchFeaturedPlaces = async () => {
   const places = await Place.findAll({
     where: { status: "approved", is_featured: true },
     order: [["created_at", "DESC"]],
   });
-  return places.map(FeaturedPlaceDTO); // home page cards — image + description
+  return places.map(FeaturedPlaceDTO);
 };
 
+// returns total places, approved places and user count for stats
 export const fetchPlaceStats = async () => {
   const [total, approved, users] = await Promise.all([
     Place.count(),
@@ -42,7 +47,9 @@ export const fetchPlaceStats = async () => {
 
 // ── USER ──────────────────────────────────────────────────────────────────────
 
+// creates a new place — always starts as pending until admin approves
 export const createPlace = async ({ name, address, description, category, lat, lng, files, file, userId }) => {
+  // build image path — single string if 1 file, JSON array if multiple
   let imageValue = null;
   if (files && files.length > 0) {
     const paths = files.map(f => `/uploads/places/${f.filename}`);
@@ -51,7 +58,7 @@ export const createPlace = async ({ name, address, description, category, lat, l
     imageValue = `/uploads/places/${file.filename}`;
   }
 
-  return Place.create({
+  const place = await Place.create({
     name,
     address,
     description:  description || "",
@@ -60,11 +67,33 @@ export const createPlace = async ({ name, address, description, category, lat, l
     lng:          parseFloat(lng),
     image:        imageValue,
     submitted_by: userId,
-    status:       "pending",
+    status:       "pending", // pending until admin approves
   });
+
+  // reward user for submitting a place (+20 pts)
+  await earnPoints({
+    userId,
+    action:      "place_submitted",
+    description: `Submitted place: ${name}`,
+    referenceId: place.id,
+  });
+
+  // extra reward if photos were uploaded with the place (+10 pts)
+  if (imageValue) {
+    await earnPoints({
+      userId,
+      action:      "photo_uploaded",
+      description: `Uploaded photo with place: ${name}`,
+      referenceId: place.id,
+    });
+  }
+
+  return place;
 };
 
+// updates a place — only the owner can edit their own place
 export const updateUserPlace = async ({ placeId, userId, fields, file }) => {
+  // findOne with submitted_by ensures user can only edit their own places
   const place = await Place.findOne({ where: { id: placeId, submitted_by: userId } });
   if (!place) return { notFound: true };
 
@@ -72,22 +101,26 @@ export const updateUserPlace = async ({ placeId, userId, fields, file }) => {
   const updates = { name, address, description, category };
   if (lat)  updates.lat   = parseFloat(lat);
   if (lng)  updates.lng   = parseFloat(lng);
-  if (file) updates.image = `/uploads/places/${file.filename}`;
+  if (file) updates.image = `/uploads/places/${file.filename}`; // replace image if new one uploaded
 
   await place.update(updates);
   return { place };
 };
 
+// deletes a place — only the owner can delete their own place
 export const deleteUserPlace = async ({ placeId, userId }) => {
+  // destroy with submitted_by check — 0 rows means not found or not owner
   const affected = await Place.destroy({ where: { id: placeId, submitted_by: userId } });
   if (affected === 0) return { notFound: true };
   return { deleted: true };
 };
 
+// submits a report for a place — one report per user per place
 export const reportPlace = async ({ placeId, userId, reason, note }) => {
   const place = await Place.findByPk(placeId);
   if (!place) return { notFound: true };
 
+  // prevent duplicate reports from same user
   const existing = await PostReport.findOne({ where: { place_id: placeId, user_id: userId } });
   if (existing) return { alreadyReported: true };
 

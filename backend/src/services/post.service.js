@@ -9,6 +9,7 @@ import PostReport   from "../models/postreport.model.js";
 import User         from "../models/user.model.js";
 import { createNotification } from "./notification.service.js";
 import { PostDTO } from "../DTOs/post.dto.js";
+import { earnPoints } from "./points.service.js";
 
 const POST_ATTRS = [
   "id", "user_id", "caption", "images", "place_id",
@@ -21,7 +22,6 @@ const AUTHOR_INCLUDE = {
   attributes: ["id", "first_name", "last_name", "avatar"],
 };
 
-// attaches liked/bookmarked flags per post for the current user
 async function attachUserFlags(posts, userId) {
   if (!userId || posts.length === 0)
     return posts.map((p) => (p.toJSON ? p.toJSON() : p));
@@ -69,7 +69,7 @@ export const fetchFeed = async ({ page, limit, userId }) => {
     limit, offset, subQuery: false,
   });
   const withFlags = await attachUserFlags(posts, userId);
-  return withFlags.map(PostDTO); // apply DTO — remove reports_count, is_hidden etc.
+  return withFlags.map(PostDTO);
 };
 
 export const fetchTrending = async ({ page, limit, userId }) => {
@@ -177,6 +177,16 @@ export const createPost = async ({ userId, caption, files, place_id }) => {
     place_id: place_id || null,
   });
 
+  // +15 pts for creating a post
+  try {
+    await earnPoints({
+      userId,
+      action:      "post_created",
+      description: "Created a community post",
+      referenceId: post.id,
+    });
+  } catch (e) { console.warn("post_created points failed:", e.message); }
+
   const full = await Post.findByPk(post.id, { include: [AUTHOR_INCLUDE] });
   return PostDTO({ ...full.toJSON(), has_liked: false, liked_type: "like", is_bookmarked: false });
 };
@@ -212,19 +222,46 @@ export const toggleLike = async ({ postId, userId, reactType, user }) => {
   if (!post || post.is_hidden) return { notFound: true };
 
   const existing = await PostLike.findOne({ where: { post_id: postId, user_id: userId } });
+
   if (existing) {
     if (existing.react_type === reactType) {
+      // unlike — remove like, no points
       await existing.destroy();
       await post.decrement("likes_count");
       return { liked: false, react_type: null };
     } else {
+      // change react type — no extra points
       await existing.update({ react_type: reactType });
       return { liked: true, react_type: reactType };
     }
   }
 
+  // new like
   await PostLike.create({ post_id: postId, user_id: userId, react_type: reactType });
   await post.increment("likes_count");
+
+  // +5 pts for the person who liked
+  try {
+    await earnPoints({
+      userId,
+      action:      "like_given",
+      description: "Liked a community post",
+      referenceId: postId,
+    });
+  } catch (e) { console.warn("like_given points failed:", e.message); }
+
+  // +4 pts for the post owner (received a like) — आफ्नै post मा like गरेमा reward नदिने
+  if (post.user_id !== userId) {
+    try {
+      await earnPoints({
+        userId:      post.user_id,
+        action:      "received_like",
+        description: `${user.first_name} liked your post`,
+        referenceId: postId,
+      });
+    } catch (e) { console.warn("received_like points failed:", e.message); }
+  }
+
   await createNotification({
     user_id:  post.user_id,
     actor_id: userId,
@@ -232,6 +269,7 @@ export const toggleLike = async ({ postId, userId, reactType, user }) => {
     post_id:  postId,
     message:  `${user.first_name} ${user.last_name} liked your post`,
   });
+
   return { liked: true, react_type: reactType };
 };
 
@@ -248,6 +286,29 @@ export const addComment = async ({ postId, userId, body, parent_id, user }) => {
 
   if (!parent_id) {
     await post.increment("comments_count");
+
+    // +8 pts for commenter
+    try {
+      await earnPoints({
+        userId,
+        action:      "comment_written",
+        description: "Commented on a community post",
+        referenceId: postId,
+      });
+    } catch (e) { console.warn("comment_written points failed:", e.message); }
+
+    // +4 pts for post owner (received a comment) — आफ्नै post मा comment गरेमा reward नदिने
+    if (post.user_id !== userId) {
+      try {
+        await earnPoints({
+          userId:      post.user_id,
+          action:      "received_comment",
+          description: `${user.first_name} commented on your post`,
+          referenceId: postId,
+        });
+      } catch (e) { console.warn("received_comment points failed:", e.message); }
+    }
+
     await createNotification({
       user_id:  post.user_id,
       actor_id: userId,

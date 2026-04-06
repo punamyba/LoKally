@@ -1,11 +1,12 @@
 // auth.service.js — pure business logic, no req/res
 
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt    from "jsonwebtoken";
 import crypto from "crypto";
 import { Op } from "sequelize";
-import { User } from "../models/index.js";
-import sendMail from "./mailer.js";
+import { User }          from "../models/index.js";
+import sendMail          from "./mailer.js";
+import { handleDailyLogin } from "./points.service.js";
 import { getVerifyEmailHTML, getPasswordResetHTML } from "../utils/authEmailtemp.js";
 
 // generates a random 6-digit OTP string
@@ -16,29 +17,30 @@ const generateSessionToken = () => crypto.randomBytes(32).toString("hex");
 
 // ── REGISTER ──────────────────────────────────────────────────────────────────
 
+// creates a new user account and sends a verification email
 export const registerUser = async ({ first_name, last_name, email, phone, dob, address, gender, password }) => {
   // check if email is already taken
   const existing = await User.findOne({ where: { email } });
   if (existing) return { conflict: true };
 
-  const hashedPassword = await bcrypt.hash(password, 10); // hash with salt rounds = 10
-  const verificationToken = crypto.randomBytes(32).toString("hex"); // unique token for email link
+  const hashedPassword    = await bcrypt.hash(password, 10);
+  const verificationToken = crypto.randomBytes(32).toString("hex");
 
   await User.create({
     first_name, last_name, email, phone, dob, address, gender,
-    password: hashedPassword,
-    is_verified: false,        // user must verify email before logging in
+    password:           hashedPassword,
+    is_verified:        false,
     verification_token: verificationToken,
   });
 
-  // send verification email — non-blocking, failure won't break registration
+  // send verification email — failure won't break registration
   try {
     const verifyLink = `${process.env.BACKEND_URL || "http://localhost:5001"}/api/auth/verify-email/${verificationToken}`;
     await sendMail({
-      to: email,
-      subject: "Verify your email — LoKally Nepal",
-      html: getVerifyEmailHTML(verifyLink),
-      text: `Verify your email using this link: ${verifyLink}`,
+      to:      email,
+      subject: "Verify your email - LoKally Nepal",
+      html:    getVerifyEmailHTML(verifyLink),
+      text:    `Verify your email using this link: ${verifyLink}`,
     });
   } catch (e) { console.error("Register email failed:", e.message); }
 
@@ -47,24 +49,25 @@ export const registerUser = async ({ first_name, last_name, email, phone, dob, a
 
 // ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
 
+// marks the user as verified using the one-time token from the email link
 export const verifyEmail = async (token) => {
   const user = await User.findOne({ where: { verification_token: token } });
-  if (!user) return { invalid: true }; // token not found or already used
+  if (!user) return { invalid: true };
 
-  // mark as verified and clear the one-time token
+  // clear the token so it can't be reused
   await user.update({ is_verified: true, verification_token: null });
   return { ok: true };
 };
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 
+// verifies credentials, signs a JWT, and handles daily login points
 export const loginUser = async (email, password) => {
   const user = await User.findOne({ where: { email } });
-  if (!user) return { notFound: true };
+  if (!user)            return { notFound: true };
+  if (!user.is_verified) return { unverified: true };
 
-  if (!user.is_verified) return { unverified: true }; // block login until email is confirmed
-
-  const isMatch = await bcrypt.compare(password, user.password); // compare plain vs hashed
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return { wrongPassword: true };
 
   // sign JWT with user id, email, role — expires in 1 day
@@ -74,36 +77,44 @@ export const loginUser = async (email, password) => {
     { expiresIn: "1d" }
   );
 
+  // handle daily login points and streak — non-blocking
+  let loginPoints = null;
+  try {
+    loginPoints = await handleDailyLogin(user.id);
+  } catch (e) { console.warn("Daily login points failed:", e.message); }
+
   return {
     ok: true,
     token,
-    user: { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role },
+    user:        { id: user.id, first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role },
+    loginPoints, // null if already rewarded today, { rewarded, points, streak } otherwise
   };
 };
 
 // ── FORGOT PASSWORD — SEND OTP ────────────────────────────────────────────────
 
+// sends a 6-digit OTP to the user's email for password reset
 export const sendForgotPasswordCode = async (email) => {
   const user = await User.findOne({ where: { email } });
-  // always return same response whether user exists or not — prevents email enumeration
+  // always return ok — prevents email enumeration attacks
   if (!user) return { ok: true };
 
-  const otp = generateOtp();
-  const otpHash = await bcrypt.hash(otp, 10); // store hashed OTP, never plain
+  const otp     = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10); // store hashed, never plain
 
   await user.update({
-    reset_code_hash: otpHash,
-    reset_code_expires: new Date(Date.now() + 10 * 60 * 1000), // expires in 10 minutes
-    reset_session_hash: null,    // clear any existing session
+    reset_code_hash:       otpHash,
+    reset_code_expires:    new Date(Date.now() + 10 * 60 * 1000), // 10 minute expiry
+    reset_session_hash:    null,
     reset_session_expires: null,
   });
 
   try {
     await sendMail({
-      to: email,
-      subject: "Password Reset Code — LoKally Nepal",
-      html: getPasswordResetHTML(otp),
-      text: `Your LoKally password reset code is: ${otp}`,
+      to:      email,
+      subject: "Password Reset Code - LoKally Nepal",
+      html:    getPasswordResetHTML(otp),
+      text:    `Your LoKally password reset code is: ${otp}`,
     });
   } catch (e) { console.error("Forgot password email failed:", e.message); }
 
@@ -112,12 +123,12 @@ export const sendForgotPasswordCode = async (email) => {
 
 // ── FORGOT PASSWORD — VERIFY OTP ──────────────────────────────────────────────
 
+// verifies the OTP and returns a short-lived session token for the reset step
 export const verifyForgotPasswordCode = async (email, code) => {
-  // find user with a valid (non-expired) reset code
   const user = await User.findOne({
     where: {
       email,
-      reset_code_hash: { [Op.ne]: null },
+      reset_code_hash:    { [Op.ne]: null },
       reset_code_expires: { [Op.gt]: new Date() }, // must not be expired
     },
   });
@@ -126,22 +137,22 @@ export const verifyForgotPasswordCode = async (email, code) => {
   const validOtp = await bcrypt.compare(code, user.reset_code_hash);
   if (!validOtp) return { wrongCode: true };
 
-  // OTP verified — issue a short-lived session token for the password reset step
+  // issue a short-lived session token for the next step
   const resetSessionToken = generateSessionToken();
-  const resetSessionHash = await bcrypt.hash(resetSessionToken, 10);
+  const resetSessionHash  = await bcrypt.hash(resetSessionToken, 10);
 
   await user.update({
-    reset_session_hash: resetSessionHash,
+    reset_session_hash:    resetSessionHash,
     reset_session_expires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes to reset
   });
 
-  return { ok: true, resetSessionToken }; // token sent to frontend, used in next step
+  return { ok: true, resetSessionToken };
 };
 
 // ── RESET PASSWORD ────────────────────────────────────────────────────────────
 
+// resets the password using the session token from the OTP step
 export const resetPassword = async (email, resetSessionToken, newPassword) => {
-  // find user with a valid (non-expired) reset session
   const user = await User.findOne({
     where: {
       email,
@@ -155,13 +166,13 @@ export const resetPassword = async (email, resetSessionToken, newPassword) => {
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // update password and clear all reset fields in one update
+  // update password and clear all reset fields so they cannot be reused
   await user.update({
-    password: hashedPassword,
-    is_verified: true,          // ensure account stays verified
-    reset_code_hash: null,
-    reset_code_expires: null,
-    reset_session_hash: null,   // invalidate session so it can't be reused
+    password:              hashedPassword,
+    is_verified:           true,
+    reset_code_hash:       null,
+    reset_code_expires:    null,
+    reset_session_hash:    null,
     reset_session_expires: null,
   });
 
