@@ -10,14 +10,19 @@
 .lk-nav {
   position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
   font-family: "DM Sans", sans-serif;
-  transition: background 0.3s, backdrop-filter 0.3s, box-shadow 0.3s;
+  transition: background 0.4s ease, backdrop-filter 0.4s ease,
+              box-shadow 0.4s ease, border-color 0.4s ease;
+  will-change: background, box-shadow;
+  /* prevent layout shift — always takes space */
+  min-height: 68px;
 }
 .lk-nav--transparent { background: transparent; backdrop-filter: none; border-bottom: none; box-shadow: none; }
 .lk-nav--scrolled {
-  background: rgba(255,255,255,0.94);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(27,141,40,0.1);
-  box-shadow: var(--lk-shadow);
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-bottom: 1px solid rgba(27,141,40,0.12);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
 }
 .lk-nav__inner {
   max-width: 1400px; margin: 0 auto; padding: 14px 28px;
@@ -33,33 +38,58 @@
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .lk-brand__sub { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: var(--lk-muted); margin-top: 3px; }
-
-/* Logo image */
 .lk-brand__logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
 }
 
 /* Actions */
-.lk-actions { display: flex; align-items: center; gap: 8px; }
+.lk-actions { display: flex; align-items: center; gap: 8px; min-height: 42px; }
 
 /* Nav links */
 .lk-links { display: none; gap: 2px; align-items: center; }
 .lk-link {
   text-decoration: none; color: #4589e8; font-weight: 700; font-size: 14px;
   padding: 8px 14px; border-radius: 999px; background: transparent;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
   display: inline-flex; align-items: center; gap: 5px;
 }
+.lk-link:active { transform: scale(0.97); }
 .lk-link:hover { background: rgba(147,225,246,0.25); }
 .lk-link--active { color: #fff; background: linear-gradient(135deg, var(--lk-secondary), var(--lk-primary)); }
 .lk-nav--transparent .lk-link { color: rgba(10,20,40,0.85); }
 .lk-nav--transparent .lk-link:hover { background: rgba(0,0,0,0.1); color: #000; }
 .lk-nav--transparent .lk-link--active { background: rgba(0,0,0,0.15); color: #000; }
+
+/* ── POINTS BUTTON ─────────────────────────────── */
+.lk-points-btn {
+  position: relative;
+  width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.9);
+  cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  color: #167ee0;
+  /* prevent badge from causing layout shift */
+  overflow: visible;
+}
+.lk-points-btn:hover {
+  background: rgba(22,126,224,0.08);
+  box-shadow: 0 2px 10px rgba(22,126,224,0.15);
+}
+.lk-nav--transparent .lk-points-btn { background: rgba(255,255,255,0.65); }
+
+.lk-points-badge {
+  position: absolute;
+  top: -4px; right: -6px;
+  min-width: 18px; height: 18px;
+  background: linear-gradient(135deg, #167ee0, #1b8d28);
+  color: white; font-size: 10px; font-weight: 800;
+  border-radius: 999px; border: 2px solid white;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px; line-height: 1;
+  font-family: "DM Sans", sans-serif;
+}
+/* ─────────────────────────────────────────────── */
 
 /* Icon button */
 .lk-iconBtn {
@@ -82,7 +112,6 @@
 }
 .lk-userChip:hover { background: rgba(27,141,40,0.1); box-shadow: 0 2px 12px rgba(27,141,40,0.15); }
 .lk-nav--transparent .lk-userChip { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.1); }
-
 .lk-userChip__avatar {
   width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -96,7 +125,6 @@
 }
 .lk-userChip__name { font-weight: 700; font-size: 14px; color: #0f3d2e; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lk-nav--transparent .lk-userChip__name { color: #0f3d2e; }
-
 .lk-chevron { color: var(--lk-muted); transition: transform 0.2s ease; flex-shrink: 0; }
 .lk-chevron--open { transform: rotate(180deg); }
 
@@ -110,10 +138,9 @@
   animation: dropDown 0.18s cubic-bezier(0.34,1.3,0.64,1);
 }
 @keyframes dropDown {
-  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .lk-drop-header { display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px; }
 .lk-drop-avatar {
   width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
@@ -126,7 +153,6 @@
 .lk-drop-name { font-size: 14px; font-weight: 800; color: #0d1117; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lk-drop-email { font-size: 11.5px; color: var(--lk-muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .lk-drop-divider { height: 1px; background: #f1f5f9; margin: 2px 0; }
-
 .lk-drop-item {
   display: flex; align-items: center; gap: 11px; width: 100%;
   padding: 11px 16px; border: none; background: none;
@@ -158,13 +184,23 @@
 /* Mobile drawer */
 .lk-mobile {
   padding: 10px 16px 14px; border-top: 1px solid rgba(0,0,0,0.06);
-  background: rgba(255,255,255,0.98); backdrop-filter: blur(16px); display: grid; gap: 7px;
+  background: rgba(255,255,255,0.98); 
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  display: grid; gap: 7px;
+  animation: mobileSlide 0.2s ease;
+}
+@keyframes mobileSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .lk-mItem {
   height: 46px; border-radius: 13px; border: 1px solid rgba(0,0,0,0.07);
   background: rgba(255,255,255,0.95); display: flex; align-items: center; gap: 12px;
-  padding: 0 16px; text-decoration: none; color: #111827; font-weight: 700; font-size: 14px; transition: all 0.15s;
+  padding: 0 16px; text-decoration: none; color: #111827; font-weight: 700; font-size: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
+.lk-mItem:active { transform: scale(0.98); }
 .lk-mItem:hover { background: #f0f7ff; border-color: rgba(26,127,232,0.2); }
 .lk-mItem--active { color: white; background: linear-gradient(135deg, var(--lk-secondary), var(--lk-primary)); border-color: transparent; }
 .lk-mItem__pic { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: block; border: 2px solid rgba(255,255,255,0.8); flex-shrink: 0; }
@@ -181,24 +217,17 @@
 /* AI Search link */
 .lk-link--ai {
   background: linear-gradient(135deg, #1a7fe8, #16a34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   font-weight: 800 !important;
 }
-.lk-link--ai.lk-link--active,
-.lk-link--ai:hover { opacity: 0.85; }
+.lk-link--ai.lk-link--active, .lk-link--ai:hover { opacity: 0.85; }
 .lk-nav--scrolled .lk-link--ai {
   background: linear-gradient(135deg, #1a7fe8, #16a34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .lk-nav--transparent .lk-link--ai {
   background: linear-gradient(135deg, #a5f3fc, #86efac);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 
 /* Desktop */
@@ -215,3 +244,7 @@ body:has(.pc-lightbox) .lk-nav { z-index: 1 !important; }
   .lk-nav__inner { padding: 12px 14px; }
   .lk-brand__main { font-size: 20px; }
 }
+
+/* Trophy button variant */
+.lk-points-btn--trophy { color: #1b8d28; }
+.lk-points-btn--trophy:hover { background: rgba(27,141,40,0.08); }

@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import {
-  LogOut, Menu, X, Users2, Mail, Compass, User,
-  ChevronDown, Settings, Sparkles, Home, Phone,
+  LogOut, Menu, X, Users2, Compass, User,
+  ChevronDown, Settings, Sparkles, Home, Phone, Zap, Trophy,
 } from "lucide-react";
 import NotificationDropdown from "../../../Notifications/NotificationDropdown";
 import logo from "../../../../../assets/logo1.png";
+import axiosInstance from "../../../../../shared/config/axiosinstance";
+import { POINTS_EVENT } from "../../../../../shared/utils/pointsEvent";
 
 const API    = (import.meta.env.VITE_API_URL || "http://localhost:5001/api");
 const SERVER = import.meta.env.VITE_API_BASE_URL || API.replace("/api", "");
@@ -27,12 +29,27 @@ const Navbar = () => {
     try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); }
     catch { return {}; }
   });
+  const [points,       setPoints]       = useState<number>(0);
+  const [pointsLoaded, setPointsLoaded] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
   const isLoggedIn = !!localStorage.getItem("token");
   const isHome     = location.pathname === "/home" || location.pathname === "/";
+
+  // fetch points balance — extracted so it can be called from multiple places
+  const fetchPoints = useCallback(async () => {
+    try {
+      const r = await axiosInstance.get("/points/balance");
+      if (r.data.success) {
+        setPoints(r.data.data.current);
+        setPointsLoaded(true);
+      }
+    } catch {
+      setPointsLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
@@ -43,9 +60,11 @@ const Navbar = () => {
 
   useEffect(() => { setDropOpen(false); setOpen(false); }, [location.pathname]);
 
+  // fetch user info + points on route change
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
+
     fetch(`${API}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
@@ -55,7 +74,19 @@ const Navbar = () => {
         }
       })
       .catch(() => {});
-  }, [location.pathname]);
+
+    fetchPoints();
+  }, [location.pathname, fetchPoints]);
+
+  // listen for points update events — fires when user likes, comments, posts, etc.
+  useEffect(() => {
+    const handler = () => {
+      // small delay so backend has time to write the points before we fetch
+      setTimeout(fetchPoints, 600);
+    };
+    window.addEventListener(POINTS_EVENT, handler);
+    return () => window.removeEventListener(POINTS_EVENT, handler);
+  }, [fetchPoints]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -81,7 +112,7 @@ const Navbar = () => {
     <header className={`lk-nav ${isHome && !scrolled ? "lk-nav--transparent" : "lk-nav--scrolled"}`}>
       <div className="lk-nav__inner">
 
-        {/* Brand — logo image + LoKally Nepal text */}
+        {/* Brand */}
         <Link to={isLoggedIn ? "/home" : "/"} className="lk-brand">
           <img src={logo} alt="LoKally Logo" className="lk-brand__logo" />
           <div className="lk-brand__text">
@@ -113,6 +144,31 @@ const Navbar = () => {
             </NavLink>
           </nav>
 
+          {/* Points badge */}
+          {isLoggedIn && (
+            <button
+              className="lk-points-btn"
+              onClick={() => navigate("/rewards")}
+              type="button"
+              title="Your points — click to view rewards"
+            >
+              <Zap size={16} strokeWidth={2.5} />
+              {pointsLoaded && <span className="lk-points-badge">{points}</span>}
+            </button>
+          )}
+
+          {/* Leaderboard */}
+          {isLoggedIn && (
+            <button
+              className="lk-points-btn lk-points-btn--trophy"
+              onClick={() => navigate("/leaderboard")}
+              type="button"
+              title="Leaderboard"
+            >
+              <Trophy size={16} strokeWidth={2.5} />
+            </button>
+          )}
+
           {/* Bell */}
           {isLoggedIn && <NotificationDropdown />}
 
@@ -132,10 +188,7 @@ const Navbar = () => {
                 <div className="lk-dropdown">
                   <div className="lk-drop-header">
                     <div className="lk-drop-avatar">
-                      {picUrl
-                        ? <img src={picUrl} alt={fullName} />
-                        : <span>{initials}</span>
-                      }
+                      {picUrl ? <img src={picUrl} alt={fullName} /> : <span>{initials}</span>}
                     </div>
                     <div className="lk-drop-info">
                       <div className="lk-drop-name">{fullName}</div>
@@ -147,6 +200,12 @@ const Navbar = () => {
 
                   <button className="lk-drop-item" onClick={() => navigate("/profile")} type="button">
                     <User size={15} strokeWidth={2} /> My Profile
+                  </button>
+                  <button className="lk-drop-item" onClick={() => navigate("/rewards")} type="button">
+                    <Zap size={15} strokeWidth={2} /> My Rewards
+                  </button>
+                  <button className="lk-drop-item" onClick={() => navigate("/leaderboard")} type="button">
+                    <Trophy size={15} strokeWidth={2} /> Leaderboard
                   </button>
                   <button className="lk-drop-item" onClick={() => navigate("/settings")} type="button">
                     <Settings size={15} strokeWidth={2} /> Settings
@@ -206,6 +265,20 @@ const Navbar = () => {
             onClick={() => setOpen(false)}>
             <Sparkles size={18} /><span>AI Search</span>
           </NavLink>
+          {isLoggedIn && (
+            <NavLink to="/rewards"
+              className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
+              onClick={() => setOpen(false)}>
+              <Zap size={18} /><span>My Rewards {points !== null ? `· ${points} pts` : ""}</span>
+            </NavLink>
+          )}
+          {isLoggedIn && (
+            <NavLink to="/leaderboard"
+              className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}
+              onClick={() => setOpen(false)}>
+              <Trophy size={18} /><span>Leaderboard</span>
+            </NavLink>
+          )}
           {isLoggedIn && (
             <NavLink to="/profile"
               className={({ isActive }) => isActive ? "lk-mItem lk-mItem--active" : "lk-mItem"}

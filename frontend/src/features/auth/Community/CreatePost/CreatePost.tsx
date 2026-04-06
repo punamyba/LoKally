@@ -3,10 +3,10 @@ import { Image, X, MapPin, Globe, Lock, Tag, ChevronDown } from "lucide-react";
 import { communityApi } from "../communityApi";
 import type { Post } from "../CommunityTypes";
 import "./CreatePost.css";
+import { refreshPoints } from "../../../../shared/utils/pointsEvent";
 
 const SERVER = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5001";
 
-// Get avatar URL from stored user
 function getAvatarUrl(avatar?: string | null): string | null {
   if (!avatar) return null;
   if (avatar.includes("|||")) return avatar.split("|||")[1];
@@ -15,7 +15,6 @@ function getAvatarUrl(avatar?: string | null): string | null {
   return null;
 }
 
-// Predefined tags
 const QUICK_TAGS = [
   "Peaceful", "Scenic", "Hiking", "Adventure", "Photography",
   "Sunrise", "Wildlife", "Cultural", "Historical", "Hidden Gem",
@@ -36,20 +35,18 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
   const [error, setError]           = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showTagPicker, setShowTagPicker]   = useState(false);
+  const [showTagPicker, setShowTagPicker]     = useState(false);
   const [showVisibility, setShowVisibility]   = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef     = useRef<HTMLInputElement>(null);
 
-  // Get profile pic from stored user or prop
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem("currentUser") || "{}"); } catch { return {}; }
   })();
-  const avatar  = currentUser.avatar || storedUser.avatar;
-  const picUrl  = getAvatarUrl(avatar);
+  const avatar   = currentUser.avatar || storedUser.avatar;
+  const picUrl   = getAvatarUrl(avatar);
   const initials = `${currentUser.first_name[0]}${currentUser.last_name?.[0] ?? ""}`.toUpperCase();
 
-  // Auto resize textarea
   const handleCaptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCaption(e.target.value);
     if (textareaRef.current) {
@@ -91,6 +88,7 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
       const r = await communityApi.createPost(fd);
       if (r.success) {
         onCreated(r.data);
+        refreshPoints(); // post created = +15 pts
         resetForm();
       } else setError(r.message || "Failed.");
     } catch { setError("Something went wrong."); }
@@ -108,7 +106,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
   return (
     <div className={`create-post ${open ? "create-post--open" : ""}`}>
 
-      {/* Collapsed trigger */}
       {!open && (
         <div className="cp-trigger" onClick={() => setOpen(true)}>
           <div className="cp-avatar">
@@ -125,11 +122,8 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
         </div>
       )}
 
-      {/* Expanded form */}
       {open && (
         <div className="cp-form">
-
-          {/* Author row */}
           <div className="cp-author-row">
             <div className="cp-avatar">
               {picUrl
@@ -138,7 +132,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             </div>
             <div className="cp-author-info">
               <div className="cp-author-name">{currentUser.first_name} {currentUser.last_name}</div>
-              {/* Visibility toggle */}
               <div className="cp-visibility-wrap">
                 <button className="cp-visibility-btn" onClick={() => setShowVisibility(v => !v)}>
                   {visibility === "public"
@@ -164,10 +157,8 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             </div>
           </div>
 
-          {/* Error */}
           {error && <div className="cp-error">{error}</div>}
 
-          {/* Textarea */}
           <textarea
             ref={textareaRef}
             className="cp-textarea"
@@ -177,7 +168,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             autoFocus
           />
 
-          {/* Selected tags */}
           {selectedTags.length > 0 && (
             <div className="cp-selected-tags">
               {selectedTags.map(tag => (
@@ -189,7 +179,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             </div>
           )}
 
-          {/* Image previews */}
           {previews.length > 0 && (
             <div className={`cp-previews cp-previews--${Math.min(previews.length, 3)}`}>
               {previews.map((src, i) => (
@@ -206,7 +195,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             </div>
           )}
 
-          {/* Tag picker */}
           {showTagPicker && (
             <div className="cp-tag-picker">
               <div className="cp-tag-picker-title">Select tags</div>
@@ -222,8 +210,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
             </div>
           )}
 
-
-          {/* Toolbar */}
           <div className="cp-toolbar">
             <span className="cp-toolbar-label">Add to post</span>
             <div className="cp-toolbar-actions">
@@ -244,7 +230,6 @@ export default function CreatePost({ currentUser, onCreated }: Props) {
           <input ref={fileRef} type="file" accept="image/*" multiple hidden
             onChange={e => addFiles(e.target.files)} />
 
-          {/* Footer */}
           <div className="cp-footer">
             <button className="cp-cancel-btn" onClick={resetForm} disabled={loading}>Cancel</button>
             <button className="cp-post-btn" onClick={submit} disabled={loading}>

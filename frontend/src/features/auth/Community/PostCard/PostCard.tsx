@@ -11,6 +11,7 @@ import { REACTS, REPORT_REASONS } from "../CommunityTypes";
 import type { Post, Comment, ReactType } from "../CommunityTypes";
 import "./PostCard.css";
 import { getImageUrl, getAvatarUrl } from "../../../../shared/config/imageUrl";
+import { refreshPoints } from "../../../../shared/utils/pointsEvent";
 
 const parseImages = (raw: string | null): string[] => {
   if (!raw) return [];
@@ -71,10 +72,14 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
   const inputRef = useRef<HTMLInputElement>(null);
   const editFileRef = useRef<HTMLInputElement>(null);
 
+  // ref for the like button — used to calculate react picker position on mobile
+  const likeButtonRef = useRef<HTMLButtonElement>(null);
+  const [reactPos, setReactPos] = useState({ top: 0, left: 0 });
+
   // Core state
   const [liked, setLiked] = useState(post.has_liked ?? false);
   const [likeType, setLikeType] = useState<ReactType>((post.liked_type as ReactType) ?? "like");
-  const [likesCount, setLikesCount] = useState(post.likes_count);
+  const [likesCount, setLikesCount] = useState(post.likes_count ?? 0);
   const [bookmarked, setBookmarked] = useState(post.is_bookmarked ?? false);
   const [isHidden, setIsHidden] = useState(post.is_hidden);
   const [showReacts, setShowReacts] = useState(false);
@@ -83,7 +88,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
-  const [commentsCount, setCommentsCount] = useState(post.comments_count);
+  const [commentsCount, setCommentsCount] = useState(post.comments_count ?? 0);
   const [showMenu, setShowMenu] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -142,8 +147,8 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
     const sameType = wasLiked && wasType === type;
     setLiked(!sameType); setLikeType(type);
     setLikesCount(c => sameType ? c - 1 : wasLiked ? c : c + 1);
-    try { await communityApi.toggleLike(post.id, type); }
-    catch { setLiked(wasLiked); setLikeType(wasType); setLikesCount(post.likes_count); }
+    try { await communityApi.toggleLike(post.id, type); if (!sameType) refreshPoints(); }
+    catch { setLiked(wasLiked); setLikeType(wasType); setLikesCount(post.likes_count ?? 0); }
   };
 
   const handleBookmark = async () => {
@@ -199,6 +204,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
         if (replyTo) setComments(prev => prev.map(c => c.id === replyTo.id ? { ...c, replies: [...(c.replies ?? []), r.data] } : c));
         else { setComments(prev => [...prev, { ...r.data, replies: [] }]); setCommentsCount(c => c + 1); }
         setCommentText(""); setReplyTo(null);
+        if (!replyTo) refreshPoints(); // top-level comment earns points
       }
     } catch {}
     setSubmittingComment(false);
@@ -261,9 +267,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
     setEditMode(false); setEditNewFiles([]); setEditNewPreviews([]);
   };
 
-  const removeExistingImage = (idx: number) => {
-    setEditImages(prev => prev.filter((_, i) => i !== idx));
-  };
+  const removeExistingImage = (idx: number) => setEditImages(prev => prev.filter((_, i) => i !== idx));
 
   const removeNewImage = (idx: number) => {
     URL.revokeObjectURL(editNewPreviews[idx]);
@@ -302,11 +306,11 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
 
   const ReactIcon = ({ type, size = 18 }: { type: ReactType; size?: number }) => {
     const icons: Record<ReactType, React.ReactNode> = {
-      like: <ThumbsUp size={size} strokeWidth={2} />,
-      love: <Heart size={size} strokeWidth={2} />,
-      wow: <Zap size={size} strokeWidth={2} />,
-      haha: <Smile size={size} strokeWidth={2} />,
-      sad: <Frown size={size} strokeWidth={2} />,
+      like:  <ThumbsUp    size={size} strokeWidth={2} />,
+      love:  <Heart       size={size} strokeWidth={2} />,
+      wow:   <Zap         size={size} strokeWidth={2} />,
+      haha:  <Smile       size={size} strokeWidth={2} />,
+      sad:   <Frown       size={size} strokeWidth={2} />,
       angry: <AlertCircle size={size} strokeWidth={2} />,
     };
     return <>{icons[type]}</>;
@@ -376,7 +380,8 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
   return (
     <>
       <article className={`post-card ${isHidden ? "post-card--hidden" : ""}`}>
-        {/* Header */}
+
+        {/* ── HEADER ── */}
         <div className="post-head">
           <div className="post-avatar-wrap" onClick={goToProfile} style={{ cursor: "pointer" }}>
             <AvatarWithFallback src={authorAvatar} alt={initials} initials={initials} className="post-avatar-img" fallbackClassName="post-avatar" />
@@ -420,7 +425,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
           </div>
         </div>
 
-        {/* Edit mode */}
+        {/* ── EDIT MODE ── */}
         {editMode ? (
           <div className="post-edit-box">
             <textarea
@@ -430,7 +435,6 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
               placeholder="What's on your mind?"
               rows={3}
             />
-            {/* Existing images */}
             {(editImages.length > 0 || editNewPreviews.length > 0) && (
               <div className="post-edit-images">
                 {editImages.map((img, i) => (
@@ -471,7 +475,6 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
           </div>
         ) : (
           <>
-            {/* Caption with view more */}
             {post.caption && (
               <p className="post-caption">
                 {displayCaption}
@@ -486,7 +489,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
           </>
         )}
 
-        {/* Stats */}
+        {/* ── STATS BAR ── */}
         {(likesCount > 0 || commentsCount > 0) && (
           <div className="post-stats-bar">
             {likesCount > 0 && (
@@ -505,23 +508,62 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
           </div>
         )}
 
-        {/* Actions */}
+        {/* ── ACTIONS ── */}
         <div className="post-actions">
-          <div className="post-react-wrap"
-            onMouseEnter={() => { if (reactTimer.current) clearTimeout(reactTimer.current); reactTimer.current = setTimeout(() => setShowReacts(true), 350); }}
-            onMouseLeave={() => { if (reactTimer.current) clearTimeout(reactTimer.current); reactTimer.current = setTimeout(() => setShowReacts(false), 220); }}>
-            <button className={`post-action ${liked ? "post-action--liked" : ""}`}
+
+          {/* Like — react picker uses fixed positioning so it never gets clipped on mobile */}
+          <div
+            className="post-react-wrap"
+            onMouseEnter={() => {
+              // calculate position from the button's bounding rect before showing picker
+              if (likeButtonRef.current) {
+                const rect = likeButtonRef.current.getBoundingClientRect();
+                setReactPos({ top: rect.top - 56, left: rect.left });
+              }
+              if (reactTimer.current) clearTimeout(reactTimer.current);
+              reactTimer.current = setTimeout(() => setShowReacts(true), 350);
+            }}
+            onMouseLeave={() => {
+              if (reactTimer.current) clearTimeout(reactTimer.current);
+              reactTimer.current = setTimeout(() => setShowReacts(false), 220);
+            }}
+          >
+            <button
+              ref={likeButtonRef}
+              className={`post-action ${liked ? "post-action--liked" : ""}`}
               style={liked ? { color: REACTS[likeType]?.color } : {}}
-              onClick={() => handleLike(liked ? likeType : "like")} type="button">
+              onClick={() => handleLike(liked ? likeType : "like")}
+              type="button"
+            >
               <ReactIcon type={liked ? likeType : "like"} size={18} />
               <span>{liked ? REACTS[likeType]?.label : "Like"}</span>
             </button>
+
             {showReacts && (
-              <div className="post-react-picker"
+              <div
+                className="post-react-picker"
+                style={{
+                  position: "fixed",
+                  top: reactPos.top,
+                  left: reactPos.left,
+                  bottom: "auto",
+                  zIndex: 9999,
+                }}
                 onMouseEnter={() => { if (reactTimer.current) clearTimeout(reactTimer.current); }}
-                onMouseLeave={() => { if (reactTimer.current) clearTimeout(reactTimer.current); reactTimer.current = setTimeout(() => setShowReacts(false), 220); }}>
+                onMouseLeave={() => {
+                  if (reactTimer.current) clearTimeout(reactTimer.current);
+                  reactTimer.current = setTimeout(() => setShowReacts(false), 220);
+                }}
+              >
                 {reactKeys.map(type => (
-                  <button key={type} className="post-react-btn" title={REACTS[type].label} onClick={() => handleLike(type)} type="button" style={{ color: REACTS[type].color }}>
+                  <button
+                    key={type}
+                    className="post-react-btn"
+                    title={REACTS[type].label}
+                    onClick={() => handleLike(type)}
+                    type="button"
+                    style={{ color: REACTS[type].color }}
+                  >
                     <ReactIcon type={type} size={22} />
                   </button>
                 ))}
@@ -529,10 +571,12 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
             )}
           </div>
 
+          {/* Comment */}
           <button className="post-action" onClick={loadComments} type="button">
             <MessageCircle size={18} /> <span>Comment</span>
           </button>
 
+          {/* Share */}
           <div className="post-share-wrap">
             <button className="post-action" onClick={() => setShowShare(s => !s)} type="button">
               <Share2 size={18} /> <span>Share</span>
@@ -553,13 +597,14 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
             )}
           </div>
 
+          {/* Save */}
           <button className={`post-action ${bookmarked ? "post-action--saved" : ""}`} onClick={handleBookmark} type="button">
             {bookmarked ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
             <span>{bookmarked ? "Saved" : "Save"}</span>
           </button>
         </div>
 
-        {/* Comments */}
+        {/* ── COMMENTS ── */}
         {showComments && (
           <div className="post-comments">
             <div className="comment-input-row">
@@ -571,10 +616,14 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
                     <button onClick={() => setReplyTo(null)} type="button"><X size={10} /></button>
                   </div>
                 )}
-                <input ref={inputRef} className="comment-input"
+                <input
+                  ref={inputRef}
+                  className="comment-input"
                   placeholder={replyTo ? `Reply to ${replyTo.user.first_name}…` : "Write a comment…"}
-                  value={commentText} onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && submitComment()} />
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submitComment()}
+                />
                 {commentText.trim() && (
                   <button className="comment-send-btn" onClick={submitComment} disabled={submittingComment} type="button">
                     <Send size={13} />
@@ -582,6 +631,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
                 )}
               </div>
             </div>
+
             <div className="comment-list">
               {comments.map(c => {
                 const cAvatar = getAvatarUrl(c.user?.avatar);
@@ -631,12 +681,10 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
         )}
       </article>
 
-      {/* Report modal */}
+      {/* ── REPORT MODAL ── */}
       {showReport && (
         <div className="modal-overlay" onClick={() => setShowReport(false)}>
           <div className="report-modal" onClick={e => e.stopPropagation()}>
-
-            {/* Header */}
             <div className="report-header">
               <div className="report-header-left">
                 <div className="report-header-icon"><Flag size={16} /></div>
@@ -646,8 +694,6 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
                 <X size={15} />
               </button>
             </div>
-
-            {/* Already reported */}
             {alreadyReported ? (
               <div className="report-status report-status--warn">
                 <div className="report-status-icon">⚠️</div>
@@ -671,9 +717,7 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
                   {REPORT_REASONS.map(r => (
                     <button key={r}
                       className={`report-option ${reportReason === r ? "report-option--active" : ""}`}
-                      onClick={() => setReportReason(r)} type="button">
-                      {r}
-                    </button>
+                      onClick={() => setReportReason(r)} type="button">{r}</button>
                   ))}
                 </div>
                 {reportReason === "Other" && (
@@ -691,11 +735,16 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
         </div>
       )}
 
+      {/* ── DELETE CONFIRM ── */}
       {showDeleteConfirm && (
-        <ConfirmModal message="Delete this post permanently? This cannot be undone." onConfirm={confirmDelete} onCancel={() => setShowDeleteConfirm(false)} />
+        <ConfirmModal
+          message="Delete this post permanently? This cannot be undone."
+          onConfirm={confirmDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
 
-      {/* Likers modal */}
+      {/* ── LIKERS MODAL ── */}
       {showLikers && (
         <div className="modal-overlay" onClick={() => setShowLikers(false)}>
           <div className="likers-modal" onClick={e => e.stopPropagation()}>
@@ -704,36 +753,51 @@ export default function PostCard({ post, currentUserId, isAdmin, onDelete, onHid
               <button className="modal-close-btn" onClick={() => setShowLikers(false)} type="button"><X size={16} /></button>
             </div>
             <div className="likers-tabs">
-              <button className={`likers-tab ${likersFilter === "all" ? "likers-tab--active" : ""}`} onClick={() => setLikersFilter("all")} type="button">All {likers.length}</button>
+              <button className={`likers-tab ${likersFilter === "all" ? "likers-tab--active" : ""}`} onClick={() => setLikersFilter("all")} type="button">
+                All {likers.length}
+              </button>
               {Object.entries(reactCounts).map(([type, count]) => (
-                <button key={type} className={`likers-tab ${likersFilter === type ? "likers-tab--active" : ""}`} onClick={() => setLikersFilter(type)} type="button" style={{ color: REACTS[type as ReactType]?.color }}>
+                <button key={type}
+                  className={`likers-tab ${likersFilter === type ? "likers-tab--active" : ""}`}
+                  onClick={() => setLikersFilter(type)} type="button"
+                  style={{ color: REACTS[type as ReactType]?.color }}>
                   <ReactIcon type={type as ReactType} size={14} /> {count}
                 </button>
               ))}
             </div>
             <div className="likers-list">
-              {likersLoading ? <div className="likers-loading">Loading...</div>
-                : filteredLikers.length === 0 ? <div className="likers-empty">No reactions yet</div>
-                : filteredLikers.map((l, i) => (
-                  <div key={i} className="likers-row">
-                    <div className="likers-avatar">{`${l.first_name?.[0] || ""}${l.last_name?.[0] || ""}`.toUpperCase() || "U"}</div>
-                    <span className="likers-name">{l.first_name} {l.last_name}</span>
+              {likersLoading ? (
+                <div className="likers-loading">Loading...</div>
+              ) : filteredLikers.length === 0 ? (
+                <div className="likers-empty">No reactions yet</div>
+              ) : filteredLikers.map((l, i) => (
+                <div key={i} className="likers-row">
+                  <div className="likers-avatar">
+                    {`${l.first_name?.[0] || ""}${l.last_name?.[0] || ""}`.toUpperCase() || "U"}
                   </div>
-                ))}
+                  <span className="likers-name">{l.first_name} {l.last_name}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Lightbox */}
+      {/* ── LIGHTBOX ── */}
       {lightboxIdx !== null && (
         <div className="lightbox" onClick={() => setLightboxIdx(null)}>
           <button className="lightbox-close-btn" onClick={() => setLightboxIdx(null)} type="button"><X size={22} /></button>
           <img src={getImageUrl(images[lightboxIdx])} alt="" onClick={e => e.stopPropagation()} />
           {images.length > 1 && (
             <>
-              <button className="lightbox-prev-btn" type="button" onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + images.length) % images.length); }}>&#8249;</button>
-              <button className="lightbox-next-btn" type="button" onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % images.length); }}>&#8250;</button>
+              <button className="lightbox-prev-btn" type="button"
+                onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + images.length) % images.length); }}>
+                &#8249;
+              </button>
+              <button className="lightbox-next-btn" type="button"
+                onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % images.length); }}>
+                &#8250;
+              </button>
               <div className="lightbox-counter">{lightboxIdx + 1} / {images.length}</div>
             </>
           )}
