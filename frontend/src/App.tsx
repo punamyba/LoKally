@@ -24,19 +24,24 @@ import AdminUsers         from "./features/auth/Admin/UsersLists/AdminUsers";
 import AdminReports       from "./features/auth/Admin/Reports/AdminReports";
 import { AdminSettings }  from "./features/auth/Admin/Placeholder/AdminPlaceholder";
 
-import ContactUs         from "./features/auth/ContactUs/ContactUs";
-import AdminContactInbox from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
+import ContactUs           from "./features/auth/ContactUs/ContactUs";
+import AdminContactInbox   from "./features/auth/Admin/AdminContactInbox/AdminContactInbox";
 import AdminCommunity      from "./features/auth/Admin/AdminCommunity/AdminCommunity";
-import CommunityFeed     from "./features/auth/Community/CommunityFeed/CommunityFeed";
-import PostDetail        from "./features/auth/Community/PostDetail/PostDetail";
-import AISearch          from "./features/auth/AI/AiSearch";
+import CommunityFeed       from "./features/auth/Community/CommunityFeed/CommunityFeed";
+import PostDetail          from "./features/auth/Community/PostDetail/PostDetail";
+import AISearch            from "./features/auth/AI/AiSearch";
 
 import UserProfile   from "./features/auth/User/UserProfile";
 import PublicProfile from "./features/auth/User/PublicProfile";
 import Settings      from "./features/auth/Settings/Settings";
 
 import { ToastContainer } from "./features/auth/Components/Toast/Toast";
-import NotificationsPage from "./features/auth/Notifications/NotificationsPage";
+import NotificationsPage  from "./features/auth/Notifications/NotificationsPage";
+
+// Rewards & Points pages
+import RewardsPage     from "./features/auth/Rewards/RewardsPage";
+import LeaderboardPage from "./features/auth/Rewards/LeaderboardPage";
+import AdminRewards    from "./features/auth/Admin/AdminRewards/AdminRewards";
 
 function App() {
   const [email,      setEmail]      = useState("");
@@ -56,18 +61,20 @@ function App() {
         <Route path="/notifications"   element={<NotificationsPage />} />
 
         {/* Public app */}
-        <Route path="/explore-map" element={<ExploreMap />} />
-        <Route path="/place/:id"   element={<PlaceDetail />} />
-        <Route path="/contact"     element={<ContactUs />} />
-        <Route path="/ai-search"   element={<AISearch />} />
+        <Route path="/explore-map"  element={<ExploreMap />} />
+        <Route path="/place/:id"    element={<PlaceDetail />} />
+        <Route path="/contact"      element={<ContactUs />} />
+        <Route path="/ai-search"    element={<AISearch />} />
+        <Route path="/leaderboard"  element={<LeaderboardPage />} />
 
         {/* Protected user routes */}
-        <Route path="/home"             element={<AuthGuard><Home /></AuthGuard>} />
-        <Route path="/community"           element={<AuthGuard><CommunityFeed /></AuthGuard>} />
-        <Route path="/community/post/:id"  element={<AuthGuard><PostDetail /></AuthGuard>} />
-        <Route path="/profile"          element={<AuthGuard><UserProfile /></AuthGuard>} />
-        <Route path="/profile/:userId"  element={<AuthGuard><PublicProfile /></AuthGuard>} />
-        <Route path="/settings"         element={<AuthGuard><Settings /></AuthGuard>} />
+        <Route path="/home"                   element={<AuthGuard><Home /></AuthGuard>} />
+        <Route path="/community"              element={<AuthGuard><CommunityFeed /></AuthGuard>} />
+        <Route path="/community/post/:id"     element={<AuthGuard><PostDetail /></AuthGuard>} />
+        <Route path="/profile"                element={<AuthGuard><UserProfile /></AuthGuard>} />
+        <Route path="/profile/:userId"        element={<AuthGuard><PublicProfile /></AuthGuard>} />
+        <Route path="/settings"               element={<AuthGuard><Settings /></AuthGuard>} />
+        <Route path="/rewards"                element={<AuthGuard><RewardsPage /></AuthGuard>} />
 
         {/* Admin */}
         <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
@@ -78,8 +85,9 @@ function App() {
           <Route path="add-place"   element={<AdminAddPlace />} />
           <Route path="users"       element={<AdminUsers />} />
           <Route path="contact"     element={<AdminContactInbox />} />
-          <Route path="community"     element={<AdminCommunity />} />
+          <Route path="community"   element={<AdminCommunity />} />
           <Route path="reports"     element={<AdminReports />} />
+          <Route path="rewards"     element={<AdminRewards />} />
           <Route path="settings"    element={<AdminSettings />} />
         </Route>
       </Routes>
