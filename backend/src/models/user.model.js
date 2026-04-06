@@ -38,12 +38,10 @@ const User = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: true,
     },
-    // ── Bio ───────────────────────────────────────────
     bio: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // ─────────────────────────────────────────────────
     password: {
       type: DataTypes.STRING(255),
       allowNull: true,
@@ -60,7 +58,6 @@ const User = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
-    // ── Google OAuth ──────────────────────────────────
     google_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
@@ -70,7 +67,6 @@ const User = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // ─────────────────────────────────────────────────
     reset_code_hash: {
       type: DataTypes.STRING(255),
       allowNull: true,
@@ -87,6 +83,13 @@ const User = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    // ── Points ────────────────────────────────────────
+    total_points: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+    },
+    // ─────────────────────────────────────────────────
   },
   {
     tableName: "users",
@@ -97,11 +100,10 @@ const User = sequelize.define(
   }
 );
 
-// Associations
-import Place from "./place.model.js";
+import Place               from "./place.model.js";
 import ContactConversation from "./contactconversation.model.js";
 
-User.hasMany(Place, { foreignKey: "submitted_by", as: "places" });
-User.hasMany(ContactConversation, { foreignKey: "user_id", as: "contactConversations" });
+User.hasMany(Place,               { foreignKey: "submitted_by", as: "places"               });
+User.hasMany(ContactConversation, { foreignKey: "user_id",      as: "contactConversations" });
 
 export default User;

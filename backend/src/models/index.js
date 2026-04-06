@@ -18,6 +18,11 @@ import PlaceVisit     from "./placevisit.model.js";
 import PlaceTag       from "./placetag.model.js";
 import PlaceCondition from "./placecondition.model.js";
 
+// Points & Rewards models
+import PointsHistory   from "./pointshistory.model.js";
+import PlatformReward  from "./platformreward.model.js";
+import RedeemedVoucher from "./redeemedvoucher.model.js";
+
 export {
   User,
   Place,
@@ -34,4 +39,7 @@ export {
   PlaceVisit,
   PlaceTag,
   PlaceCondition,
+  PointsHistory,
+  PlatformReward,
+  RedeemedVoucher,
 };

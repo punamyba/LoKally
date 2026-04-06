@@ -1,13 +1,16 @@
 import "dotenv/config";
 
-import app from "./app.js";
-import sequelize from "./config/db.js";
+import app        from "./app.js";
+import sequelize  from "./config/db.js";
 import "./models/index.js";
-import User from "./models/user.model.js";
-import Notification from "./models/notification.model.js";
-import PostReport from "./models/postreport.model.js";
-import Place from "./models/place.model.js";
-import PlaceVisit from "./models/placevisit.model.js";
+import User          from "./models/user.model.js";
+import Notification  from "./models/notification.model.js";
+import PostReport    from "./models/postreport.model.js";
+import Place         from "./models/place.model.js";
+import PlaceVisit    from "./models/placevisit.model.js";
+import PointsHistory   from "./models/pointshistory.model.js";
+import PlatformReward  from "./models/platformreward.model.js";
+import RedeemedVoucher from "./models/redeemedvoucher.model.js";
 
 const PORT = process.env.PORT || 5001;
 
@@ -33,6 +36,15 @@ const startServer = async () => {
 
     await PlaceVisit.sync({ alter: true });
     console.log("PlaceVisit model updated");
+
+    await PointsHistory.sync({ alter: true });
+    console.log("PointsHistory model updated");
+
+    await PlatformReward.sync({ alter: true });
+    console.log("PlatformReward model updated");
+
+    await RedeemedVoucher.sync({ alter: true });
+    console.log("RedeemedVoucher model updated");
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
